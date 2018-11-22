@@ -29,20 +29,20 @@ Connection::Connection(Server* server, uint64_t id) :
 
 void Connection::run() { read_start(); }
 
-void Connection::on_read(string& buf, const CodeError* err) {
-    panda_log_debug("on_read " << buf.size());
+void Connection::on_read(string& _buf, const CodeError* err) {
+    panda_log_debug("on_read " << _buf.size());
     
-    string buf_copy = string(buf.data(), buf.length()); // TODO - REMOVE COPYING
+    string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
 
     if(err) { 
         return on_stream_error(err); 
     }
 
 #ifdef ENABLE_DUMP_SERVER_MESSAGES
-    dump_message(server_->config.dump_file_prefix, request_counter_, part_counter_++, buf_copy);
+    dump_message(server_->config.dump_file_prefix, request_counter_, part_counter_++, buf);
 #endif
 
-    for(auto pos = request_parser_->parse(buf_copy); pos->state != protocol::http::RequestParser::State::not_yet; ++pos) {
+    for(auto pos = request_parser_->parse(buf); pos->state != protocol::http::RequestParser::State::not_yet; ++pos) {
         panda_log_debug("parser state: " << static_cast<int>(pos->state) << " " << pos->position);
 
         if(pos->state == protocol::http::RequestParser::State::failed) {
@@ -61,7 +61,7 @@ void Connection::on_read(string& buf, const CodeError* err) {
             on_request(pos->request);
         }
 
-        if(pos->position >= buf_copy.size()) {
+        if(pos->position >= buf.size()) {
             return;
         }
     }

@@ -8,9 +8,9 @@ TEST_CASE("get real sites", "[live]") {
 
     std::vector<string> sites = {
         //"http://google.com",  // TODO uncomment when unbanned
-        "http://youtube.com",
-        "http://facebook.com",
-        "http://wikipedia.org",
+        //"http://youtube.com",
+        //"http://facebook.com",
+        //"http://wikipedia.org",
         //"http://yandex.ru",
         "http://rbc.ru",
         "http://amazon.com"

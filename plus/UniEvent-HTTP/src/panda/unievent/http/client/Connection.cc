@@ -68,7 +68,7 @@ void Connection::detach(RequestSP request) {
 }
 
 void Connection::connect(const string& host, unsigned short port) {
-    panda_log_debug("connect");
+    panda_log_debug("connect, " << host << ":" << port);
     if(connected_) {
         return;
     }
@@ -95,13 +95,15 @@ void Connection::on_connect(const CodeError* err, ConnectRequest*) {
     connect_callback(0);
 }
 
-void Connection::on_read(string& buf, const CodeError* err) {
+void Connection::on_read(string& _buf, const CodeError* err) {
     //panda_log_debug("on_read: " << buf.size());
     if(err) {
         panda_log_warn("on_read failed: " << err->what());
         on_stream_error(err);
         return;
     }
+    
+    string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
     
     for(auto pos = response_parser_->parse(buf); pos->state != protocol::http::ResponseParser::State::not_yet; ++pos) {
         //panda_log_debug("parser state: " << static_cast<int>(pos->state) << " " << pos->position);
