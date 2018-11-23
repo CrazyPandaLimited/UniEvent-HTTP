@@ -26,7 +26,7 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(
     client::Request::Builder builder = client::Request::Builder()
         .method(request_method)
         .uri(uri)
-        .timeout(500);
+        .timeout(100);
     
     if(!header->empty()) {
         builder.header(header);
@@ -45,7 +45,7 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(
 
     http_request(request);
 
-    wait(2000, Loop::default_loop());
+    wait(200, Loop::default_loop());
    
     if(response && response->is_valid()) {
         auto echo_request = parse_request(response->body()->as_buffer());

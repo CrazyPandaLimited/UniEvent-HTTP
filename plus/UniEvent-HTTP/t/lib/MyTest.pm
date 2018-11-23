@@ -24,7 +24,7 @@ init();
 sub init {
     Panda::Lib::Logger::set_native_logger(sub {
     	my ($level, $code, $msg) = @_;
-        say "$level $code $msg";
+        #say "$level $code $msg";
     });
 
     remove_tree($rdir, {error => \my $err} );

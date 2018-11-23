@@ -8,10 +8,10 @@ TEST_CASE("get real sites", "[live]") {
 
     std::vector<string> sites = {
         //"http://google.com",  // TODO uncomment when unbanned
-        //"http://youtube.com",
-        //"http://facebook.com",
-        //"http://wikipedia.org",
-        //"http://yandex.ru",
+        "http://youtube.com",
+        "http://facebook.com",
+        "http://wikipedia.org",
+        "http://yandex.ru",
         "http://rbc.ru",
         "http://amazon.com"
     };
@@ -37,6 +37,7 @@ TEST_CASE("get real sites", "[live]") {
 
         wait(5000, Loop::default_loop());
 
+        //TODO: uncomment when ipv6 is working
         //REQUIRE(response);
     }
 }

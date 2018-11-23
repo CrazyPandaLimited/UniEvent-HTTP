@@ -170,7 +170,7 @@ TEST_CASE("chunked response", "[http-client]") {
 
     http_request(request);
 
-    wait(1000, Loop::default_loop());
+    wait(500, Loop::default_loop());
    
     REQUIRE(response);
     REQUIRE(response->is_valid());
