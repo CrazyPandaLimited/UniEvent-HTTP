@@ -206,46 +206,46 @@ TEST_CASE("simple redirect", "[http-client]") {
     REQUIRE(to_request->header()->get_field("Host") == protocol::http::to_host(to_uri));
 }
 
-TEST_CASE("redirect chain", "[http-client]") {
-    server::ServerSP echo;
-    uint16_t echo_port;
-    std::tie(echo, echo_port) = echo_server("echo");
+//TEST_CASE("redirect chain", "[http-client]") {
+    //server::ServerSP echo;
+    //uint16_t echo_port;
+    //std::tie(echo, echo_port) = echo_server("echo");
 
-    string echo_uri_str = "http://localhost:" + to_string(echo_port); 
-    iptr<uri::URI> echo_uri = make_iptr<uri::URI>(echo_uri_str);    
+    //string echo_uri_str = "http://localhost:" + to_string(echo_port); 
+    //iptr<uri::URI> echo_uri = make_iptr<uri::URI>(echo_uri_str);    
     
-    server::ServerSP redirect3; 
-    uint16_t redirect3_port;
-    std::tie(redirect3, redirect3_port) = redirect_server("redirect3", echo_port);
+    //server::ServerSP redirect3; 
+    //uint16_t redirect3_port;
+    //std::tie(redirect3, redirect3_port) = redirect_server("redirect3", echo_port);
     
-    string redirect3_uri_str = "http://localhost:" + to_string(redirect3_port); 
-    iptr<uri::URI> redirect3_uri = make_iptr<uri::URI>(redirect3_uri_str);    
+    //string redirect3_uri_str = "http://localhost:" + to_string(redirect3_port); 
+    //iptr<uri::URI> redirect3_uri = make_iptr<uri::URI>(redirect3_uri_str);    
     
-    server::ServerSP redirect2; 
-    uint16_t redirect2_port;
-    std::tie(redirect2, redirect2_port) = redirect_server("redirect2", redirect3_port);
+    //server::ServerSP redirect2; 
+    //uint16_t redirect2_port;
+    //std::tie(redirect2, redirect2_port) = redirect_server("redirect2", redirect3_port);
     
-    string redirect2_uri_str = "http://localhost:" + to_string(redirect2_port); 
-    iptr<uri::URI> redirect2_uri = make_iptr<uri::URI>(redirect2_uri_str);    
+    //string redirect2_uri_str = "http://localhost:" + to_string(redirect2_port); 
+    //iptr<uri::URI> redirect2_uri = make_iptr<uri::URI>(redirect2_uri_str);    
     
-    server::ServerSP redirect1; 
-    uint16_t redirect1_port;
-    std::tie(redirect1, redirect1_port) = redirect_server("redirect1", redirect2_port);
+    //server::ServerSP redirect1; 
+    //uint16_t redirect1_port;
+    //std::tie(redirect1, redirect1_port) = redirect_server("redirect1", redirect2_port);
     
-    string redirect1_uri_str = "http://localhost:" + to_string(redirect1_port); 
-    iptr<uri::URI> redirect1_uri = make_iptr<uri::URI>(redirect1_uri_str);    
+    //string redirect1_uri_str = "http://localhost:" + to_string(redirect1_port); 
+    //iptr<uri::URI> redirect1_uri = make_iptr<uri::URI>(redirect1_uri_str);    
 
-    _DBG("from: " << redirect1_uri_str << " to: " << echo_uri_str);
+    //_DBG("from: " << redirect1_uri_str << " to: " << echo_uri_str);
 
-    protocol::http::ResponseSP response;
-    protocol::http::RequestSP request;
-    std::tie(response, request) = echo_request(redirect1_uri, protocol::http::Request::Method::GET);
+    //protocol::http::ResponseSP response;
+    //protocol::http::RequestSP request;
+    //std::tie(response, request) = echo_request(redirect1_uri, protocol::http::Request::Method::GET);
 
-    REQUIRE(response);
-    REQUIRE(response->is_valid());
-    REQUIRE(response->http_version() == "1.1");
-    REQUIRE(request->header()->get_field("Host") == protocol::http::to_host(echo_uri));
-}
+    //REQUIRE(response);
+    //REQUIRE(response->is_valid());
+    //REQUIRE(response->http_version() == "1.1");
+    //REQUIRE(request->header()->get_field("Host") == protocol::http::to_host(echo_uri));
+//}
 
 //TEST_CASE("redirection-loop", "[http-client]") {
     //uint16_t from_port = find_free_port();
