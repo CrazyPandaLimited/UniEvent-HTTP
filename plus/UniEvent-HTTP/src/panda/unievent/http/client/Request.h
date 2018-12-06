@@ -5,7 +5,6 @@
 #include <panda/log.h>
 #include <panda/refcnt.h>
 #include <panda/string.h>
-#include <panda/uri/URI.h>
 #include <panda/unievent/Timer.h>
 #include <panda/CallbackDispatcher.h>
 
@@ -20,11 +19,12 @@
 
 #include "Response.h"
 
-namespace panda { namespace unievent { namespace http { namespace client {
+namespace panda { namespace unievent { namespace http {
+namespace client {
 
 // Host field builder
 // See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host
-inline string to_host(iptr<uri::URI> uri) {
+inline string to_host(URISP uri) {
     if(uri->port() == 80 || uri->port() == 443) {
         return uri->host();
     } else {
@@ -32,42 +32,38 @@ inline string to_host(iptr<uri::URI> uri) {
     }
 }
 
-inline ClientConnectionPool* get_thread_local_connection_pool() {
-    thread_local ClientConnectionPool pool;
-    thread_local ClientConnectionPool* pool_ptr = &pool;
-    return pool_ptr;
-}
-
-using URISP = iptr<uri::URI>;
-
 class Request : public protocol::http::Request {
-    friend client::Connection;
-    friend void http_request(RequestSP request, iptr<client::Connection> connection);
-    friend iptr<client::Connection> http_request(RequestSP request, ClientConnectionPool* connection_pool);
+    friend Connection;
+    friend void http::http_request(client::RequestSP, client::ConnectionSP); 
+    friend ConnectionSP http::http_request(client::RequestSP, client::ClientConnectionPool*);
 
 public:
+    static constexpr uint64_t DEFAULT_CONNECT_TIMEOUT   = 4000; // [ms]
+    static constexpr uint64_t DEFAULT_REDIRECTION_LIMIT = 20;   // [hops]
+
     Request(protocol::http::Request::Method method, 
         URISP uri, 
         protocol::http::HeaderSP header, 
         protocol::http::BodySP body, 
         const string& http_version,
-        function<void(RequestSP, ResponseSP)> response_c,
-        function<void(RequestSP, URISP)> redirect_c,
-        function<void(RequestSP, const string&)> error_c,
-        iptr<Loop> loop,
+        ResponseCallback response_c,
+        RedirectCallback redirect_c,
+        ErrorCallback error_c,
+        LoopSP loop,
         uint64_t timeout,
         uint8_t redirection_limit) :
-            protocol::http::Request(method, uri, header, body, http_version),
-            loop_(loop),
-            close_timer_(new Timer(loop)),
+            loop_(loop ? loop : (LoopSP)Loop::default_loop()),
+            close_timer_(new Timer(loop_)),
             original_uri_(uri),
-            timeout_(timeout),
-            redirection_limit_(redirection_limit),
+            timeout_(timeout ? timeout : DEFAULT_CONNECT_TIMEOUT),
+            redirection_limit_(redirection_limit ? redirection_limit : DEFAULT_REDIRECTION_LIMIT),
             request_counter_(0),
             part_counter_(0),
             connection_(nullptr),
             connection_pool_(nullptr) {
         panda_log_debug("ctor");    
+
+        init_defaults(method, uri, header, body, http_version);
 
         response_callback.add(response_c);
         redirect_callback.add(redirect_c);
@@ -78,114 +74,111 @@ public:
             on_any_error("timeout exceeded: " + to_string(timeout_));
         });
     }
- 
-    struct Builder {
-    public:
-        Builder& header(protocol::http::HeaderSP header) {
-            header_ = header;
-            return *this;
+
+    void init_defaults(Method method, 
+            URISP uri, 
+            const protocol::http::HeaderSP& header, 
+            const protocol::http::BodySP& body, 
+            const string& http_version) {
+        method_ = method;
+        uri_ = uri;
+        http_version_ = http_version ? http_version : "1.1";
+        header_ = header ? header : make_iptr<protocol::http::Header>();
+
+        if (http_version_ == "1.1") {
+            if (!header_->has_field("Host")) {
+                header_->add_field("Host", to_host(uri_));
+            }
         }
 
-        Builder& body(protocol::http::BodySP body) {
+        if (body) {
             body_ = body;
-            return *this;
+            header_->add_field("Content-Length", to_string(body_->content_length()));
+            if (!header_->has_field("Content-Type")) {
+                header_->add_field("Content-Type", "text/plain");
+            }
+        } else {
+            body_ = make_iptr<protocol::http::Body>();
         }
 
-        Builder& body(const string& body, const string& content_type = "text/plain") {
+        if (!header_->has_field("User-Agent")) {
+            header_->add_field(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36 Panda/1.0.1");
+        }
+    }
+
+    template <class Derived> 
+    struct BasicBuilder {
+    public:
+        Derived& concrete () { return static_cast<Derived&>(*this); }
+
+        Derived& header(protocol::http::HeaderSP header) {
+            header_ = header;
+            return concrete();
+        }
+
+        Derived& body(protocol::http::BodySP body) {
+            body_ = body;
+            return concrete();
+        }
+
+        Derived& body(const string& body) {
             body_ = make_iptr<protocol::http::Body>(body);
-            content_type_ = content_type;
-            return *this;
+            return concrete();
         }
 
-        Builder& version(const string& http_version) {
+        Derived& version(const string& http_version) {
             http_version_ = http_version;
-            return *this;
+            return concrete();
         }
 
-        Builder& method(protocol::http::Request::Method method) {
+        Derived& method(protocol::http::Request::Method method) {
             method_ = method;
-            return *this;
+            return concrete();
         }
 
-        Builder& uri(const string& uri) {
+        Derived& uri(const string& uri) {
             uri_ = make_iptr<uri::URI>(uri);
-            return *this;
+            return concrete();
         }
 
-        Builder& uri(URISP uri) {
+        Derived& uri(URISP uri) {
             uri_ = uri;
-            return *this;
+            return concrete();
         }
 
-        Builder& response_callback(function<void(RequestSP, ResponseSP)> cb) {
+        Derived& response_callback(ResponseCallback cb) {
             response_callback_ = cb;
-            return *this;
+            return concrete();
         }
         
-        Builder& redirect_callback(function<void(RequestSP, URISP)> cb) {
+        Derived& redirect_callback(RedirectCallback cb) {
             redirect_callback_ = cb;
-            return *this;
+            return concrete();
         }
         
-        Builder& error_callback(function<void(RequestSP, const string&)> cb) {
+        Derived& error_callback(ErrorCallback cb) {
             error_callback_ = cb;
-            return *this;
+            return concrete();
         }
         
-        Builder& loop(iptr<Loop> loop) {
+        Derived& loop(LoopSP loop) {
             loop_ = loop;
-            return *this;
+            return concrete();
         }
         
-        Builder& timeout(uint64_t timeout) {
+        Derived& timeout(uint64_t timeout) {
             timeout_ = timeout;
-            return *this;
+            return concrete();
         }
         
-        Builder& redirection_limit(uint8_t redirection_limit) {
+        Derived& redirection_limit(uint8_t redirection_limit) {
             redirection_limit_ = redirection_limit;
-            return *this;
+            return concrete();
         }
 
         Request* build() {
-            if(http_version_.empty()) {
-                http_version_ = "1.1";
-            }
-
-            if(!header_) {
-                header_ = make_iptr<protocol::http::Header>();
-            }
-
-            if(http_version_ == "1.1") {
-                if(!header_->has_field("Host")) {
-                    header_->add_field("Host", to_host(uri_));
-                }
-            }
-
-            if(!body_) {
-                body_ = make_iptr<protocol::http::Body>();
-            } else {
-                header_->add_field("Content-Length", to_string(body_->content_length()));
-                header_->add_field("Content-Type", content_type_);
-            }
-
-            if(!header_->has_field("User-Agent")) {
-                header_->add_field("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36 Panda/0.1.1");
-            }
-
-            if(!loop_) {
-                loop_ = Loop::default_loop();
-                panda_log_debug("request, default loop");
-            }
-
-            if(!timeout_) {
-                timeout_ = 4000;
-            }
-            
-            if(!redirection_limit_) {
-                redirection_limit_ = 20;
-            }
-
             return new Request(method_, uri_, header_, body_, http_version_, response_callback_, redirect_callback_, error_callback_, loop_, timeout_, redirection_limit_);
         }
 
@@ -193,16 +186,17 @@ public:
             protocol::http::HeaderSP header_;
             protocol::http::BodySP body_;
             string http_version_;
-            protocol::http::Request::Method method_;
+            protocol::http::Request::Method method_ = {Method::GET};
             URISP uri_;
-            string content_type_;
-            function<void(RequestSP, ResponseSP)> response_callback_;
-            function<void(RequestSP, URISP)> redirect_callback_;
-            function<void(RequestSP, const string&)> error_callback_;
-            iptr<Loop> loop_;
+            ResponseCallback response_callback_;
+            RedirectCallback redirect_callback_;
+            ErrorCallback error_callback_;
+            LoopSP loop_;
             uint64_t timeout_ = {};
             uint8_t redirection_limit_ = {};
     };
+    
+    struct Builder : BasicBuilder<Builder> {};
 
     ResponseSP response() const {
         return make_iptr<Response>();
@@ -316,15 +310,15 @@ private:
     Request& operator=(const Request&) = delete;
 
 private:
-    iptr<Loop> loop_;
-    iptr<Timer> close_timer_;
+    LoopSP loop_;
+    TimerSP close_timer_;
     URISP original_uri_;
     uint64_t timeout_;
     uint8_t redirection_limit_;
     uint8_t redirection_counter_;
     uint64_t request_counter_;
     uint64_t part_counter_;
-    client::Connection* connection_;
+    Connection* connection_;
     ClientConnectionPool* connection_pool_;
 };
 
@@ -356,7 +350,9 @@ inline std::vector<string> to_vector(RequestSP request_ptr) {
     return result;
 }
 
-inline void http_request(RequestSP request, iptr<client::Connection> connection) {
+} // namespace client
+
+inline void http_request(panda::unievent::http::client::RequestSP request, panda::unievent::http::client::ConnectionSP connection) {
     panda_log_debug("http_request, connection: " << &connection);
     if(request->connection_) {
         throw ProgrammingError("Can't reuse incompleted request"); 
@@ -365,16 +361,23 @@ inline void http_request(RequestSP request, iptr<client::Connection> connection)
     connection->request(request);
 }
 
-inline iptr<client::Connection> http_request(RequestSP request, ClientConnectionPool* connection_pool = get_thread_local_connection_pool()) {
-    panda_log_debug("http_request, pooled, pool: " << connection_pool);
+inline panda::unievent::http::client::ClientConnectionPool* get_thread_local_connection_pool() {
+    thread_local panda::unievent::http::client::ClientConnectionPool pool;
+    thread_local panda::unievent::http::client::ClientConnectionPool* pool_ptr = &pool;
+    return pool_ptr;
+}
 
+inline client::ConnectionSP http_request(
+        client::RequestSP request, 
+        client::ClientConnectionPool* connection_pool = get_thread_local_connection_pool()) {
+    panda_log_debug("http_request, pooled, pool: " << connection_pool);
     if(connection_pool->loop().get() != request->loop_.get()) {
-        throw ProgrammingError("Loop mismatch, connection pool loop != loop"); 
+        throw ProgrammingError("Loop mismatch, connection pool loop != request loop"); 
     }
     request->connection_pool_ = connection_pool;
-    iptr<client::Connection> connection = connection_pool->get(request->uri()->host(), request->uri()->port());
+    client::ConnectionSP connection = connection_pool->get(request->uri()->host(), request->uri()->port());
     http_request(request, connection);
     return connection;
 }
 
-}}}} // namespace panda::unievent::http::client
+}}} // namespace panda::unievent::http

@@ -33,7 +33,7 @@ TEST_CASE("get real sites", "[live]") {
             .build();
         
         //panda_log_debug("request " << request);
-        client::http_request(request);
+        http_request(request);
 
         wait(5000, Loop::default_loop());
 

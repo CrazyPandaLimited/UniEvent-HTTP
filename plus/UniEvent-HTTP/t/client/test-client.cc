@@ -96,7 +96,7 @@ TEST_CASE("response larger than mtu", "[http-client]") {
         .timeout(100)
         .build();
     
-    client::http_request(request);
+    http_request(request);
 
     wait(100, Loop::default_loop());
 

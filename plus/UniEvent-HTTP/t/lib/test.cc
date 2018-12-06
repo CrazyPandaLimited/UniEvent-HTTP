@@ -22,6 +22,7 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(
         protocol::http::Request::Method request_method,
         const string& body,
         protocol::http::HeaderSP header) {
+    panda_log_debug("echo request");    
 
     client::Request::Builder builder = client::Request::Builder()
         .method(request_method)

@@ -48,8 +48,8 @@ TEST_CASE("timeouted connection from pool", "[pool]") {
         .timeout(100)
         .build();
     
-    client::http_request(request1, &pool);
-    client::http_request(request2, &pool);
+    http_request(request1, &pool);
+    http_request(request2, &pool);
 
     wait(100, Loop::default_loop());
 
@@ -92,11 +92,11 @@ TEST_CASE("sequential requests", "[pool]") {
         .timeout(100)
         .build();
     
-    client::http_request(request1, &pool);
+    http_request(request1, &pool);
     
     wait(100, Loop::default_loop());
 
-    client::http_request(request2, &pool);
+    http_request(request2, &pool);
     
     wait(100, Loop::default_loop());
 
@@ -131,8 +131,8 @@ TEST_CASE("same request using pool", "[pool]") {
 
     // cant reuse not completed request
     REQUIRE_THROWS_AS([&]{
-        client::http_request(request, &pool);
-        client::http_request(request, &pool);
+        http_request(request, &pool);
+        http_request(request, &pool);
     }(), ProgrammingError);
 }
 
