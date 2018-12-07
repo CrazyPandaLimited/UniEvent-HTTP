@@ -5,15 +5,19 @@ use UniEvent::HTTP;
 use Test::Catch '[http-client]';
 
 sub test_live {
-    my $loop = UniEvent::Loop->default_loop;
+    #my $loop = new UniEvent::Loop->default_loop;
+    my $loop = new UniEvent::Loop;
+    my $pool = new UniEvent::HTTP::ClientConnectionPool($loop);
 
     UniEvent::HTTP::http_request(new UniEvent::HTTP::Request({
         uri => 'http://rbc.ru',
         response_callback => sub {
             my ($request, $response) = @_;
+            $pool->clear;
             $loop->stop;
         },
-    }));
+        loop => $loop,
+    }), $pool);
 
     $loop->run;
 }

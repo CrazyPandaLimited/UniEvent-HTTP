@@ -16,7 +16,7 @@
 namespace panda { namespace unievent { namespace http { namespace client {
 
 template <class C>    
-class ConnectionPool {
+class ConnectionPool : public virtual Refcnt {
 private:
     using ConnectionSP = iptr<C>;
     using Key = HostAndPort;
@@ -130,9 +130,9 @@ public:
         }
     }
 
-    iptr<Loop> loop() const { return loop_; }
+    LoopSP loop() const { return loop_; }
     
-    void loop(iptr<Loop> loop) { 
+    void loop(LoopSP loop) { 
         if(!connections_.empty()) {
             throw PoolError("Pool is not empty"); 
         }
@@ -143,10 +143,14 @@ public:
     bool empty() const {
         return connections_.empty();
     }
+    
+    bool clear() {
+        return connections_.clear();
+    }
 
 private:
     uint64_t timeout_;
-    iptr<Loop> loop_;
+    LoopSP loop_;
     std::unordered_map<Key, Value, Hash> connections_;
 };
 

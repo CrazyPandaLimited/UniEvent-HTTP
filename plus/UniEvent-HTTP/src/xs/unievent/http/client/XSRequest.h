@@ -19,7 +19,7 @@ using namespace panda::unievent::http::client;
 
 namespace proto = panda::protocol::http;
 
-struct XSRequest : Request {
+struct XSRequest : client::Request {
     XSCallback xs_response_cb;
     XSCallback xs_redirect_cb;
     XSCallback xs_error_cb;
@@ -81,5 +81,13 @@ namespace xs {
     
     template <class TYPE> struct Typemap<panda::unievent::http::client::Response*, TYPE> : TypemapObject<panda::unievent::http::client::Response*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMGBackref> {
         std::string package () { return "UniEvent::HTTP::Response"; }
+    };
+    
+    template <class TYPE> struct Typemap<panda::unievent::http::client::Connection*, TYPE> : TypemapObject<panda::unievent::http::client::Connection*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMGBackref> {
+        std::string package () { return "UniEvent::HTTP::Connection"; }
+    };
+    
+    template <class TYPE> struct Typemap<panda::unievent::http::client::ClientConnectionPool*, TYPE> : TypemapObject<panda::unievent::http::client::ClientConnectionPool*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMGBackref> {
+        std::string package () { return "UniEvent::HTTP::ClientConnectionPool"; }
     };
 } // namespace xs
