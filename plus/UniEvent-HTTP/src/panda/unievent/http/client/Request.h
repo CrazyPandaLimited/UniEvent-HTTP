@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <cinttypes>
 
-#include <panda/log.h>
 #include <panda/refcnt.h>
 #include <panda/string.h>
 #include <panda/unievent/Timer.h>
@@ -34,26 +34,23 @@ inline string to_host(URISP uri) {
 
 class Request : public protocol::http::Request {
     friend Connection;
-    friend void http::http_request(client::RequestSP, client::ConnectionSP); 
+    friend void http::http_request(client::RequestSP, client::ConnectionSP);
     friend ConnectionSP http::http_request(client::RequestSP, client::ClientConnectionPool*);
 
 public:
     static constexpr uint64_t DEFAULT_CONNECT_TIMEOUT   = 4000; // [ms]
     static constexpr uint64_t DEFAULT_REDIRECTION_LIMIT = 20;   // [hops]
 
-    Request(protocol::http::Request::Method method, 
-        URISP uri, 
-        protocol::http::HeaderSP header, 
-        protocol::http::BodySP body, 
+    Request(protocol::http::Request::Method method,
+        URISP uri,
+        protocol::http::HeaderSP header,
+        protocol::http::BodySP body,
         const string& http_version,
         ResponseCallback response_c,
         RedirectCallback redirect_c,
         ErrorCallback error_c,
-        LoopSP loop,
         uint64_t timeout,
         uint8_t redirection_limit) :
-            loop_(loop ? loop : (LoopSP)Loop::default_loop()),
-            close_timer_(new Timer(loop_)),
             original_uri_(uri),
             timeout_(timeout ? timeout : DEFAULT_CONNECT_TIMEOUT),
             redirection_limit_(redirection_limit ? redirection_limit : DEFAULT_REDIRECTION_LIMIT),
@@ -61,24 +58,19 @@ public:
             part_counter_(0),
             connection_(nullptr),
             connection_pool_(nullptr) {
-        panda_log_debug("ctor");    
+        _ECTOR();
 
         init_defaults(method, uri, header, body, http_version);
 
         response_callback.add(response_c);
         redirect_callback.add(redirect_c);
         error_callback.add(error_c);
-
-        close_timer_->timer_event.add([&](Timer*) {
-            panda_log_debug("ticking close timer");
-            on_any_error("timeout exceeded: " + to_string(timeout_));
-        });
     }
 
-    void init_defaults(Method method, 
-            URISP uri, 
-            const protocol::http::HeaderSP& header, 
-            const protocol::http::BodySP& body, 
+    void init_defaults(Method method,
+            URISP uri,
+            const protocol::http::HeaderSP& header,
+            const protocol::http::BodySP& body,
             const string& http_version) {
         method_ = method;
         uri_ = uri;
@@ -108,7 +100,7 @@ public:
         }
     }
 
-    template <class Derived> 
+    template <class Derived>
     struct BasicBuilder {
     public:
         Derived& concrete () { return static_cast<Derived&>(*this); }
@@ -152,34 +144,29 @@ public:
             response_callback_ = cb;
             return concrete();
         }
-        
+
         Derived& redirect_callback(RedirectCallback cb) {
             redirect_callback_ = cb;
             return concrete();
         }
-        
+
         Derived& error_callback(ErrorCallback cb) {
             error_callback_ = cb;
             return concrete();
         }
-        
-        Derived& loop(LoopSP loop) {
-            loop_ = loop;
-            return concrete();
-        }
-        
+
         Derived& timeout(uint64_t timeout) {
             timeout_ = timeout;
             return concrete();
         }
-        
+
         Derived& redirection_limit(uint8_t redirection_limit) {
             redirection_limit_ = redirection_limit;
             return concrete();
         }
 
         Request* build() {
-            return new Request(method_, uri_, header_, body_, http_version_, response_callback_, redirect_callback_, error_callback_, loop_, timeout_, redirection_limit_);
+            return new Request(method_, uri_, header_, body_, http_version_, response_callback_, redirect_callback_, error_callback_, timeout_, redirection_limit_);
         }
 
         protected:
@@ -191,61 +178,58 @@ public:
             ResponseCallback response_callback_;
             RedirectCallback redirect_callback_;
             ErrorCallback error_callback_;
-            LoopSP loop_;
             uint64_t timeout_ = {};
             uint8_t redirection_limit_ = {};
     };
-    
+
     struct Builder : BasicBuilder<Builder> {};
 
     ResponseSP response() const {
         return make_iptr<Response>();
     }
 
-    uint64_t timeout() const { 
-        return timeout_; 
+    uint64_t timeout() const {
+        return timeout_;
     }
 
     CallbackDispatcher<void(RequestSP, const string&)> error_callback;
     CallbackDispatcher<void(RequestSP)> detach_connection_callback;
     CallbackDispatcher<void(RequestSP, ResponseSP)> response_callback;
     CallbackDispatcher<void(RequestSP, URISP)> redirect_callback;
-    
+
     virtual void on_start() {
-        panda_log_debug("on_start");
+        _EDEBUGTHIS("on_start: counter: %" PRIu64 "", request_counter_);
 
         request_counter_++;
         part_counter_ = 0;
-        
-        panda_log_debug("request to: " << uri_->to_string() << " " << request_counter_);
 
-        close_timer_->start(timeout_);
+        reset_timer();
     }
 
 protected:
     // restrict stack allocation
     virtual ~Request() {
-        panda_log_debug("dtor");
+        _EDTOR();
     }
-    
+
     virtual protocol::http::ResponseSP create_response() const override {
         return response();
     }
 
     virtual void on_connect(int) {
-        panda_log_debug("on_connect");
+        _EDEBUGTHIS();
         redirection_counter_ = 0;
-        close_timer_->again();
+        reset_timer();
     }
 
     virtual void on_response(ResponseSP response_ptr) {
-        panda_log_debug("on_response");
+        _EDEBUGTHIS();
         redirection_counter_ = 0;
         response_callback(this, response_ptr);
     }
-    
+
     virtual void on_redirect(URISP uri) {
-        panda_log_debug("on_redirect");
+        _EDEBUGTHIS();
         if(redirection_counter_++ >= redirection_limit_) {
             on_any_error("redirection limit exceeded");
             return;
@@ -254,36 +238,32 @@ protected:
         header()->set_field("Host", to_host(uri));
 
         uri_ = uri;
-        
-        panda_log_debug("on_redirect: "<< this);
 
         redirect_callback(this, uri_);
-        
+
         detach_connection();
 
         if(connection_pool_) {
             connection_ = connection_pool_->get(uri_->host(), uri_->port());
-            panda_log_debug("on_redirect, got connection: " << connection_);
+            _EDEBUGTHIS("on_redirect, connection: %p", connection_);
             connection_->request(this);
         }
     }
 
     virtual void on_stop() {
-        panda_log_warn("on_stop");
+        _EDEBUGTHIS();
         detach_connection();
     }
-    
+
     virtual void on_any_error(const string& error_str) {
-        panda_log_warn("on_any_error: " << error_str);
+        _EDEBUGTHIS();
         error_callback(this, error_str);
         detach_connection();
     }
 
     void detach_connection() {
-        panda_log_debug("detach_connection");
-
-        close_timer_->stop();
-
+        _EDEBUGTHIS();
+        stop_timer();
         if(connection_) {
             connection_->detach(this);
             if(connection_pool_) {
@@ -293,15 +273,36 @@ protected:
             connection_ = nullptr;
         }
     }
-    
+
     void reset_timer() {
-        panda_log_debug("reset_timer");
-        close_timer_->again();
+        _EDEBUGTHIS();
+        if(close_timer_) {
+            close_timer_->again();
+        }
+        else {
+            LoopSP loop;
+            if(connection_) {
+                loop = connection_->loop();
+            } else if(connection_pool_) {
+                loop = connection_pool_->loop();
+            } else {
+                throw ProgrammingError("No connection and no pool, don't know where to find loop for a timer");
+            }
+
+            _EDEBUGTHIS("using loop: %p", loop.get());
+
+            close_timer_ = Timer::start(timeout_, [this](Timer*) {
+                _EDEBUGTHIS("ticking close timer");
+                on_any_error("timeout exceeded: " + to_string(timeout_));
+            }, loop);
+        }
     }
-    
+
     void stop_timer() {
-        panda_log_debug("stop_timer");
-        close_timer_->stop();
+        _EDEBUGTHIS();
+        if(close_timer_) {
+            close_timer_->stop();
+        }
     }
 
 private:
@@ -310,7 +311,6 @@ private:
     Request& operator=(const Request&) = delete;
 
 private:
-    LoopSP loop_;
     TimerSP close_timer_;
     URISP original_uri_;
     uint64_t timeout_;
@@ -353,9 +353,9 @@ inline std::vector<string> to_vector(RequestSP request_ptr) {
 } // namespace client
 
 inline void http_request(panda::unievent::http::client::RequestSP request, panda::unievent::http::client::ConnectionSP connection) {
-    panda_log_debug("http_request, connection: " << &connection);
+    _EDEBUG("http_request");
     if(request->connection_) {
-        throw ProgrammingError("Can't reuse incompleted request"); 
+        throw ProgrammingError("Can't reuse incompleted request");
     }
     request->connection_ = connection;
     connection->request(request);
@@ -368,12 +368,9 @@ inline panda::unievent::http::client::ClientConnectionPool* get_thread_local_con
 }
 
 inline client::ConnectionSP http_request(
-        client::RequestSP request, 
+        client::RequestSP request,
         client::ClientConnectionPool* connection_pool = get_thread_local_connection_pool()) {
-    panda_log_debug("http_request, pooled, pool: " << connection_pool);
-    if(connection_pool->loop().get() != request->loop_.get()) {
-        throw ProgrammingError("Loop mismatch, connection pool loop != request loop"); 
-    }
+    _EDEBUG("http_request, pooled: %p", connection_pool);
     request->connection_pool_ = connection_pool;
     client::ConnectionSP connection = connection_pool->get(request->uri()->host(), request->uri()->port());
     http_request(request, connection);

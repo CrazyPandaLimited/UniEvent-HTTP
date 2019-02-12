@@ -2,15 +2,13 @@
 
 #include <atomic>
 
-#include <panda/log.h>
-
 #include "../common/Time.h"
 #include "../common/Error.h"
 
 using namespace std::placeholders;
 
 namespace panda { namespace unievent { namespace http { namespace server {
-    
+
 std::atomic<uint64_t> Server::lastid(0);
 
 time_t Server::cached_time;
@@ -20,31 +18,29 @@ thread_local string Server::cached_time_string_rfc;
 thread_local string* Server::cached_time_string_rfc_ptr = &Server::cached_time_string_rfc;
 
 Server::~Server() {
-    panda_log_info("dtor");
+    _EDTOR();
     stop();
 }
 
-Server::Server(Loop* loop) : 
-    running(false), 
-    _loop(loop), 
+Server::Server(Loop* loop) :
+    running(false),
+    _loop(loop),
     _cached_date_timer(make_iptr<Timer>(_loop)) {
-    panda_log_info("ctor, default loop = " << (_loop == Loop::default_loop()));
-
+    _ECTOR();
     // callback to update http date string every second
     _cached_date_timer->timer_event.add([&](Timer*) {
         cached_time = std::time(0);
         time::datetime dt;
         time::gmtime(cached_time, &dt);
         *cached_time_string_rfc_ptr = rfc822_date(dt);;
-
-        panda_log_debug("ticking timer cache: [" << cached_time_string_rfc << "]");
+        _EDEBUG("ticking timer cache");
     });
 
     _cached_date_timer->start(1000, 0);
 }
 
 const string& Server::http_date_now() const {
-    return *cached_time_string_rfc_ptr; 
+    return *cached_time_string_rfc_ptr;
 }
 
 void Server::configure(const Config& conf) {
@@ -75,17 +71,15 @@ void Server::config_apply(const Config& conf) {
 }
 
 void Server::run() {
-    panda_log_info("run");
+    _EDEBUGTHIS();
     if (running)
         throw ServerError("server already running");
     running = true;
-    //panda_log_info("websocket::Server::run with conn_conf:" << conn_conf);
-
     start_listening();
 }
 
 void Server::stop() {
-    panda_log_info("stop");
+    _EDEBUGTHIS();
     if(!running) {
         return;
     }
@@ -124,14 +118,14 @@ void Server::stop_listening() {
 }
 
 void Server::on_connect(Stream* parent, Stream* stream, const CodeError* err) {
+    _EDEBUGTHIS();
     if (err) {
-        panda_log_info("Server[on_connect]: error: " << err->whats());
         return;
     }
 
-    if (auto listener = dyn_cast<Listener*>(parent)) {
-        panda_log_info("Server[on_connect]: somebody connected to " << listener->location);
-    }
+    //if (auto listener = dyn_cast<Listener*>(parent)) {
+        //_EDEBUGTHIS("connection");
+    //}
 
     auto connection = dyn_cast<Connection*>(stream);
 
@@ -141,20 +135,20 @@ void Server::on_connect(Stream* parent, Stream* stream, const CodeError* err) {
 
     on_connection(connection);
 
-    panda_log_info("Server[on_connect]: now i have " << connections.size() << " connections");
+    _EDEBUGTHIS("connected: %zu", connections.size());
 }
 
 void Server::on_disconnect(Stream* handle) {
+    _EDEBUGTHIS();
     auto conn = dyn_cast<Connection*>(handle);
-    panda_log_info("Server[on_disconnect]: disconnected id " << conn->id());
     remove_connection(conn);
 }
 
 void Server::remove_connection(ConnectionSP conn) {
+    _EDEBUGTHIS();
     auto erased = connections.erase(conn->id());
     if (!erased) return;
     on_remove_connection(conn);
-    panda_log_info("Server[remove_connection]: now i have " << connections.size() << " connections");
 }
 
 }}}} // namespace panda::unievent::http::server

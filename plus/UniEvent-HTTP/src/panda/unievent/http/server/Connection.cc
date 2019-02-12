@@ -1,6 +1,5 @@
 #include "Connection.h"
 
-#include <panda/log.h>
 #include <panda/string.h>
 #include <panda/function.h>
 #include <panda/protocol/http/Request.h>
@@ -11,50 +10,45 @@
 
 namespace panda { namespace unievent { namespace http { namespace server {
 
-Connection::~Connection() {
-    panda_log_debug("dtor");
-}
+Connection::~Connection() { _EDTOR(); }
 
-Connection::Connection(Server* server, uint64_t id) : 
-    TCP(server->loop()),
-    server_(server),
-    id_(id),
-    request_counter_(0),
-    part_counter_(0),
-    alive_(true),
-    request_parser_(make_iptr<protocol::http::RequestParser>())
-{
-    panda_log_debug("ctor connection id = " << id_);
+Connection::Connection(Server* server, uint64_t id)
+        : TCP(server->loop())
+        , server_(server)
+        , id_(id)
+        , request_counter_(0)
+        , part_counter_(0)
+        , alive_(true)
+        , request_parser_(make_iptr<protocol::http::RequestParser>()) {
+    _ECTOR();
 }
 
 void Connection::run() { read_start(); }
 
 void Connection::on_read(string& _buf, const CodeError* err) {
-    panda_log_debug("on_read " << _buf.size());
-    
-    string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
-
-    if(err) { 
-        return on_stream_error(err); 
+    _EDEBUGTHIS("on_read %zu", _buf.size());
+    if(err) {
+        return on_stream_error(err);
     }
+
+    string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
 
 #ifdef ENABLE_DUMP_SERVER_MESSAGES
     dump_message(server_->config.dump_file_prefix, request_counter_, part_counter_++, buf);
 #endif
 
     for(auto pos = request_parser_->parse(buf); pos->state != protocol::http::RequestParser::State::not_yet; ++pos) {
-        panda_log_debug("parser state: " << static_cast<int>(pos->state) << " " << pos->position);
-
+        _EDEBUGTHIS("parser state: %d %zu", static_cast<int>(pos->state), pos->position);
         if(pos->state == protocol::http::RequestParser::State::failed) {
-            panda_log_warn("parser failed: " << pos->position);
+            _EDEBUGTHIS("parser failed: %zu", pos->position);
             on_any_error("parser failed");
             return;
         }
         else if(pos->state == protocol::http::RequestParser::State::got_header) {
-            panda_log_debug("got header: " << pos->position);
+            _EDEBUGTHIS("got header: %zu", pos->position);
         }
         else if(pos->state == protocol::http::RequestParser::State::got_body) {
-            panda_log_debug("got body: " << pos->position);
+            _EDEBUGTHIS("got body: %zu", pos->position);
         }
 
         if(pos->request->is_valid()) {
@@ -72,14 +66,14 @@ void Connection::close(uint16_t, string) {
 }
 
 void Connection::on_request(protocol::http::RequestSP request) {
-    panda_log_debug("on_request " << &request);
+    _EDEBUGTHIS("on_request");
 
     //if (Log::should_log(logger::DEBUG, _panda_code_point_)){
         //Log logger = Log(_panda_code_point_, logger::DEBUG);
         //logger << "on_request: payload=\n";
         //logger << request;
     //}
-    
+
     ResponseSP response;
     request_callback(this, request, response);
 
@@ -87,7 +81,7 @@ void Connection::on_request(protocol::http::RequestSP request) {
 
     if(response->chunked()) {
         responses_.emplace_back(response);
-    }  
+    }
 
     auto response_vector = to_vector(response);
     //for(auto part : response_vector)
@@ -97,27 +91,27 @@ void Connection::on_request(protocol::http::RequestSP request) {
 }
 
 void Connection::write_chunk(const string& buf, bool is_last) {
-    panda_log_debug("write_chunk, is_last=" << is_last);
+    _EDEBUGTHIS("write_chunk, is_last=%d", is_last);
     std::vector<panda::string> chunk_with_length = { string::from_number(buf.length(), 16) + "\r\n", buf, "\r\n" };
     if(is_last) {
         chunk_with_length.push_back("0\r\n\r\n");
-    } 
+    }
     write(begin(chunk_with_length), end(chunk_with_length));
 }
 
 void Connection::on_stream_error(const CodeError* err) {
-    //panda_log_info("on_stream_error: " << err.what());
+    _EDEBUGTHIS("on_stream_error");
     stream_error_callback(this, err);
     //on_any_error(err.what());
 }
 
 void Connection::on_any_error(const string& err) {
-    panda_log_warn(err);
+    _EDEBUGTHIS("on_any_error");
     any_error_callback(this, err);
 }
 
 void Connection::on_eof() {
-    panda_log_info("on_eof");
+    _EDEBUGTHIS("on_eof");
     TCP::on_eof();
 }
 

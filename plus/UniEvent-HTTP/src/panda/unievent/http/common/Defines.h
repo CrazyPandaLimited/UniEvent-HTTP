@@ -1,8 +1,12 @@
+#pragma once
+
+#include <sstream>
+
 #include <panda/refcnt.h>
 #include <panda/unievent/Fwd.h>
 #include <panda/uri/URI.h>
 
-namespace panda { namespace unievent { namespace http { 
+namespace panda { namespace unievent { namespace http {
 
 using URISP = iptr<uri::URI>;
 
@@ -21,7 +25,7 @@ namespace client {
 
     using ClientConnectionPool = ConnectionPool<Connection>;
 
-    class Request; 
+    class Request;
     using RequestSP = iptr<Request>;
 
     class Response;
@@ -43,7 +47,7 @@ namespace server {
     class Server;
     using ServerSP = iptr<Server>;
 
-    class Connection; 
+    class Connection;
     using ConnectionSP = iptr<Connection>;
 
     struct Listener;
@@ -52,14 +56,21 @@ namespace server {
     struct Location;
     using LocationSP = iptr<Location>;
 
-    class Request; 
+    class Request;
     using RequestSP = iptr<Request>;
 
     class Response;
     using ResponseSP = iptr<Response>;
 }
 
-void http_request(client::RequestSP, client::ConnectionSP); 
+void http_request(client::RequestSP, client::ConnectionSP);
 client::ConnectionSP http_request(client::RequestSP, client::ClientConnectionPool*);
+
+template <class... Args> std::string collect(Args&&... args) {
+    std::ostringstream ss;
+    using expand = int[];
+    void(expand{0, ((ss << args), 0)...});
+    return ss.str();
+}
 
 }}} // namespace panda::unievent::http

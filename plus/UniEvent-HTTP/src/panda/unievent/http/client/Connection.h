@@ -17,8 +17,9 @@
 namespace panda { namespace unievent { namespace http { namespace client {
 
 class Connection : public TCP {
+    static constexpr uint64_t DEFAULT_CLOSE_TIMEOUT = 5000; // [ms]
 public:
-    Connection(const HostAndPort& host_and_port, Loop* loop, ClientConnectionPool* pool=nullptr, uint64_t close_timeout=5000);
+    Connection(const HostAndPort& host_and_port, Loop* loop, ClientConnectionPool* pool=nullptr, uint64_t close_timeout=DEFAULT_CLOSE_TIMEOUT);
 
     virtual ~Connection();
 
@@ -26,16 +27,16 @@ public:
     CallbackDispatcher<void(Connection*, const string&)> any_error_callback;
     CallbackDispatcher<void(Connection*)> close_callback;
     CallbackDispatcher<void(int)> connect_callback;
-    
+
     void request(RequestSP request);
-    
+
     void detach(RequestSP request);
 
     void connect(const string& host, unsigned short port);
-    
+
     void close();
-    
-    bool connected() const { 
+
+    bool connected() const {
         return connected_;
     }
 

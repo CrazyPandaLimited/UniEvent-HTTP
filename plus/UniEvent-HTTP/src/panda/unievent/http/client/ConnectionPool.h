@@ -5,9 +5,10 @@
 #include <unordered_map>
 #include <set>
 
-#include <panda/log.h>
 #include <panda/refcnt.h>
 #include <panda/string.h>
+
+#include <panda/unievent/Debug.h>
 
 #include "../common/Defines.h"
 #include "../common/HostAndPort.h"
@@ -15,7 +16,7 @@
 
 namespace panda { namespace unievent { namespace http { namespace client {
 
-template <class C>    
+template <class C>
 class ConnectionPool : public virtual Refcnt {
 private:
     using ConnectionSP = iptr<C>;
@@ -24,7 +25,7 @@ private:
         std::set<ConnectionSP> free;
         std::set<ConnectionSP> busy;
     };
-    
+
     struct Hash {
 	template <class T>
 	inline void hash_combine(std::size_t& s, const T& v) const {
@@ -36,34 +37,36 @@ private:
 	    std::size_t s = 0;
 	    hash_combine(s, p.host);
 	    hash_combine(s, p.port);
-	    return s;  
+	    return s;
 	}
     };
 
 public:
-    ~ConnectionPool() { 
-        panda_log_debug("dtor, pool size: " << connections_.size());
-    } 
+    static constexpr uint64_t DEFAULT_POOL_TIMEOUT = 10000; // [ms]
 
-    ConnectionPool(uint64_t timeout=5000, Loop* loop = Loop::default_loop()) : timeout_(timeout), loop_(loop) {
-        panda_log_info("ctor, default loop = " << (loop == Loop::default_loop()));
-    } 
+    ~ConnectionPool() {
+        _EDTOR();
+    }
+
+    ConnectionPool(Loop* loop = Loop::default_loop(), uint64_t timeout=DEFAULT_POOL_TIMEOUT) : loop_(loop), timeout_(timeout){
+        _ECTOR();
+    }
 
     ConnectionSP get(const string& host, uint16_t port) {
-        panda_log_debug("get " << host << ":" << port << " pool size: " << connections_.size());
+        _EDEBUGTHIS("get: %.*s:%d, pool: %zu", (int)host.size(), host.data(), port, connections_.size());
 
         auto key = Key{host, port};
         auto pos = connections_.find(key);
         if(pos == std::end(connections_)) {
             // no connections to host, create a busy one
-            panda_log_debug("get " << key << " no connections, create new");
+            _EDEBUGTHIS("get: no connections, create");
             auto connection = make_iptr<C>(HostAndPort{host, port}, loop_, this, timeout_);
             connections_.emplace(key, Value{{}, {connection}});
             return connection;
         }
 
         if(pos->second.free.empty()) {
-            panda_log_debug("get " << key << " all busy, create new");
+            _EDEBUGTHIS("get: all busy, create");
 
             //XXX: limit connections?
 
@@ -74,7 +77,7 @@ public:
         }
 
         // move connection from free to busy
-        panda_log_debug("get " << key << " pick from free connections");
+        _EDEBUGTHIS("get: pick from free");
         auto free_pos = std::begin(pos->second.free);
         auto connection = *free_pos;
         pos->second.free.erase(free_pos);
@@ -84,34 +87,32 @@ public:
     }
 
     void detach(ConnectionSP connection) {
+        _EDEBUGTHIS("detach: pool: %zu", connections_.size());
         auto key = connection->get_host_and_port();
-
-        panda_log_debug("release " << key << " pool size: " << connections_.size());
-
         auto pos = connections_.find(key);
         if(pos == std::end(connections_)) {
-            panda_log_warn("connection is not in pool" << key.host << ":" << key.port);
+            _EDEBUGTHIS("detach: not in pool: %.*s:%d", (int)key.host.size(), key.host.data(), key.port);
             return;
         }
 
         auto busy_pos = pos->second.busy.find(connection);
         if(busy_pos == std::end(pos->second.busy)) {
-            panda_log_warn("connection is not in pool" << key.host << ":" << key.port);
+            _EDEBUGTHIS("detach: not in pool: %.*s:%d", (int)key.host.size(), key.host.data(), key.port);
             return;
         }
 
         pos->second.busy.erase(busy_pos);
         pos->second.free.insert(connection);
     }
-    
+
     void erase(ConnectionSP connection) {
         auto key = connection->get_host_and_port();
 
-        panda_log_debug("erase " << connection.get() << " "<< key << " pool size: " << connections_.size());
+        _EDEBUGTHIS("erase: pool: %zu", connections_.size());
 
         auto pos = connections_.find(key);
         if(pos == std::end(connections_)) {
-            panda_log_warn("connection is not in pool" << key.host << ":" << key.port);
+            _EDEBUGTHIS("erase: not in pool: %.*s:%d", (int)key.host.size(), key.host.data(), key.port);
             return;
         }
 
@@ -119,7 +120,7 @@ public:
         if(busy_pos != std::end(pos->second.busy)) {
             pos->second.busy.erase(busy_pos);
         }
-        
+
         auto free_pos = pos->second.free.find(connection);
         if(free_pos != std::end(pos->second.free)) {
             pos->second.free.erase(free_pos);
@@ -131,26 +132,26 @@ public:
     }
 
     LoopSP loop() const { return loop_; }
-    
-    void loop(LoopSP loop) { 
+
+    void loop(LoopSP loop) {
         if(!connections_.empty()) {
-            throw PoolError("Pool is not empty"); 
+            throw PoolError("Pool is not empty");
         }
 
-        loop_ = loop; 
+        loop_ = loop;
     }
 
     bool empty() const {
         return connections_.empty();
     }
-    
-    bool clear() {
-        return connections_.clear();
+
+    void clear() {
+        connections_.clear();
     }
 
 private:
-    uint64_t timeout_;
     LoopSP loop_;
+    uint64_t timeout_;
     std::unordered_map<Key, Value, Hash> connections_;
 };
 

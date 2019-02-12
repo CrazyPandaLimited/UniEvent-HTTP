@@ -1,7 +1,7 @@
 #pragma once
 
-#include <ostream>
 #include <cstdint>
+#include <ostream>
 
 #include <panda/string.h>
 
@@ -16,8 +16,7 @@ struct Location {
     SSL_CTX* ssl_ctx    = nullptr;
 };
 
-inline
-std::ostream& operator<<(std::ostream& os, const Location& location) {
+inline std::ostream& operator<<(std::ostream& os, const Location& location) {
     os << "Location{";
     os << "host:\"" << location.host << "\"";
     os << ",port:" << location.port;

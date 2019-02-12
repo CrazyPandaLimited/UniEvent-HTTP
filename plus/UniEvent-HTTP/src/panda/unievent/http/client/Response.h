@@ -13,22 +13,22 @@ namespace panda { namespace unievent { namespace http { namespace client {
 class Response : public protocol::http::Response {
 public:
     Response() {
-        panda_log_debug("ctor");    
+        _ECTOR();
     }
 
-    Response(int code, 
-        const string& reason, 
+    Response(int code,
+        const string& reason,
         protocol::http::HeaderSP header,
         protocol::http::BodySP body,
         const string& http_version,
         bool chunked,
-        function<void(ResponseSP, const string&)> error_cb) : 
+        function<void(ResponseSP, const string&)> error_cb) :
             protocol::http::Response(code, reason, header, body, http_version),
             chunked_(chunked) {
-        panda_log_debug("ctor");    
+        _ECTOR();
         error_callback.add(error_cb);
     }
-    
+
     struct Builder {
         Builder& header(protocol::http::HeaderSP header) {
             header_ = header;
@@ -60,18 +60,18 @@ public:
             reason_ = reason;
             return *this;
         }
-        
+
         Builder& chunked(const string& content_type = "text/plain") {
             chunked_ = true;
             content_type_ = content_type;
             return *this;
         }
-        
+
         Builder& error_callback(function<void(ResponseSP, const string&)> cb) {
             error_callback_ = cb;
             return *this;
         }
-        
+
         Response* build() {
             if(http_version_.empty()) {
                 http_version_ = "1.1";
@@ -88,7 +88,7 @@ public:
                 } else {
                     body_ = make_iptr<protocol::http::Body>();
                 }
-            } 
+            }
             else {
                 header_->add_field("Content-Length", to_string(body_->content_length()));
                 header_->add_field("Content-Type", content_type_);
@@ -112,15 +112,15 @@ public:
     bool chunked() const { return chunked_; }
 
     void write_chunk(const string&, bool is_last = false) {
-        panda_log_debug("write_chunk, is_last: " << is_last); 
-    }   
+        _EDEBUGTHIS("write_chunk, is_last, %d", is_last);
+    }
 
     CallbackDispatcher<void(ResponseSP, const string&)> error_callback;
 
 protected:
     // restrict stack allocation
     virtual ~Response() {
-        panda_log_debug("dtor");    
+        _EDTOR();
     }
 
 private:
@@ -149,7 +149,7 @@ std::vector<string> to_vector(ResponseSP response_ptr) {
     }
 
     header_str += "\r\n";
-    
+
     std::vector<string> result;
     if(response_ptr->chunked()) {
         result.emplace_back(header_str);

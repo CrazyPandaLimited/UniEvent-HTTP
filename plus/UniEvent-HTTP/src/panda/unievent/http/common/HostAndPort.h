@@ -1,24 +1,23 @@
 #pragma once
 
-#include <ostream>
 #include <cstdint>
+#include <ostream>
 
-#include <panda/string.h>
 #include <panda/lib.h>
+#include <panda/string.h>
 
 namespace panda { namespace unievent { namespace http {
 
 struct HostAndPort {
-    bool operator==(const HostAndPort &other) const { return host == other.host && port == other.port; }
+    bool operator==(const HostAndPort& other) const { return host == other.host && port == other.port; }
 
     string to_string() const { return host + ":" + panda::to_string(port); }
 
-    string host;
+    string   host;
     uint16_t port;
 };
 
-inline
-std::ostream& operator<<(std::ostream& os, const HostAndPort& h) {
+inline std::ostream& operator<<(std::ostream& os, const HostAndPort& h) {
     os << h.to_string();
     return os;
 }

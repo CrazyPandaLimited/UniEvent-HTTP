@@ -31,14 +31,14 @@ public:
     Server(Loop* loop = Loop::default_loop());
 
     void configure(const Config& config);
-    
+
     Loop* loop() const { return _loop; }
-    
+
     virtual void run();
     virtual void stop();
 
     void remove_connection(ConnectionSP conn);
-    
+
     // gets cached http date string, keeps us from calling strftime every now and again
     const string& http_date_now() const;
 
@@ -60,7 +60,7 @@ protected:
 
     void start_listening();
     void stop_listening();
-    
+
     ConnectionSP get_connection(uint64_t id) {
         auto pos = connections.find(id);
         if(pos == connections.end()) {
@@ -86,11 +86,11 @@ public:
     using ConnectionMap = std::map<uint64_t, ConnectionSP>;
     ConnectionMap connections;
 
-private:    
+private:
     static std::atomic<uint64_t> lastid;
 
     iptr<Loop> _loop;
-    
+
     // time() and strftime() cache updater
     iptr<Timer> _cached_date_timer;
 
@@ -109,5 +109,5 @@ Stream& operator<<(Stream& stream, const Server::Config& conf) {
     stream << "]};";
     return stream;
 }
-    
+
 }}}}

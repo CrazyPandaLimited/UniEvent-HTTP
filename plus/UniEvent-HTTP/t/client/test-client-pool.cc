@@ -5,8 +5,8 @@ TEST_CASE("trivial pool", "[pool]") {
     uint16_t echo_port;
     std::tie(echo, echo_port) = echo_server("trivial_pool");
 
-    string uri_str = "http://localhost:" + to_string(echo_port); 
-    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);    
+    string uri_str = "http://localhost:" + to_string(echo_port);
+    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     protocol::http::ResponseSP response;
     protocol::http::RequestSP request;
@@ -23,10 +23,10 @@ TEST_CASE("timeouted connection from pool", "[pool]") {
     uint16_t echo_port;
     std::tie(echo, echo_port) = echo_server("trivial_pool");
 
-    string uri_str = "http://localhost:" + to_string(echo_port); 
-    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);    
+    string uri_str = "http://localhost:" + to_string(echo_port);
+    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
-    client::ClientConnectionPool pool(50);
+    client::ClientConnectionPool pool(Loop::default_loop(), 50);
 
     client::ResponseSP response1;
     client::RequestSP request1 = client::Request::Builder()
@@ -37,7 +37,7 @@ TEST_CASE("timeouted connection from pool", "[pool]") {
         })
         .timeout(100)
         .build();
-    
+
     client::ResponseSP response2;
     client::RequestSP request2 = client::Request::Builder()
         .method(protocol::http::Request::Method::GET)
@@ -47,13 +47,13 @@ TEST_CASE("timeouted connection from pool", "[pool]") {
         })
         .timeout(100)
         .build();
-    
+
     http_request(request1, &pool);
     http_request(request2, &pool);
 
     wait(100, Loop::default_loop());
 
-    // all connections are expired    
+    // all connections are expired
     REQUIRE(pool.empty());
 
     REQUIRE(response1);
@@ -67,10 +67,10 @@ TEST_CASE("sequential requests", "[pool]") {
     uint16_t echo_port;
     std::tie(echo, echo_port) = echo_server("trivial_pool");
 
-    string uri_str = "http://localhost:" + to_string(echo_port); 
-    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);    
+    string uri_str = "http://localhost:" + to_string(echo_port);
+    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
-    client::ClientConnectionPool pool(50);
+    client::ClientConnectionPool pool(Loop::default_loop(), 50);
 
     client::ResponseSP response1;
     client::RequestSP request1 = client::Request::Builder()
@@ -81,7 +81,7 @@ TEST_CASE("sequential requests", "[pool]") {
         })
         .timeout(100)
         .build();
-    
+
     client::ResponseSP response2;
     client::RequestSP request2 = client::Request::Builder()
         .method(protocol::http::Request::Method::GET)
@@ -91,16 +91,16 @@ TEST_CASE("sequential requests", "[pool]") {
         })
         .timeout(100)
         .build();
-    
+
     http_request(request1, &pool);
-    
+
     wait(100, Loop::default_loop());
 
     http_request(request2, &pool);
-    
+
     wait(100, Loop::default_loop());
 
-    // all connections are expired    
+    // all connections are expired
     REQUIRE(pool.empty());
 
     REQUIRE(response1);
@@ -114,10 +114,10 @@ TEST_CASE("same request using pool", "[pool]") {
     uint16_t echo_port;
     std::tie(echo, echo_port) = echo_server("trivial_pool");
 
-    string uri_str = "http://localhost:" + to_string(echo_port); 
-    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);    
+    string uri_str = "http://localhost:" + to_string(echo_port);
+    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
-    client::ClientConnectionPool pool(50);
+    client::ClientConnectionPool pool(Loop::default_loop(), 50);
 
     client::ResponseSP response;
     client::RequestSP request = client::Request::Builder()
@@ -141,8 +141,8 @@ TEST_CASE("timeouted pool request", "[pool]") {
     uint16_t echo_port;
     std::tie(echo, echo_port) = echo_server("timeouted_pool");
 
-    string uri_str = "http://localhost:" + to_string(echo_port); 
-    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);    
+    string uri_str = "http://localhost:" + to_string(echo_port);
+    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     string err;
     client::ResponseSP response;
@@ -157,11 +157,11 @@ TEST_CASE("timeouted pool request", "[pool]") {
             err = details;
         })
         .build();
-    
+
     http_request(request);
 
     wait(200, Loop::default_loop());
-   
+
     //TODO from time to time it manages to connect before the timeout
     //REQUIRE(!err.empty());
 
@@ -177,11 +177,11 @@ TEST_CASE("timeouted pool request", "[pool]") {
             err = details;
         })
         .build();
-    
+
     http_request(request);
 
     wait(100, Loop::default_loop());
-    
+
     REQUIRE(err.empty());
 }
 
@@ -190,8 +190,8 @@ TEST_CASE("multiple pool requests", "[pool]") {
     uint16_t echo_port;
     std::tie(echo, echo_port) = echo_server("timeouted_pool");
 
-    string uri_str = "http://localhost:" + to_string(echo_port); 
-    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);    
+    string uri_str = "http://localhost:" + to_string(echo_port);
+    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     // there is no guarantee that requests will be processed in order
     // because they will produce multiple different connections
@@ -205,8 +205,8 @@ TEST_CASE("multiple pool requests", "[pool]") {
             .header(protocol::http::Header::Builder()
                     .host(host)
                     .build())
-            .response_callback([host, &responses](client::RequestSP, client::ResponseSP r) { 
-                    responses.insert(std::make_pair(host, r)); 
+            .response_callback([host, &responses](client::RequestSP, client::ResponseSP r) {
+                    responses.insert(std::make_pair(host, r));
                     })
             .build();
 

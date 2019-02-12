@@ -6,8 +6,8 @@
     //std::tie(echo, echo_port) = echo_server("pipeline");
     //echo->run();
 
-    //string uri_str = "http://localhost:" + to_string(echo_port); 
-    //iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);    
+    //string uri_str = "http://localhost:" + to_string(echo_port);
+    //iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     //iptr<client::Connection> connection;
 
@@ -21,8 +21,8 @@
             //.header(parser::Header::Builder()
                     //.host(host)
                     //.build())
-            //.response_callback([host, &responses](client::RequestSP request, client::ResponseSP r) { 
-                    //responses.insert(std::make_pair(host, r)); 
+            //.response_callback([host, &responses](client::RequestSP request, client::ResponseSP r) {
+                    //responses.insert(std::make_pair(host, r));
                     //})
             //.build();
 

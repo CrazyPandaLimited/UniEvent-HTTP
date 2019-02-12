@@ -21,11 +21,11 @@ public:
     virtual ~Connection();
 
     Connection(Server* server, uint64_t id);
-    
+
     uint64_t id() const { return id_; }
 
     virtual void run();
-    
+
     virtual void close(uint16_t code, string payload);
 
     Server* server() const { return server_; }
@@ -54,7 +54,7 @@ private:
     uint64_t request_counter_;
     uint64_t part_counter_;
     bool alive_;
-    iptr<protocol::http::RequestParser> request_parser_; 
+    iptr<protocol::http::RequestParser> request_parser_;
     std::deque<ResponseSP> responses_;
 };
 
