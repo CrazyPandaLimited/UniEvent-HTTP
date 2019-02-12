@@ -20,7 +20,7 @@ sub test_live_default_loop {
 
 sub test_live_separate_loop {
     my $loop = new UniEvent::Loop;
-    my $pool = new UniEvent::HTTP::ClientConnectionPool($loop);
+    my $pool = new UniEvent::HTTP::ClientConnectionPool($loop, 1.0);
 
     UniEvent::HTTP::http_request(new UniEvent::HTTP::Request({
         uri => 'http://rbc.ru',
