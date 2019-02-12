@@ -3,8 +3,8 @@
 iptr<protocol::http::Request> parse_request(const string& buf) {
     auto parser = make_iptr<protocol::http::RequestParser>();
     protocol::http::RequestParser::Result result = parser->parse_first(buf);
-    panda_log_debug("parse_request state [" << static_cast<int>(result.state) << "]"
-<< " " << result.position);
+    //panda_log_debug("parse_request state [" << static_cast<int>(result.state) << "]"
+//<< " " << result.position);
     if(result.state == protocol::http::RequestParser::State::failed) {
         throw std::runtime_error("request parser failed");
     }
@@ -22,21 +22,21 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(
         protocol::http::Request::Method request_method,
         const string& body,
         protocol::http::HeaderSP header) {
-    panda_log_debug("echo request");    
+    //panda_log_debug("echo request");
 
     client::Request::Builder builder = client::Request::Builder()
         .method(request_method)
         .uri(uri)
         .timeout(100);
-    
+
     if(!header->empty()) {
         builder.header(header);
     }
-   
+
     if(!body.empty()) {
         builder.body(body);
     }
-    
+
     client::ResponseSP response;
     builder.response_callback([&](client::RequestSP, client::ResponseSP r) {
         response = r;
@@ -47,7 +47,7 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(
     http_request(request);
 
     wait(200, Loop::default_loop());
-   
+
     if(response && response->is_valid()) {
         auto echo_request = parse_request(response->body()->as_buffer());
         return std::make_tuple(response, echo_request);
@@ -64,7 +64,7 @@ std::tuple<server::ServerSP, uint16_t> echo_server(const string& name) {
         ss << request;
         string request_str(ss.str().c_str());
 
-        panda_log_info("on_request, echoing back: [" << request_str << "]");
+        //panda_log_info("on_request, echoing back: [" << request_str << "]");
 
         response.reset(server::Response::Builder()
             .header(protocol::http::Header::Builder()
@@ -73,9 +73,9 @@ std::tuple<server::ServerSP, uint16_t> echo_server(const string& name) {
             .code(200)
             .reason("OK")
             .body(request_str)
-            .build()); 
+            .build());
     });
-    
+
     server::Server::Config config;
     config.locations.emplace_back(server::Location{"localhost"});
     config.dump_file_prefix = "echo." + name;
@@ -86,10 +86,10 @@ std::tuple<server::ServerSP, uint16_t> echo_server(const string& name) {
 }
 
 std::tuple<server::ServerSP, uint16_t> redirect_server(const string& name, uint16_t to_port) {
-    string location = "http://localhost:" + to_string(to_port); 
+    string location = "http://localhost:" + to_string(to_port);
     auto server = make_iptr<server::Server>();
-    server->request_callback.add([location, server](server::ConnectionSP /* connection */, 
-                protocol::http::RequestSP /* request */, 
+    server->request_callback.add([location, server](server::ConnectionSP /* connection */,
+                protocol::http::RequestSP /* request */,
                 server::ResponseSP& response) {
         //panda_log_debug("request_callback: " << request);
         response.reset(server::ResponseSP(server::Response::Builder()
@@ -99,10 +99,10 @@ std::tuple<server::ServerSP, uint16_t> redirect_server(const string& name, uint1
                 .build())
             .code(301)
             .reason("Moved Permanently")
-            .body("<html><head><title>Moved</title></head><body><h1>Moved</h1><p>This page has moved to <a href=\"" 
+            .body("<html><head><title>Moved</title></head><body><h1>Moved</h1><p>This page has moved to <a href=\""
                 + location + "\">" + location + "</a>.</p></body></html>",
                 "text/html")
-            .build())); 
+            .build()));
     });
 
     server::Server::Config config;

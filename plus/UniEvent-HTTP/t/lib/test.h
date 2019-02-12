@@ -32,14 +32,6 @@
 #include <panda/unievent/http/server/Server.h>
 #include <panda/unievent/http/server/Location.h>
 
-//#define _PRINT_RESPONSE 0
-//#define _DEBUG 1
-#ifdef _DEBUG
-#define _DBG(x) do { std::cerr << "[test-client]" << x << std::endl; } while (0)
-#else
-#define _DBG(x)
-#endif
-
 using namespace panda;
 using namespace unievent;
 using namespace http;
@@ -64,11 +56,11 @@ bool check_internet_available() {
 
 template<class R>
 R random_string_generator(size_t length, const char* alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz") {
-    R result; 
+    R result;
     result.resize(length);
 
-    std::random_device rd; 
-    std::mt19937 engine(rd()); 
+    std::random_device rd;
+    std::mt19937 engine(rd());
     std::uniform_int_distribution<> distribution(0, strlen(alphabet) - 1);
     for(size_t i = 0; i < length; ++i) {
        	result[i] = alphabet[distribution(engine)];
@@ -122,8 +114,8 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(
         iptr<uri::URI> uri,
         protocol::http::Request::Method request_method,
         const string& body = "",
-        protocol::http::HeaderSP header = protocol::http::Header::Builder().build()); 
+        protocol::http::HeaderSP header = protocol::http::Header::Builder().build());
 
 std::tuple<server::ServerSP, uint16_t> echo_server(const string& name);
 
-std::tuple<server::ServerSP, uint16_t> redirect_server(const string& name, uint16_t to_port); 
+std::tuple<server::ServerSP, uint16_t> redirect_server(const string& name, uint16_t to_port);

@@ -17,7 +17,7 @@ TEST_CASE("get real sites", "[live]") {
     };
 
     for(auto site : sites) {
-        panda_log_debug("request to: " << site);
+        //panda_log_debug("request to: " << site);
         client::ResponseSP response;
         client::RequestSP request = client::Request::Builder()
             .method(protocol::http::Request::Method::GET)

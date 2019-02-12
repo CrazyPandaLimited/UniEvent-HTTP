@@ -206,6 +206,12 @@ public:
         reset_timer();
     }
 
+    std::string dump() const {
+        std::stringstream ss;
+        ss << *this;
+        return ss.str();
+    }
+
 protected:
     // restrict stack allocation
     virtual ~Request() {

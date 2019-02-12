@@ -117,14 +117,14 @@ void Server::stop_listening() {
     listeners.clear();
 }
 
-void Server::on_connect(Stream* parent, Stream* stream, const CodeError* err) {
+void Server::on_connect(Stream*, Stream* stream, const CodeError* err) {
     _EDEBUGTHIS();
     if (err) {
         return;
     }
 
     //if (auto listener = dyn_cast<Listener*>(parent)) {
-        //_EDEBUGTHIS("connection");
+        //_EDEBUGTHIS("connection listener");
     //}
 
     auto connection = dyn_cast<Connection*>(stream);

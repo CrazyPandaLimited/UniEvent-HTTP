@@ -128,9 +128,9 @@ TEST_CASE("chunked response", "[http-client]") {
             .build());
 
         chunk_timer->timer_event.add([&pos, &test_body, &block_size, chunk_timer, r](Timer*) {
-            panda_log_debug("ticking chunk timer: " << pos);
+            //panda_log_debug("ticking chunk timer: " << pos);
             if(pos >= test_body.length()) {
-                panda_log_debug("ticking chunk timer, stop");
+                //panda_log_debug("ticking chunk timer, stop");
                 chunk_timer->stop();
             }
 
@@ -193,8 +193,6 @@ TEST_CASE("simple redirect", "[http-client]") {
     string from_uri_str = "http://localhost:" + to_string(from_port);
     iptr<uri::URI> from_uri = make_iptr<uri::URI>(from_uri_str);
 
-    _DBG("from: " << from_uri_str << " to: " << to_uri_str);
-
     protocol::http::ResponseSP response;
     protocol::http::RequestSP to_request;
     std::tie(response, to_request) = echo_request(from_uri, protocol::http::Request::Method::GET);
@@ -234,8 +232,6 @@ TEST_CASE("simple redirect", "[http-client]") {
 
     //string redirect1_uri_str = "http://localhost:" + to_string(redirect1_port);
     //iptr<uri::URI> redirect1_uri = make_iptr<uri::URI>(redirect1_uri_str);
-
-    //_DBG("from: " << redirect1_uri_str << " to: " << echo_uri_str);
 
     //protocol::http::ResponseSP response;
     //protocol::http::RequestSP request;

@@ -117,6 +117,12 @@ public:
 
     CallbackDispatcher<void(ResponseSP, const string&)> error_callback;
 
+    std::string dump() const {
+        std::stringstream ss;
+        ss << *this;
+        return ss.str();
+    }
+
 protected:
     // restrict stack allocation
     virtual ~Response() {
