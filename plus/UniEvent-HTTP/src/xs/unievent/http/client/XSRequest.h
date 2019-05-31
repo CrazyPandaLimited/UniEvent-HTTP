@@ -75,18 +75,18 @@ private:
 
 namespace xs {
     template <class TYPE> struct Typemap<panda::unievent::http::client::Request*, TYPE> : TypemapObject<panda::unievent::http::client::Request*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMGBackref> {
-        std::string package () { return "UniEvent::HTTP::Request"; }
+        static std::string package () { return "UniEvent::HTTP::Request"; }
     };
 
     template <class TYPE> struct Typemap<panda::unievent::http::client::Response*, TYPE> : TypemapObject<panda::unievent::http::client::Response*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMGBackref> {
-        std::string package () { return "UniEvent::HTTP::Response"; }
+        static std::string package () { return "UniEvent::HTTP::Response"; }
     };
 
     template <class TYPE> struct Typemap<panda::unievent::http::client::Connection*, TYPE> : TypemapObject<panda::unievent::http::client::Connection*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMGBackref> {
-        std::string package () { return "UniEvent::HTTP::Connection"; }
+        static std::string package () { return "UniEvent::HTTP::Connection"; }
     };
 
     template <class TYPE> struct Typemap<panda::unievent::http::client::ClientConnectionPool*, TYPE> : TypemapObject<panda::unievent::http::client::ClientConnectionPool*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMGBackref> {
-        std::string package () { return "UniEvent::HTTP::ClientConnectionPool"; }
+        static std::string package () { return "UniEvent::HTTP::ClientConnectionPool"; }
     };
 } // namespace xs
