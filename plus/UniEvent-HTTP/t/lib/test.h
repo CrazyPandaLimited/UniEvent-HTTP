@@ -18,13 +18,8 @@
     #include <random>
 #endif
 
-#include <panda/refcnt.h>
-#include <panda/uri/URI.h>
 #include <panda/unievent.h>
-#include <panda/unievent/Debug.h>
 #include <panda/unievent/test/AsyncTest.h>
-#include <panda/unievent/Loop.h>
-#include <panda/unievent/Timer.h>
 #include <panda/protocol/http/Request.h>
 #include <panda/protocol/http/Response.h>
 #include <panda/protocol/http/ResponseParser.h>
@@ -72,7 +67,7 @@ template<typename F>
 iptr<Timer> once(uint64_t timeout, iptr<Loop> loop, F&& f) {
     iptr<Timer> timer = new Timer(loop);
     timer->once(timeout);
-    timer->timer_event.add([=](Timer*) {
+    timer->event.add([=](auto) {
         timer->stop();
         f();
     });
@@ -93,7 +88,7 @@ inline void run(Loop* loop = Loop::default_loop()) {
 inline void wait(uint64_t timeout, panda::iptr<Loop> loop) {
     panda::iptr<Timer> timer = new Timer(loop);
     timer->once(timeout);
-    timer->timer_event.add([=](Timer*) {
+    timer->event.add([=](auto) {
         timer->stop();
         loop->stop();
     });

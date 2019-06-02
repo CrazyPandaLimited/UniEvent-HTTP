@@ -1,8 +1,7 @@
 #pragma once
-
 #include <cstdint>
 #include <ostream>
-
+#include <openssl/ssl.h>
 #include <panda/string.h>
 
 namespace panda { namespace unievent { namespace http { namespace server {

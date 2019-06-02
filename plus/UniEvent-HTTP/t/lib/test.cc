@@ -82,7 +82,7 @@ std::tuple<server::ServerSP, uint16_t> echo_server(const string& name) {
     server->configure(config);
     server->run();
 
-    return std::make_tuple(server, server->listeners[0]->get_sockaddr().port());
+    return std::make_tuple(server, server->listeners[0]->sockaddr().port());
 }
 
 std::tuple<server::ServerSP, uint16_t> redirect_server(const string& name, uint16_t to_port) {
@@ -111,5 +111,5 @@ std::tuple<server::ServerSP, uint16_t> redirect_server(const string& name, uint1
     server->configure(config);
     server->run();
 
-    return std::make_tuple(server, server->listeners[0]->get_sockaddr().port());
+    return std::make_tuple(server, server->listeners[0]->sockaddr().port());
 }

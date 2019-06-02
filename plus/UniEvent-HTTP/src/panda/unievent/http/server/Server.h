@@ -75,7 +75,7 @@ private:
     Server(const Server&) = delete;
     Server& operator=(const Server&) = delete;
 
-    void on_connect(Stream* serv, Stream* handle, const CodeError* err);
+    void on_connect(const StreamSP&, const StreamSP&, const CodeError&);
     void on_disconnect(Stream* handle);
 
 public:

@@ -54,11 +54,11 @@ TEST_CASE("request larger than mtu", "[http-client]") {
     protocol::http::RequestSP request;
     std::tie(response, request) = echo_request(uri, protocol::http::Request::Method::POST, test_body);
 
-    REQUIRE(response);
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
     REQUIRE(request->header()->get_field("Host") == protocol::http::to_host(uri));
-    REQUIRE(request->body()->as_buffer() == test_body);
+    bool bodyok = request->body()->as_buffer() == test_body;
+    REQUIRE(bodyok);
 }
 
 TEST_CASE("response larger than mtu", "[http-client]") {
@@ -83,7 +83,7 @@ TEST_CASE("response larger than mtu", "[http-client]") {
     server->configure(config);
     server->run();
 
-    string uri_str = "http://localhost:" + to_string(server->listeners[0]->get_sockaddr().port());
+    string uri_str = "http://localhost:" + to_string(server->listeners[0]->sockaddr().port());
     iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     client::ResponseSP response;
@@ -100,10 +100,10 @@ TEST_CASE("response larger than mtu", "[http-client]") {
 
     wait(100, Loop::default_loop());
 
-    REQUIRE(response);
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    REQUIRE(response->body()->as_buffer() == test_body);
+    bool bodyok = response->body()->as_buffer() == test_body;
+    REQUIRE(bodyok);
 }
 
 TEST_CASE("chunked response", "[http-client]") {
@@ -127,7 +127,7 @@ TEST_CASE("chunked response", "[http-client]") {
             .reason("OK")
             .build());
 
-        chunk_timer->timer_event.add([&pos, &test_body, &block_size, chunk_timer, r](Timer*) {
+        chunk_timer->event.add([&pos, &test_body, &block_size, chunk_timer, r](auto&) {
             //panda_log_debug("ticking chunk timer: " << pos);
             if(pos >= test_body.length()) {
                 //panda_log_debug("ticking chunk timer, stop");
@@ -153,7 +153,7 @@ TEST_CASE("chunked response", "[http-client]") {
     server->configure(config);
     server->run();
 
-    string uri_str = "http://localhost:" + to_string(server->listeners[0]->get_sockaddr().port());
+    string uri_str = "http://localhost:" + to_string(server->listeners[0]->sockaddr().port());
     iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     client::Request::Builder builder = client::Request::Builder()
@@ -172,10 +172,10 @@ TEST_CASE("chunked response", "[http-client]") {
 
     wait(500, Loop::default_loop());
 
-    REQUIRE(response);
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    REQUIRE(response->body()->as_buffer() == test_body);
+    bool bodyok = response->body()->as_buffer() == test_body;
+    REQUIRE(bodyok);
 }
 
 TEST_CASE("simple redirect", "[http-client]") {

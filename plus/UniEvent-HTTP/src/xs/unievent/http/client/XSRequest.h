@@ -1,9 +1,6 @@
 #pragma once
-
 #include "error.h"
-
 #include <xs.h>
-
 #include <panda/protocol/http/Request.h>
 #include <panda/protocol/http/Response.h>
 #include <panda/uri.h>

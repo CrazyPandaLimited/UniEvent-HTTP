@@ -28,7 +28,7 @@ Server::Server(Loop* loop) :
     _cached_date_timer(make_iptr<Timer>(_loop)) {
     _ECTOR();
     // callback to update http date string every second
-    _cached_date_timer->timer_event.add([&](Timer*) {
+    _cached_date_timer->event.add([&](Timer*) {
         cached_time = std::time(0);
         time::datetime dt;
         time::gmtime(cached_time, &dt);
@@ -117,7 +117,7 @@ void Server::stop_listening() {
     listeners.clear();
 }
 
-void Server::on_connect(Stream*, Stream* stream, const CodeError* err) {
+void Server::on_connect(const StreamSP&, const StreamSP& stream, const CodeError& err) {
     _EDEBUGTHIS();
     if (err) {
         return;
@@ -127,7 +127,7 @@ void Server::on_connect(Stream*, Stream* stream, const CodeError* err) {
         //_EDEBUGTHIS("connection listener");
     //}
 
-    auto connection = dyn_cast<Connection*>(stream);
+    auto connection = dynamic_pointer_cast<Connection>(stream);
 
     connections[connection->id()] = connection;
     connection->eof_event.add(std::bind(&Server::on_disconnect, this, _1));
