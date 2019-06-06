@@ -15,7 +15,7 @@ TEST_CASE("trivial pool", "[pool]") {
     REQUIRE(response);
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    REQUIRE(request->header()->get_field("Host") == protocol::http::to_host(uri));
+    REQUIRE(request->header().get_field("Host") == protocol::http::to_host(uri));
 }
 
 TEST_CASE("timeouted connection from pool", "[pool]") {

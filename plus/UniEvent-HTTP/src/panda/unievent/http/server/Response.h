@@ -18,19 +18,19 @@ public:
 
     Response(int                                       code,
              const string&                             reason,
-             protocol::http::HeaderSP                  header,
+             protocol::http::Header&&                  header,
              protocol::http::BodySP                    body,
              const string&                             http_version,
              bool                                      chunked,
              function<void(ResponseSP, const string&)> error_cb)
-            : protocol::http::Response(code, reason, header, body, http_version), chunked_(chunked) {
+            : protocol::http::Response(code, reason, std::move(header), body, http_version), chunked_(chunked) {
         _ECTOR();
         error_callback.add(error_cb);
     }
 
     struct Builder {
-        Builder& header(protocol::http::HeaderSP header) {
-            header_ = header;
+        Builder& header(protocol::http::Header header) {
+            header_ = std::move(header);
             return *this;
         }
 
@@ -76,27 +76,23 @@ public:
                 http_version_ = "1.1";
             }
 
-            if (!header_) {
-                header_ = make_iptr<protocol::http::Header>();
-            }
-
             if (!body_) {
                 if (chunked_) {
-                    header_->add_field("Transfer-Encoding", "chunked");
-                    header_->add_field("Content-Type", content_type_);
+                    header_.add_field("Transfer-Encoding", "chunked");
+                    header_.add_field("Content-Type", content_type_);
                 } else {
                     body_ = make_iptr<protocol::http::Body>();
                 }
             } else {
-                header_->add_field("Content-Length", to_string(body_->content_length()));
-                header_->add_field("Content-Type", content_type_);
+                header_.add_field("Content-Length", to_string(body_->content_length()));
+                header_.add_field("Content-Type", content_type_);
             }
 
-            return new Response(code_, reason_, header_, body_, http_version_, chunked_, error_callback_);
+            return new Response(code_, reason_, std::move(header_), body_, http_version_, chunked_, error_callback_);
         }
 
     protected:
-        protocol::http::HeaderSP                  header_;
+        protocol::http::Header                    header_;
         protocol::http::BodySP                    body_;
         string                                    http_version_;
         int                                       code_ = {};
@@ -139,7 +135,7 @@ inline std::ostream& operator<<(std::ostream& os, const ResponseSP& ptr) {
 inline std::vector<string> to_vector(ResponseSP response_ptr) {
     string header_str;
     header_str += string("HTTP/") + response_ptr->http_version() + " " + to_string(response_ptr->code()) + " " + response_ptr->reason() + "\r\n";
-    for (auto field : response_ptr->header()->fields) {
+    for (auto field : response_ptr->header().fields) {
         header_str += field.name + ": " + field.value + "\r\n";
     }
 

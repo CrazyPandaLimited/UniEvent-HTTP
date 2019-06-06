@@ -27,7 +27,7 @@ struct XSRequest : client::Request {
     Sub xs_error_cb;
     XSRequest(proto::Request::Method method,
         iptr<URI> uri,
-        proto::HeaderSP header,
+        proto::Header&& header,
         proto::BodySP body,
         const string& http_version,
         SV* response_c,
@@ -37,7 +37,7 @@ struct XSRequest : client::Request {
         uint8_t redirection_limit) :
         Request(method,
                 uri,
-                header,
+                std::move(header),
                 body,
                 http_version,
                 response_c ? response_cb : ResponseCallback(nullptr),
@@ -56,7 +56,7 @@ struct XSRequest : client::Request {
         Builder& error_callback (SV* xs_callback) { xs_error_callback_ = xs_callback; return *this; }
 
         XSRequest* build () {
-            return new XSRequest(method_, uri_, header_, body_, http_version_, xs_response_callback_, xs_redirect_callback_, xs_error_callback_, timeout_, redirection_limit_);
+            return new XSRequest(method_, uri_, std::move(header_), body_, http_version_, xs_response_callback_, xs_redirect_callback_, xs_error_callback_, timeout_, redirection_limit_);
         }
 
     private:

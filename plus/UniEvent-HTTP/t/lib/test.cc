@@ -17,11 +17,10 @@ iptr<protocol::http::Request> parse_request(const string& buf) {
 }
 
 // Send in request end get it back in reponse body
-std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(
-        iptr<uri::URI> uri,
+std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(iptr<uri::URI> uri,
         protocol::http::Request::Method request_method,
         const string& body,
-        protocol::http::HeaderSP header) {
+        protocol::http::Header header) {
     //panda_log_debug("echo request");
 
     client::Request::Builder builder = client::Request::Builder()
@@ -29,8 +28,8 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(
         .uri(uri)
         .timeout(100);
 
-    if(!header->empty()) {
-        builder.header(header);
+    if(!header.empty()) {
+        builder.header(std::move(header));
     }
 
     if(!body.empty()) {
