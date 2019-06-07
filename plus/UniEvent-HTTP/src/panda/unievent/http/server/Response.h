@@ -134,7 +134,7 @@ inline std::ostream& operator<<(std::ostream& os, const ResponseSP& ptr) {
 
 inline std::vector<string> to_vector(ResponseSP response_ptr) {
     string header_str;
-    header_str += string("HTTP/") + response_ptr->http_version() + " " + to_string(response_ptr->code()) + " " + response_ptr->reason() + "\r\n";
+    header_str += string("HTTP/") + response_ptr->http_version() + " " + to_string(response_ptr->code) + " " + response_ptr->message + "\r\n";
     for (auto field : response_ptr->headers.fields) {
         header_str += field.name + ": " + field.value + "\r\n";
     }

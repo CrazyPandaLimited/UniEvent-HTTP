@@ -132,8 +132,8 @@ void Connection::on_read(string& _buf, const CodeError* err) {
 }
 
 void Connection::on_response(RequestSP request, ResponseSP response) {
-    _EDEBUGTHIS("on_response: %d", response->code());
-    switch(response->code()) {
+    _EDEBUGTHIS("on_response: %d", response->code);
+    switch(response->code) {
         case 300:
         case 301:
         case 302:

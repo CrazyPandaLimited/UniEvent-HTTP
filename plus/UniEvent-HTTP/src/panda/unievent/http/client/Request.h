@@ -72,14 +72,14 @@ public:
             protocol::http::Header&& header,
             const protocol::http::BodySP& body,
             const string& http_version) {
-        method_ = method;
-        uri_ = uri;
+        this->method = method;
+        this->uri = uri;
         http_version_ = http_version ? http_version : "1.1";
         headers = std::move(header);
 
         if (http_version_ == "1.1") {
             if (!headers.has_field("Host")) {
-                headers.add_field("Host", to_host(uri_));
+                headers.add_field("Host", to_host(uri));
             }
         }
 
@@ -243,14 +243,14 @@ protected:
 
         headers.set_field("Host", to_host(uri));
 
-        uri_ = uri;
+        this->uri = uri;
 
-        redirect_callback(this, uri_);
+        redirect_callback(this, uri);
 
         detach_connection();
 
         if(connection_pool_) {
-            connection_ = connection_pool_->get(uri_->host(), uri_->port());
+            connection_ = connection_pool_->get(uri->host(), uri->port());
             _EDEBUGTHIS("on_redirect, connection: %p", connection_);
             connection_->request(this);
         }
@@ -341,7 +341,7 @@ inline std::vector<string> to_vector(RequestSP request_ptr) {
     result.reserve(1 + request_ptr->body->parts.size());
 
     string header_str;
-    header_str += string(to_string(request_ptr->method())) + " " + request_ptr->uri()->relative() + " " + "HTTP/" + request_ptr->http_version() + "\r\n";
+    header_str += string(to_string(request_ptr->method)) + " " + request_ptr->uri->relative() + " " + "HTTP/" + request_ptr->http_version() + "\r\n";
     for(auto field : request_ptr->headers.fields) {
         header_str += field.name + ": " + field.value + "\r\n";
     }
@@ -378,7 +378,7 @@ inline client::ConnectionSP http_request(
         client::ClientConnectionPool* connection_pool = get_thread_local_connection_pool()) {
     _EDEBUG("http_request, pooled: %p", connection_pool);
     request->connection_pool_ = connection_pool;
-    client::ConnectionSP connection = connection_pool->get(request->uri()->host(), request->uri()->port());
+    client::ConnectionSP connection = connection_pool->get(request->uri->host(), request->uri->port());
     http_request(request, connection);
     return connection;
 }
