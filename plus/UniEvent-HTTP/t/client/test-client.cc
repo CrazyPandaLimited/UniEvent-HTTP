@@ -15,7 +15,7 @@ TEST_CASE("trivial get", "[http-client]") {
     REQUIRE(response);
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    REQUIRE(request->header().get_field("Host") == protocol::http::to_host(uri));
+    REQUIRE(request->headers.get_field("Host") == protocol::http::to_host(uri));
 }
 
 TEST_CASE("trivial post", "[http-client]") {
@@ -35,8 +35,8 @@ TEST_CASE("trivial post", "[http-client]") {
     REQUIRE(response);
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    REQUIRE(request->header().get_field("Host") == protocol::http::to_host(uri));
-    REQUIRE(request->body()->as_buffer() == TEST_BODY);
+    REQUIRE(request->headers.get_field("Host") == protocol::http::to_host(uri));
+    REQUIRE(request->body->as_buffer() == TEST_BODY);
 }
 
 TEST_CASE("request larger than mtu", "[http-client]") {
@@ -57,8 +57,8 @@ TEST_CASE("request larger than mtu", "[http-client]") {
     REQUIRE(response);
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    REQUIRE(request->header().get_field("Host") == protocol::http::to_host(uri));
-    REQUIRE(request->body()->as_buffer() == test_body);
+    REQUIRE(request->headers.get_field("Host") == protocol::http::to_host(uri));
+    REQUIRE(request->body->as_buffer() == test_body);
 }
 
 TEST_CASE("response larger than mtu", "[http-client]") {
@@ -103,7 +103,7 @@ TEST_CASE("response larger than mtu", "[http-client]") {
     REQUIRE(response);
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    REQUIRE(response->body()->as_buffer() == test_body);
+    REQUIRE(response->body->as_buffer() == test_body);
 }
 
 TEST_CASE("chunked response", "[http-client]") {
@@ -175,7 +175,7 @@ TEST_CASE("chunked response", "[http-client]") {
     REQUIRE(response);
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    REQUIRE(response->body()->as_buffer() == test_body);
+    REQUIRE(response->body->as_buffer() == test_body);
 }
 
 TEST_CASE("simple redirect", "[http-client]") {
@@ -201,7 +201,7 @@ TEST_CASE("simple redirect", "[http-client]") {
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
     // Host will be changed in the process of redirection
-    REQUIRE(to_request->header().get_field("Host") == protocol::http::to_host(to_uri));
+    REQUIRE(to_request->headers.get_field("Host") == protocol::http::to_host(to_uri));
 }
 
 //TEST_CASE("redirect chain", "[http-client]") {
@@ -240,7 +240,7 @@ TEST_CASE("simple redirect", "[http-client]") {
     //REQUIRE(response);
     //REQUIRE(response->is_valid());
     //REQUIRE(response->http_version() == "1.1");
-    //REQUIRE(request->header().get_field("Host") == protocol::http::to_host(echo_uri));
+    //REQUIRE(request->headers.get_field("Host") == protocol::http::to_host(echo_uri));
 //}
 
 //TEST_CASE("redirection-loop", "[http-client]") {

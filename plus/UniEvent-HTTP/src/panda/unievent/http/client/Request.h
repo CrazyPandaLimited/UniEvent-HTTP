@@ -75,26 +75,26 @@ public:
         method_ = method;
         uri_ = uri;
         http_version_ = http_version ? http_version : "1.1";
-        header_ = std::move(header);
+        headers = std::move(header);
 
         if (http_version_ == "1.1") {
-            if (!header_.has_field("Host")) {
-                header_.add_field("Host", to_host(uri_));
+            if (!headers.has_field("Host")) {
+                headers.add_field("Host", to_host(uri_));
             }
         }
 
         if (body) {
-            body_ = body;
-            header_.add_field("Content-Length", to_string(body_->content_length()));
-            if (!header_.has_field("Content-Type")) {
-                header_.add_field("Content-Type", "text/plain");
+            this->body = body;
+            headers.add_field("Content-Length", to_string(body->content_length()));
+            if (!headers.has_field("Content-Type")) {
+                headers.add_field("Content-Type", "text/plain");
             }
         } else {
-            body_ = make_iptr<protocol::http::Body>();
+            this->body = make_iptr<protocol::http::Body>();
         }
 
-        if (!header_.has_field("User-Agent")) {
-            header_.add_field(
+        if (!headers.has_field("User-Agent")) {
+            headers.add_field(
                 "User-Agent",
                 "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36 Panda/1.0.1");
         }
@@ -241,7 +241,7 @@ protected:
             return;
         }
 
-        header().set_field("Host", to_host(uri));
+        headers.set_field("Host", to_host(uri));
 
         uri_ = uri;
 
@@ -338,18 +338,18 @@ std::ostream& operator<<(std::ostream& os, const RequestSP& ptr) {
 
 inline std::vector<string> to_vector(RequestSP request_ptr) {
     std::vector<string> result;
-    result.reserve(1 + request_ptr->body()->parts.size());
+    result.reserve(1 + request_ptr->body->parts.size());
 
     string header_str;
     header_str += string(to_string(request_ptr->method())) + " " + request_ptr->uri()->relative() + " " + "HTTP/" + request_ptr->http_version() + "\r\n";
-    for(auto field : request_ptr->header().fields) {
+    for(auto field : request_ptr->headers.fields) {
         header_str += field.name + ": " + field.value + "\r\n";
     }
 
     header_str += "\r\n";
 
     result.emplace_back(header_str);
-    for(auto part : request_ptr->body()->parts) {
+    for(auto part : request_ptr->body->parts) {
         result.emplace_back(part);
     }
 

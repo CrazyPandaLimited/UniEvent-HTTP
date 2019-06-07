@@ -48,7 +48,7 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(i
     wait(200, Loop::default_loop());
 
     if(response && response->is_valid()) {
-        auto echo_request = parse_request(response->body()->as_buffer());
+        auto echo_request = parse_request(response->body->as_buffer());
         return std::make_tuple(response, echo_request);
     } else {
         return std::make_tuple(nullptr, nullptr);

@@ -15,7 +15,7 @@ TEST_CASE("trivial pool", "[pool]") {
     REQUIRE(response);
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    REQUIRE(request->header().get_field("Host") == protocol::http::to_host(uri));
+    REQUIRE(request->headers.get_field("Host") == protocol::http::to_host(uri));
 }
 
 TEST_CASE("timeouted connection from pool", "[pool]") {
@@ -220,7 +220,7 @@ TEST_CASE("multiple pool requests", "[pool]") {
         auto response_pos = responses.find(host);
         REQUIRE(response_pos != std::end(responses));
         auto response = response_pos->second;
-        auto echo_request = parse_request(response->body()->as_buffer());
+        auto echo_request = parse_request(response->body->as_buffer());
 
         REQUIRE(response);
         REQUIRE(response->is_valid());

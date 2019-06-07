@@ -144,7 +144,7 @@ void Connection::on_response(RequestSP request, ResponseSP response) {
         case 308:
             _ETRACETHIS("on_response, redirect");
             response_parser_->init();
-            request->on_redirect(make_iptr<uri::URI>(response->header().get_field("Location")));
+            request->on_redirect(make_iptr<uri::URI>(response->headers.get_field("Location")));
             return;
     }
 

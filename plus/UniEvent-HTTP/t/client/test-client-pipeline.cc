@@ -40,7 +40,7 @@
         ////auto response_pos = responses.find(host);
         ////REQUIRE(response_pos != std::end(responses));
         ////auto response = response_pos->second;
-        ////auto echo_request = parse_request(response->body()->as_buffer());
+        ////auto echo_request = parse_request(response->body->as_buffer());
 
         ////REQUIRE(response);
         ////REQUIRE(response->is_valid());
