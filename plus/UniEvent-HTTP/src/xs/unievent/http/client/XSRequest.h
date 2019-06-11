@@ -6,6 +6,7 @@
 
 #include <panda/protocol/http/Request.h>
 #include <panda/protocol/http/Response.h>
+#include <panda/unievent/http/common/Response.h>
 #include <panda/uri.h>
 #include <panda/unievent.h>
 #include <panda/unievent/http.h>
@@ -25,6 +26,9 @@ struct XSRequest : client::Request {
     Sub xs_response_cb;
     Sub xs_redirect_cb;
     Sub xs_error_cb;
+
+    using ResponseSP = panda::unievent::http::ResponseSP;
+
     XSRequest(proto::Request::Method method,
         iptr<URI> uri,
         proto::Header&& header,
@@ -78,7 +82,7 @@ namespace xs {
         static std::string package () { return "UniEvent::HTTP::Request"; }
     };
 
-    template <class TYPE> struct Typemap<panda::unievent::http::client::Response*, TYPE> : TypemapObject<panda::unievent::http::client::Response*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMGBackref> {
+    template <class TYPE> struct Typemap<panda::unievent::http::Response*, TYPE> : TypemapObject<panda::unievent::http::Response*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMGBackref> {
         static std::string package () { return "UniEvent::HTTP::Response"; }
     };
 

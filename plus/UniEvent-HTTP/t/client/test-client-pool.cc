@@ -28,21 +28,21 @@ TEST_CASE("timeouted connection from pool", "[pool]") {
 
     client::ClientConnectionPool pool(Loop::default_loop(), 50);
 
-    client::ResponseSP response1;
+    ResponseSP response1;
     client::RequestSP request1 = client::Request::Builder()
         .method(protocol::http::Request::Method::GET)
         .uri(uri)
-        .response_callback([&](client::RequestSP, client::ResponseSP r) {
+        .response_callback([&](client::RequestSP, ResponseSP r) {
             response1 = r;
         })
         .timeout(100)
         .build();
 
-    client::ResponseSP response2;
+    ResponseSP response2;
     client::RequestSP request2 = client::Request::Builder()
         .method(protocol::http::Request::Method::GET)
         .uri(uri)
-        .response_callback([&](client::RequestSP, client::ResponseSP r) {
+        .response_callback([&](client::RequestSP, ResponseSP r) {
             response2 = r;
         })
         .timeout(100)
@@ -72,21 +72,21 @@ TEST_CASE("sequential requests", "[pool]") {
 
     client::ClientConnectionPool pool(Loop::default_loop(), 50);
 
-    client::ResponseSP response1;
+    ResponseSP response1;
     client::RequestSP request1 = client::Request::Builder()
         .method(protocol::http::Request::Method::GET)
         .uri(uri)
-        .response_callback([&](client::RequestSP, client::ResponseSP r) {
+        .response_callback([&](client::RequestSP, ResponseSP r) {
             response1 = r;
         })
         .timeout(100)
         .build();
 
-    client::ResponseSP response2;
+    ResponseSP response2;
     client::RequestSP request2 = client::Request::Builder()
         .method(protocol::http::Request::Method::GET)
         .uri(uri)
-        .response_callback([&](client::RequestSP, client::ResponseSP r) {
+        .response_callback([&](client::RequestSP, ResponseSP r) {
             response2 = r;
         })
         .timeout(100)
@@ -119,11 +119,11 @@ TEST_CASE("same request using pool", "[pool]") {
 
     client::ClientConnectionPool pool(Loop::default_loop(), 50);
 
-    client::ResponseSP response;
+    ResponseSP response;
     client::RequestSP request = client::Request::Builder()
         .method(protocol::http::Request::Method::GET)
         .uri(uri)
-        .response_callback([&](client::RequestSP, client::ResponseSP r) {
+        .response_callback([&](client::RequestSP, ResponseSP r) {
             response = r;
         })
         .timeout(100)
@@ -145,12 +145,12 @@ TEST_CASE("timeouted pool request", "[pool]") {
     iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     string err;
-    client::ResponseSP response;
+    ResponseSP response;
     auto request = client::Request::Builder()
         .method(protocol::http::Request::Method::GET)
         .uri(uri)
         .timeout(1)
-        .response_callback([&](client::RequestSP, client::ResponseSP r) {
+        .response_callback([&](client::RequestSP, ResponseSP r) {
             response = r;
         })
         .error_callback([&](client::RequestSP, const string& details) {
@@ -170,7 +170,7 @@ TEST_CASE("timeouted pool request", "[pool]") {
         .method(protocol::http::Request::Method::GET)
         .uri(uri)
         .timeout(100)
-        .response_callback([&](client::RequestSP, client::ResponseSP r) {
+        .response_callback([&](client::RequestSP, ResponseSP r) {
             response = r;
         })
         .error_callback([&](client::RequestSP, const string& details) {
@@ -195,7 +195,7 @@ TEST_CASE("multiple pool requests", "[pool]") {
 
     // there is no guarantee that requests will be processed in order
     // because they will produce multiple different connections
-    std::map<string, client::ResponseSP> responses;
+    std::map<string, ResponseSP> responses;
     const int REQUEST_COUNT = 10;
     for(int i = 0; i < REQUEST_COUNT; ++i) {
         string host = "host" + to_string(i);
@@ -205,7 +205,7 @@ TEST_CASE("multiple pool requests", "[pool]") {
             .header(protocol::http::Header::Builder()
                     .host(host)
                     .build())
-            .response_callback([host, &responses](client::RequestSP, client::ResponseSP r) {
+            .response_callback([host, &responses](client::RequestSP, ResponseSP r) {
                     responses.insert(std::make_pair(host, r));
                     })
             .build();

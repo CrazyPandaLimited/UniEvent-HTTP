@@ -12,7 +12,6 @@
 #include "../common/HostAndPort.h"
 
 #include "Request.h"
-#include "Response.h"
 #include "ConnectionPool.h"
 
 namespace panda { namespace unievent { namespace http { namespace client {

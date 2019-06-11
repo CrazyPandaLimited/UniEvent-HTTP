@@ -5,14 +5,13 @@
 #include <panda/function_utils.h>
 #include <panda/protocol/http/Response.h>
 #include <panda/string.h>
+#include <panda/unievent/Debug.h>
 
 #include "../common/Defines.h"
 
-namespace panda { namespace unievent { namespace http { namespace server {
+namespace panda { namespace unievent { namespace http {
 
 class Response : public protocol::http::Response {
-    friend Connection;
-
 public:
     Response() { _ECTOR(); }
 
@@ -29,7 +28,7 @@ public:
     }
 
     struct Builder {
-        Builder& header(protocol::http::Header header) {
+        Builder& header(protocol::http::Header&& header) {
             header_ = std::move(header);
             return *this;
         }
@@ -109,8 +108,14 @@ public:
         write_callback(chunk, is_last);
     }
 
-    CallbackDispatcher<void(const string&, bool)>       write_callback;
     CallbackDispatcher<void(ResponseSP, const string&)> error_callback;
+    CallbackDispatcher<void(const string&, bool)>       write_callback;
+
+    std::string dump() const {
+        std::stringstream ss;
+        ss << *this;
+        return ss.str();
+    }
 
 protected:
     // restrict stack allocation
@@ -155,4 +160,4 @@ inline std::vector<string> to_vector(ResponseSP response_ptr) {
     return result;
 }
 
-}}}} // namespace panda::unievent::http::server
+}}} // namespace panda::unievent::http

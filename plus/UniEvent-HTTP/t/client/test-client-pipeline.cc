@@ -11,7 +11,7 @@
 
     //iptr<client::Connection> connection;
 
-    //std::map<string, client::ResponseSP> responses;
+    //std::map<string, ResponseSP> responses;
     //const int REQUEST_COUNT = 10;
     //for(int i = 0; i < REQUEST_COUNT; ++i) {
         //string host = "host" + to_string(i);
@@ -21,7 +21,7 @@
             //.header(parser::Header::Builder()
                     //.host(host)
                     //.build())
-            //.response_callback([host, &responses](client::RequestSP request, client::ResponseSP r) {
+            //.response_callback([host, &responses](client::RequestSP request, ResponseSP r) {
                     //responses.insert(std::make_pair(host, r));
                     //})
             //.build();

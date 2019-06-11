@@ -36,8 +36,8 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(i
         builder.body(body);
     }
 
-    client::ResponseSP response;
-    builder.response_callback([&](client::RequestSP, client::ResponseSP r) {
+    ResponseSP response;
+    builder.response_callback([&](client::RequestSP, ResponseSP r) {
         response = r;
     });
 
@@ -58,14 +58,14 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(i
 std::tuple<server::ServerSP, uint16_t> echo_server(const string& name) {
 
     auto server = make_iptr<server::Server>();
-    server->request_callback.add([&](server::ConnectionSP connection, protocol::http::RequestSP request, server::ResponseSP& response) {
+    server->request_callback.add([&](server::ConnectionSP connection, protocol::http::RequestSP request, ResponseSP& response) {
         std::stringstream ss;
         ss << request;
         string request_str(ss.str().c_str());
 
         //panda_log_info("on_request, echoing back: [" << request_str << "]");
 
-        response.reset(server::Response::Builder()
+        response.reset(Response::Builder()
             .header(protocol::http::Header::Builder()
                 .date(connection->server()->http_date_now())
                 .build())
@@ -89,9 +89,9 @@ std::tuple<server::ServerSP, uint16_t> redirect_server(const string& name, uint1
     auto server = make_iptr<server::Server>();
     server->request_callback.add([location, server](server::ConnectionSP /* connection */,
                 protocol::http::RequestSP /* request */,
-                server::ResponseSP& response) {
+                ResponseSP& response) {
         //panda_log_debug("request_callback: " << request);
-        response.reset(server::ResponseSP(server::Response::Builder()
+        response.reset(ResponseSP(Response::Builder()
             .header(protocol::http::Header::Builder()
                 .date(server->http_date_now())
                 .location(location)

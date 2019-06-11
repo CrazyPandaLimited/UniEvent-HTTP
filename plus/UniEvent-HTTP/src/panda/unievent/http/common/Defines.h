@@ -10,6 +10,9 @@ namespace panda { namespace unievent { namespace http {
 
 using URISP = iptr<uri::URI>;
 
+class Response;
+using ResponseSP = iptr<Response>;
+
 namespace client {
     using unievent::Loop;
     using unievent::Timer;
@@ -28,8 +31,8 @@ namespace client {
     class Request;
     using RequestSP = iptr<Request>;
 
-    class Response;
-    using ResponseSP = iptr<Response>;
+//    class Response;
+//    using ResponseSP = iptr<Response>;
 
     using ResponseCallback = function<void(RequestSP, ResponseSP)>;
     using RedirectCallback = function<void(RequestSP, URISP)>;
@@ -56,11 +59,11 @@ namespace server {
     struct Location;
     using LocationSP = iptr<Location>;
 
-    class Request;
-    using RequestSP = iptr<Request>;
+//    class Request;
+//    using RequestSP = iptr<Request>;
 
-    class Response;
-    using ResponseSP = iptr<Response>;
+//    class Response;
+//    using ResponseSP = iptr<Response>;
 }
 
 void http_request(client::RequestSP, client::ConnectionSP);

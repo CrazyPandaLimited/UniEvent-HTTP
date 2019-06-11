@@ -65,8 +65,8 @@ TEST_CASE("response larger than mtu", "[http-client]") {
     // assume that mtu is lower than our test body
     string test_body = random_string_generator<string>(1024*1024);
     server::ServerSP server = make_iptr<server::Server>();
-    server->request_callback.add([&](server::ConnectionSP connection, protocol::http::RequestSP, server::ResponseSP& response) {
-        response.reset(server::Response::Builder()
+    server->request_callback.add([&](server::ConnectionSP connection, protocol::http::RequestSP, ResponseSP& response) {
+        response.reset(Response::Builder()
             .header(protocol::http::Header::Builder()
                 .date(connection->server()->http_date_now())
                 .build())
@@ -86,11 +86,11 @@ TEST_CASE("response larger than mtu", "[http-client]") {
     string uri_str = "http://localhost:" + to_string(server->listeners[0]->get_sockaddr().port());
     iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
-    client::ResponseSP response;
+    ResponseSP response;
     client::RequestSP request = client::Request::Builder()
         .method(protocol::http::Request::Method::GET)
         .uri(uri)
-        .response_callback([&](client::RequestSP, client::ResponseSP r) {
+        .response_callback([&](client::RequestSP, ResponseSP r) {
             response = r;
         })
         .timeout(100)
@@ -117,8 +117,8 @@ TEST_CASE("chunked response", "[http-client]") {
 
     server::ServerSP server = make_iptr<server::Server>();
     server->request_callback.add([&](server::ConnectionSP connection,
-                protocol::http::RequestSP, server::ResponseSP& r) {
-        r.reset(server::Response::Builder()
+                protocol::http::RequestSP, ResponseSP& r) {
+        r.reset(Response::Builder()
             .header(protocol::http::Header::Builder()
                 .date(connection->server()->http_date_now())
                 .chunked()
@@ -161,8 +161,8 @@ TEST_CASE("chunked response", "[http-client]") {
         .uri(uri)
         .timeout(500);
 
-    client::ResponseSP response;
-    builder.response_callback([&](client::RequestSP, client::ResponseSP r) {
+    ResponseSP response;
+    builder.response_callback([&](client::RequestSP, ResponseSP r) {
         response = r;
     });
 
@@ -261,12 +261,12 @@ TEST_CASE("simple redirect", "[http-client]") {
     //iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     //string err;
-    //client::ResponseSP response;
+    //ResponseSP response;
     //auto request = client::Request::Builder()
         //.method(protocol::http::Request::Method::GET)
         //.uri(uri)
         //.timeout(500)
-        //.response_callback([&](client::RequestSP, client::ResponseSP r) {
+        //.response_callback([&](client::RequestSP, ResponseSP r) {
             //response = r;
         //})
         //.error_callback([&](client::RequestSP, const string& details) {

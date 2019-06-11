@@ -17,7 +17,7 @@
 #include "Connection.h"
 #include "ConnectionPool.h"
 
-#include "Response.h"
+#include "../common/Response.h"
 
 namespace panda { namespace unievent { namespace http {
 namespace client {
