@@ -137,27 +137,4 @@ inline std::ostream& operator<<(std::ostream& os, const ResponseSP& ptr) {
     return os;
 }
 
-inline std::vector<string> to_vector(ResponseSP response_ptr) {
-    string header_str;
-    header_str += string("HTTP/") + response_ptr->http_version() + " " + to_string(response_ptr->code) + " " + response_ptr->message + "\r\n";
-    for (auto field : response_ptr->headers.fields) {
-        header_str += field.name + ": " + field.value + "\r\n";
-    }
-
-    header_str += "\r\n";
-
-    std::vector<string> result;
-    if (response_ptr->chunked()) {
-        result.emplace_back(header_str);
-    } else {
-        result.reserve(1 + response_ptr->body->parts.size());
-        result.emplace_back(header_str);
-        for (auto part : response_ptr->body->parts) {
-            result.emplace_back(part);
-        }
-    }
-
-    return result;
-}
-
 }}} // namespace panda::unievent::http
