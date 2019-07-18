@@ -16,9 +16,6 @@ Connection::Connection(Server* server, uint64_t id)
         : Tcp(server->loop())
         , server_(server)
         , id_(id)
-        , request_counter_(0)
-        , part_counter_(0)
-        , alive_(true)
         , request_parser_(make_iptr<protocol::http::RequestParser>()) {
     _ECTOR();
 }
@@ -32,10 +29,6 @@ void Connection::on_read(string& _buf, const CodeError& err) {
     }
 
     string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
-
-#ifdef ENABLE_DUMP_SERVER_MESSAGES
-    dump_message(server_->config.dump_file_prefix, request_counter_, part_counter_++, buf);
-#endif
 
     for(auto pos = request_parser_->parse(buf); pos->state != protocol::http::RequestParser::State::not_yet; ++pos) {
         _EDEBUGTHIS("parser state: %d %zu", static_cast<int>(pos->state), pos->position);

@@ -46,9 +46,6 @@ private:
 private:
     Server* server_;
     uint64_t id_;
-    uint64_t request_counter_;
-    uint64_t part_counter_;
-    bool alive_;
     iptr<protocol::http::RequestParser> request_parser_;
     std::deque<ResponseSP> responses_;
 };

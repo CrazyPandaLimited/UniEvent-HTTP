@@ -77,7 +77,7 @@ std::tuple<server::ServerSP, uint16_t> echo_server(const string& name) {
     });
 
     server::Server::Config config;
-    config.locations.emplace_back(server::Location{"localhost"});
+    config.locations.emplace_back(server::Location{"127.0.0.1"});
     config.dump_file_prefix = "echo." + name;
     server->configure(config);
     server->run();
@@ -86,7 +86,7 @@ std::tuple<server::ServerSP, uint16_t> echo_server(const string& name) {
 }
 
 std::tuple<server::ServerSP, uint16_t> redirect_server(const string& name, uint16_t to_port) {
-    string location = "http://localhost:" + to_string(to_port);
+    string location = "http://127.0.0.1:" + to_string(to_port);
     auto server = make_iptr<server::Server>();
     server->request_callback.add([location, server](server::ConnectionSP /* connection */,
                 protocol::http::RequestSP /* request */,
@@ -106,7 +106,7 @@ std::tuple<server::ServerSP, uint16_t> redirect_server(const string& name, uint1
     });
 
     server::Server::Config config;
-    config.locations.emplace_back(server::Location{"localhost"});
+    config.locations.emplace_back(server::Location{"127.0.0.1"});
     config.dump_file_prefix = "redirect." + name;
     server->configure(config);
     server->run();

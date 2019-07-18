@@ -53,7 +53,6 @@ protected:
 
 private:
     HostAndPort host_and_port_;
-    ClientConnectionPool* pool_;
     uint64_t inactivity_timeout_;
     iptr<Timer> inactivity_timer_;
     RequestSP request_;

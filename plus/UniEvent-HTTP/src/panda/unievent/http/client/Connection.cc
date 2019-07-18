@@ -24,7 +24,6 @@ Connection::~Connection() {
 Connection::Connection(const HostAndPort& host_and_port, Loop* loop, ClientConnectionPool* pool, uint64_t inactivity_timeout)
         : Tcp(loop)
         , host_and_port_(host_and_port)
-        , pool_(pool)
         , inactivity_timeout_(inactivity_timeout)
         , inactivity_timer_(make_iptr<Timer>(loop))
         , response_parser_(make_iptr<protocol::http::ResponseParser>())
