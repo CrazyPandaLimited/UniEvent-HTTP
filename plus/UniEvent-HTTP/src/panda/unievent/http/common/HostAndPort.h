@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <ostream>
 
-#include <panda/lib.h>
 #include <panda/string.h>
 
 namespace panda { namespace unievent { namespace http {
