@@ -13,29 +13,22 @@ namespace panda { namespace unievent { namespace http { namespace server {
 Connection::~Connection() { _EDTOR(); }
 
 Connection::Connection(Server* server, uint64_t id)
-        : TCP(server->loop())
+        : Tcp(server->loop())
         , server_(server)
         , id_(id)
-        , request_counter_(0)
-        , part_counter_(0)
-        , alive_(true)
         , request_parser_(make_iptr<protocol::http::RequestParser>()) {
     _ECTOR();
 }
 
 void Connection::run() { read_start(); }
 
-void Connection::on_read(string& _buf, const CodeError* err) {
+void Connection::on_read(string& _buf, const CodeError& err) {
     _EDEBUGTHIS("on_read %zu", _buf.size());
     if(err) {
         return on_stream_error(err);
     }
 
     string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
-
-#ifdef ENABLE_DUMP_SERVER_MESSAGES
-    dump_message(server_->config.dump_file_prefix, request_counter_, part_counter_++, buf);
-#endif
 
     for(auto pos = request_parser_->parse(buf); pos->state != protocol::http::RequestParser::State::not_yet; ++pos) {
         _EDEBUGTHIS("parser state: %d %zu", static_cast<int>(pos->state), pos->position);
@@ -99,7 +92,7 @@ void Connection::write_chunk(const string& buf, bool is_last) {
     write(begin(chunk_with_length), end(chunk_with_length));
 }
 
-void Connection::on_stream_error(const CodeError* err) {
+void Connection::on_stream_error(const CodeError& err) {
     _EDEBUGTHIS("on_stream_error");
     stream_error_callback(this, err);
     //on_any_error(err.what());
@@ -112,7 +105,7 @@ void Connection::on_any_error(const string& err) {
 
 void Connection::on_eof() {
     _EDEBUGTHIS("on_eof");
-    TCP::on_eof();
+    Tcp::on_eof();
 }
 
 void Connection::close_tcp() {

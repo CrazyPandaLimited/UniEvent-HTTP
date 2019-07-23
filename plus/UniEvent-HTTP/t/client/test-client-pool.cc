@@ -5,7 +5,7 @@ TEST_CASE("trivial pool", "[pool]") {
     uint16_t echo_port;
     std::tie(echo, echo_port) = echo_server("trivial_pool");
 
-    string uri_str = "http://localhost:" + to_string(echo_port);
+    string uri_str = "http://127.0.0.1:" + to_string(echo_port);
     iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     protocol::http::ResponseSP response;
@@ -23,7 +23,7 @@ TEST_CASE("timeouted connection from pool", "[pool]") {
     uint16_t echo_port;
     std::tie(echo, echo_port) = echo_server("trivial_pool");
 
-    string uri_str = "http://localhost:" + to_string(echo_port);
+    string uri_str = "http://127.0.0.1:" + to_string(echo_port);
     iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     client::ClientConnectionPool pool(Loop::default_loop(), 50);
@@ -67,7 +67,7 @@ TEST_CASE("sequential requests", "[pool]") {
     uint16_t echo_port;
     std::tie(echo, echo_port) = echo_server("trivial_pool");
 
-    string uri_str = "http://localhost:" + to_string(echo_port);
+    string uri_str = "http://127.0.0.1:" + to_string(echo_port);
     iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     client::ClientConnectionPool pool(Loop::default_loop(), 50);
@@ -114,7 +114,7 @@ TEST_CASE("same request using pool", "[pool]") {
     uint16_t echo_port;
     std::tie(echo, echo_port) = echo_server("trivial_pool");
 
-    string uri_str = "http://localhost:" + to_string(echo_port);
+    string uri_str = "http://127.0.0.1:" + to_string(echo_port);
     iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     client::ClientConnectionPool pool(Loop::default_loop(), 50);
@@ -141,7 +141,7 @@ TEST_CASE("timeouted pool request", "[pool]") {
     uint16_t echo_port;
     std::tie(echo, echo_port) = echo_server("timeouted_pool");
 
-    string uri_str = "http://localhost:" + to_string(echo_port);
+    string uri_str = "http://127.0.0.1:" + to_string(echo_port);
     iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     string err;
@@ -190,7 +190,7 @@ TEST_CASE("multiple pool requests", "[pool]") {
     uint16_t echo_port;
     std::tie(echo, echo_port) = echo_server("timeouted_pool");
 
-    string uri_str = "http://localhost:" + to_string(echo_port);
+    string uri_str = "http://127.0.0.1:" + to_string(echo_port);
     iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     // there is no guarantee that requests will be processed in order
