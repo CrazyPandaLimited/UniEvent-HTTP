@@ -3,7 +3,7 @@
 namespace panda { namespace unievent { namespace http { namespace server {
 
 // initializing TCP with two params ctor: this way it will pre-create socket so we could set its options in run()
-Listener::Listener(Loop* loop, Location& location) : TCP(loop, AF_INET, unievent::use_cached_resolver_by_default), location(location) {
+Listener::Listener(Loop* loop, Location& location) : Tcp(loop, AF_INET), location(location) {
     _ECTOR();
     if (location.ssl_ctx)
         location.secure = true;

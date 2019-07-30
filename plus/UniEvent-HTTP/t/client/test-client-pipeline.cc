@@ -6,7 +6,7 @@
     //std::tie(echo, echo_port) = echo_server("pipeline");
     //echo->run();
 
-    //string uri_str = "http://localhost:" + to_string(echo_port);
+    //string uri_str = "http://127.0.0.1:" + to_string(echo_port);
     //iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     //iptr<client::Connection> connection;

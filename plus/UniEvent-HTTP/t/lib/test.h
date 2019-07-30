@@ -18,13 +18,8 @@
     #include <random>
 #endif
 
-#include <panda/refcnt.h>
-#include <panda/uri/URI.h>
 #include <panda/unievent.h>
-#include <panda/unievent/Debug.h>
 #include <panda/unievent/test/AsyncTest.h>
-#include <panda/unievent/Loop.h>
-#include <panda/unievent/Timer.h>
 #include <panda/protocol/http/Request.h>
 #include <panda/protocol/http/Response.h>
 #include <panda/protocol/http/ResponseParser.h>
@@ -37,22 +32,20 @@ using namespace unievent;
 using namespace http;
 using namespace test;
 
-#ifdef __linux__
-inline
-bool check_internet_available() {
-    FILE *output;
-    if(!(output = popen("/sbin/route -n | grep -c '^0\\.0\\.0\\.0'","r"))) {
-        return false;
-    }
-    unsigned int i;
-    if(fscanf(output,"%u",&i) != 1) {
-        return false;
-    }
-
-    pclose(output);
-    return i == 1;
+inline bool check_internet_available() {
+    return true;
+    //FILE *output;
+    //if(!(output = popen("/sbin/route -n | grep -c '^0\\.0\\.0\\.0'","r"))) {
+    //    return false;
+    //}
+    //unsigned int i;
+    //if(fscanf(output,"%u",&i) != 1) {
+    //    return false;
+    //}
+    //
+    //pclose(output);
+    //return i == 1;
 }
-#endif
 
 template<class R>
 R random_string_generator(size_t length, const char* alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz") {
@@ -72,7 +65,7 @@ template<typename F>
 iptr<Timer> once(uint64_t timeout, iptr<Loop> loop, F&& f) {
     iptr<Timer> timer = new Timer(loop);
     timer->once(timeout);
-    timer->timer_event.add([=](Timer*) {
+    timer->event.add([=](auto) {
         timer->stop();
         f();
     });
@@ -93,7 +86,7 @@ inline void run(Loop* loop = Loop::default_loop()) {
 inline void wait(uint64_t timeout, panda::iptr<Loop> loop) {
     panda::iptr<Timer> timer = new Timer(loop);
     timer->once(timeout);
-    timer->timer_event.add([=](Timer*) {
+    timer->event.add([=](auto) {
         timer->stop();
         loop->stop();
     });

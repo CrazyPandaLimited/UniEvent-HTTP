@@ -21,15 +21,14 @@ Connection::~Connection() {
 }
 
 Connection::Connection(const HostAndPort& host_and_port, Loop* loop, ClientConnectionPool* pool, uint64_t inactivity_timeout)
-        : TCP(loop)
+        : Tcp(loop)
         , host_and_port_(host_and_port)
-        , pool_(pool)
         , inactivity_timeout_(inactivity_timeout)
         , inactivity_timer_(make_iptr<Timer>(loop))
         , response_parser_(make_iptr<protocol::http::ResponseParser>())
         , connected_(false) {
     _ECTOR();
-    inactivity_timer_->timer_event.add([=](Timer*) {
+    inactivity_timer_->event.add([=](auto&) {
         _EDEBUGTHIS("ticking inactivity timer: %p", pool);
         if (pool) {
             pool->erase(this);
@@ -72,7 +71,7 @@ void Connection::connect(const string& host, unsigned short port) {
     if(connected_) {
         return;
     }
-    TCP::connect(host, port);
+    Tcp::connect(host, port);
 }
 
 void Connection::close() {
@@ -83,7 +82,7 @@ void Connection::close() {
     close_callback(this);
 }
 
-void Connection::on_connect(const CodeError* err, ConnectRequest*) {
+void Connection::on_connect(const CodeError& err, const ConnectRequestSP&) {
     _EDEBUGTHIS("on_connect");
     if(err) {
         on_stream_error(err);
@@ -94,7 +93,7 @@ void Connection::on_connect(const CodeError* err, ConnectRequest*) {
     connect_callback(0);
 }
 
-void Connection::on_read(string& _buf, const CodeError* err) {
+void Connection::on_read(string& _buf, const CodeError& err) {
     _EDEBUGTHIS("on_read: %zu", _buf.size());
     if(err) {
         on_stream_error(err);
@@ -156,8 +155,8 @@ void Connection::on_response(RequestSP request, ResponseSP response) {
     return;
 }
 
-void Connection::on_stream_error(const CodeError* err) {
-    _EDEBUGTHIS("on_stream_error: %s", err->what());
+void Connection::on_stream_error(const CodeError& err) {
+    _EDEBUGTHIS("on_stream_error: %s", err.what());
     stream_error_callback(this, err);
     close();
 }
@@ -171,7 +170,7 @@ void Connection::on_any_error(const string& error_str) {
 void Connection::on_eof() {
     _EDEBUGTHIS("on_eof");
     close();
-    TCP::on_eof();
+    Tcp::on_eof();
 }
 
 }}}} // namespace panda::unievent::http::client

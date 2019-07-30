@@ -1,10 +1,8 @@
 #pragma once
-
 #include <sstream>
-
 #include <panda/refcnt.h>
-#include <panda/unievent/Fwd.h>
 #include <panda/uri/URI.h>
+#include <panda/function.h>
 
 namespace panda { namespace unievent { namespace http {
 
@@ -14,13 +12,6 @@ class Response;
 using ResponseSP = iptr<Response>;
 
 namespace client {
-    using unievent::Loop;
-    using unievent::Timer;
-    using unievent::Stream;
-    using unievent::TCP;
-    using unievent::CodeError;
-    using unievent::ConnectRequest;
-
     class Connection;
     using ConnectionSP = iptr<Connection>;
 
@@ -40,13 +31,6 @@ namespace client {
 }
 
 namespace server {
-    using unievent::Loop;
-    using unievent::Timer;
-    using unievent::Stream;
-    using unievent::TCP;
-    using unievent::CodeError;
-    using unievent::ConnectRequest;
-
     class Server;
     using ServerSP = iptr<Server>;
 

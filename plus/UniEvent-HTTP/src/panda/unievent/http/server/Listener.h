@@ -1,17 +1,11 @@
 #pragma once
-
-#include <panda/refcnt.h>
-#include <panda/string.h>
-#include <panda/unievent/Loop.h>
-#include <panda/unievent/TCP.h>
-
-#include "../common/Defines.h"
-
 #include "Location.h"
+#include "../common/Defines.h"
+#include <panda/unievent/Tcp.h>
 
 namespace panda { namespace unievent { namespace http { namespace server {
 
-struct Listener : TCP {
+struct Listener : Tcp {
     ~Listener() { _EDTOR(); }
     Listener(Loop* loop, Location& loc);
     void run();
