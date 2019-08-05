@@ -40,7 +40,7 @@ void Connection::on_read(string& _buf, const CodeError& err) {
         else if(pos->state == protocol::http::RequestParser::State::got_header) {
             _EDEBUGTHIS("got header: %zu", pos->position);
         }
-        else if(pos->state == protocol::http::RequestParser::State::got_body) {
+        else if(pos->state == protocol::http::RequestParser::State::done) {
             _EDEBUGTHIS("got body: %zu", pos->position);
         }
 

@@ -113,7 +113,7 @@ void Connection::on_read(string& _buf, const CodeError& err) {
         else if(pos->state == protocol::http::ResponseParser::State::got_header) {
             _ETRACETHIS("got header: %zu", pos->position);
         }
-        else if(pos->state == protocol::http::ResponseParser::State::got_body) {
+        else if(pos->state == protocol::http::ResponseParser::State::done) {
             _ETRACETHIS("got body: %zu", pos->position);
         }
 
