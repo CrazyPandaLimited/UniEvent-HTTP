@@ -5,7 +5,7 @@ iptr<protocol::http::Request> parse_request(const string& buf) {
     protocol::http::RequestParser::Result result = parser->parse_first(buf);
     //panda_log_debug("parse_request state [" << static_cast<int>(result.state) << "]"
 //<< " " << result.position);
-    if(result.state == protocol::http::RequestParser::State::failed) {
+    if(!result.state) {
         throw std::runtime_error("request parser failed");
     }
 
