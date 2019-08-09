@@ -14,7 +14,7 @@
 
 namespace panda { namespace unievent { namespace http { namespace client {
 
-class Connection : public Tcp {
+class Connection : public Tcp, private ITcpSelfListener {
     static constexpr uint64_t DEFAULT_CLOSE_TIMEOUT = 5000; // [ms]
 public:
     Connection(const HostAndPort& host_and_port, Loop* loop, ClientConnectionPool* pool=nullptr, uint64_t close_timeout=DEFAULT_CLOSE_TIMEOUT);

@@ -35,6 +35,7 @@ Connection::Connection(const HostAndPort& host_and_port, Loop* loop, ClientConne
             pool->erase(this);
         }
     });
+    event_listener(this);
 }
 
 void Connection::request(RequestSP request) {
@@ -171,7 +172,6 @@ void Connection::on_any_error(const string& error_str) {
 void Connection::on_eof() {
     _EDEBUGTHIS("on_eof");
     close();
-    Tcp::on_eof();
 }
 
 }}}} // namespace panda::unievent::http::client

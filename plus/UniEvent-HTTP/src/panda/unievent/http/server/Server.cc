@@ -107,7 +107,7 @@ void Server::start_listening() {
     for (auto& location : locations) {
         auto l = new Listener(_loop, location);
         l->connection_event.add(std::bind(&Server::on_connect, this, _1, _2, _3));
-        l->connection_factory = [this]() { return new_connection(++lastid); };
+        l->connection_factory = [this](auto&) { return this->new_connection(++lastid); };
         l->run();
         listeners.push_back(l);
     }

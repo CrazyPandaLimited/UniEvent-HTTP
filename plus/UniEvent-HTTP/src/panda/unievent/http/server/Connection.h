@@ -11,7 +11,7 @@
 
 namespace panda { namespace unievent { namespace http { namespace server {
 
-class Connection : public Tcp {
+class Connection : public Tcp, private ITcpSelfListener {
 public:
     virtual ~Connection();
 
