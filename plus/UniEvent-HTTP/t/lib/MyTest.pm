@@ -8,6 +8,7 @@ use Test::Deep;
 use Test2::IPC;
 use Test::Catch;
 use Test::Exception;
+use Panda::Lib::Logger;
 use File::Path qw/make_path remove_tree/;
 
 XS::Loader::load();
