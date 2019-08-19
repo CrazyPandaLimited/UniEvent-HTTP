@@ -18,6 +18,7 @@ Connection::Connection(Server* server, uint64_t id)
         , id_(id)
         , request_parser_(make_iptr<protocol::http::RequestParser>()) {
     _ECTOR();
+    event_listener(this);
 }
 
 void Connection::run() { read_start(); }
@@ -106,7 +107,6 @@ void Connection::on_any_error(const string& err) {
 
 void Connection::on_eof() {
     _EDEBUGTHIS("on_eof");
-    Tcp::on_eof();
 }
 
 void Connection::close_tcp() {
