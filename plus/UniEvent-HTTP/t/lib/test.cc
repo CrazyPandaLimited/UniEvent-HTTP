@@ -66,9 +66,7 @@ std::tuple<server::ServerSP, uint16_t> echo_server(const string& name) {
         //panda_log_info("on_request, echoing back: [" << request_str << "]");
 
         response.reset(Response::Builder()
-            .header(protocol::http::Header::Builder()
-                .date(connection->server()->http_date_now())
-                .build())
+            .header(protocol::http::Header().date(connection->server()->http_date_now()))
             .code(200)
             .reason("OK")
             .body(request_str)
@@ -92,10 +90,7 @@ std::tuple<server::ServerSP, uint16_t> redirect_server(const string& name, uint1
                 ResponseSP& response) {
         //panda_log_debug("request_callback: " << request);
         response.reset(ResponseSP(Response::Builder()
-            .header(protocol::http::Header::Builder()
-                .date(server->http_date_now())
-                .location(location)
-                .build())
+            .header(protocol::http::Header().date(server->http_date_now()).location(location))
             .code(301)
             .reason("Moved Permanently")
             .body("<html><head><title>Moved</title></head><body><h1>Moved</h1><p>This page has moved to <a href=\""

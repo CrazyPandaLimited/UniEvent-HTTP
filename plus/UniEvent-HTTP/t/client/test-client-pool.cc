@@ -15,7 +15,7 @@ TEST_CASE("trivial pool", "[pool]") {
     REQUIRE(response);
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    REQUIRE(request->headers.get_field("Host") == protocol::http::to_host(uri));
+    REQUIRE(request->headers.get_field("Host") == uri->explicit_location());
 }
 
 TEST_CASE("timeouted connection from pool", "[pool]") {
@@ -202,9 +202,7 @@ TEST_CASE("multiple pool requests", "[pool]") {
         auto request = client::Request::Builder()
             .method(protocol::http::Request::Method::GET)
             .uri(uri)
-            .header(protocol::http::Header::Builder()
-                    .host(host)
-                    .build())
+            .header(protocol::http::Header().host(host))
             .response_callback([host, &responses](client::RequestSP, ResponseSP r) {
                     responses.insert(std::make_pair(host, r));
                     })
