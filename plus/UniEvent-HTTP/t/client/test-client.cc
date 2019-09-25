@@ -15,7 +15,7 @@ TEST_CASE("trivial get", "[http-client]") {
     REQUIRE(response);
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    REQUIRE(request->header()->get_field("Host") == protocol::http::to_host(uri));
+    REQUIRE(request->headers.get_field("Host") == uri->explicit_location());
 }
 
 TEST_CASE("trivial post", "[http-client]") {
@@ -35,8 +35,8 @@ TEST_CASE("trivial post", "[http-client]") {
     REQUIRE(response);
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    REQUIRE(request->header()->get_field("Host") == protocol::http::to_host(uri));
-    REQUIRE(request->body()->as_buffer() == TEST_BODY);
+    REQUIRE(request->headers.get_field("Host") == uri->explicit_location());
+    REQUIRE(request->body->as_buffer() == TEST_BODY);
 }
 
 TEST_CASE("request larger than mtu", "[http-client]") {
@@ -56,20 +56,17 @@ TEST_CASE("request larger than mtu", "[http-client]") {
 
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    REQUIRE(request->header()->get_field("Host") == protocol::http::to_host(uri));
-    bool bodyok = request->body()->as_buffer() == test_body;
-    REQUIRE(bodyok);
+    REQUIRE(request->headers.get_field("Host") == uri->explicit_location());
+    REQUIRE(request->body->as_buffer() == test_body);
 }
 
 TEST_CASE("response larger than mtu", "[http-client]") {
     // assume that mtu is lower than our test body
     string test_body = random_string_generator<string>(1024*1024);
     server::ServerSP server = make_iptr<server::Server>();
-    server->request_callback.add([&](server::ConnectionSP connection, protocol::http::RequestSP, server::ResponseSP& response) {
-        response.reset(server::Response::Builder()
-            .header(protocol::http::Header::Builder()
-                .date(connection->server()->http_date_now())
-                .build())
+    server->request_callback.add([&](server::ConnectionSP connection, protocol::http::RequestSP, ResponseSP& response) {
+        response.reset(Response::Builder()
+            .header(protocol::http::Header().date(connection->server()->http_date_now()))
             .code(200)
             .reason("OK")
             .body(test_body)
@@ -86,11 +83,11 @@ TEST_CASE("response larger than mtu", "[http-client]") {
     string uri_str = "http://127.0.0.1:" + to_string(server->listeners[0]->sockaddr().port());
     iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
-    client::ResponseSP response;
+    ResponseSP response;
     client::RequestSP request = client::Request::Builder()
         .method(protocol::http::Request::Method::GET)
         .uri(uri)
-        .response_callback([&](client::RequestSP, client::ResponseSP r) {
+        .response_callback([&](client::RequestSP, ResponseSP r) {
             response = r;
         })
         .timeout(100)
@@ -102,8 +99,7 @@ TEST_CASE("response larger than mtu", "[http-client]") {
 
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    bool bodyok = response->body()->as_buffer() == test_body;
-    REQUIRE(bodyok);
+    REQUIRE(response->body->as_buffer() == test_body);
 }
 
 TEST_CASE("chunked response", "[http-client]") {
@@ -117,12 +113,9 @@ TEST_CASE("chunked response", "[http-client]") {
 
     server::ServerSP server = make_iptr<server::Server>();
     server->request_callback.add([&](server::ConnectionSP connection,
-                protocol::http::RequestSP, server::ResponseSP& r) {
-        r.reset(server::Response::Builder()
-            .header(protocol::http::Header::Builder()
-                .date(connection->server()->http_date_now())
-                .chunked()
-                .build())
+                protocol::http::RequestSP, ResponseSP& r) {
+        r.reset(Response::Builder()
+            .header(protocol::http::Header().date(connection->server()->http_date_now()).chunked())
             .code(200)
             .reason("OK")
             .build());
@@ -161,8 +154,8 @@ TEST_CASE("chunked response", "[http-client]") {
         .uri(uri)
         .timeout(500);
 
-    client::ResponseSP response;
-    builder.response_callback([&](client::RequestSP, client::ResponseSP r) {
+    ResponseSP response;
+    builder.response_callback([&](client::RequestSP, ResponseSP r) {
         response = r;
     });
 
@@ -174,8 +167,7 @@ TEST_CASE("chunked response", "[http-client]") {
 
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
-    bool bodyok = response->body()->as_buffer() == test_body;
-    REQUIRE(bodyok);
+    REQUIRE(response->body->as_buffer() == test_body);
 }
 
 TEST_CASE("simple redirect", "[http-client]") {
@@ -201,7 +193,7 @@ TEST_CASE("simple redirect", "[http-client]") {
     REQUIRE(response->is_valid());
     REQUIRE(response->http_version() == "1.1");
     // Host will be changed in the process of redirection
-    REQUIRE(to_request->header()->get_field("Host") == protocol::http::to_host(to_uri));
+    REQUIRE(to_request->headers.get_field("Host") == to_uri->explicit_location());
 }
 
 //TEST_CASE("redirect chain", "[http-client]") {
@@ -240,7 +232,7 @@ TEST_CASE("simple redirect", "[http-client]") {
     //REQUIRE(response);
     //REQUIRE(response->is_valid());
     //REQUIRE(response->http_version() == "1.1");
-    //REQUIRE(request->header()->get_field("Host") == protocol::http::to_host(echo_uri));
+    //REQUIRE(request->headers.get_field("Host") == echo_uri->explicit_location());
 //}
 
 //TEST_CASE("redirection-loop", "[http-client]") {
@@ -261,12 +253,12 @@ TEST_CASE("simple redirect", "[http-client]") {
     //iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
 
     //string err;
-    //client::ResponseSP response;
+    //ResponseSP response;
     //auto request = client::Request::Builder()
         //.method(protocol::http::Request::Method::GET)
         //.uri(uri)
         //.timeout(500)
-        //.response_callback([&](client::RequestSP, client::ResponseSP r) {
+        //.response_callback([&](client::RequestSP, ResponseSP r) {
             //response = r;
         //})
         //.error_callback([&](client::RequestSP, const string& details) {

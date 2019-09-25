@@ -107,7 +107,7 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(
         iptr<uri::URI> uri,
         protocol::http::Request::Method request_method,
         const string& body = "",
-        protocol::http::HeaderSP header = protocol::http::Header::Builder().build());
+        protocol::http::Header header = {});
 
 std::tuple<server::ServerSP, uint16_t> echo_server(const string& name);
 

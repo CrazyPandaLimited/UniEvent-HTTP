@@ -2,6 +2,7 @@
 #include <xs.h>
 #include <panda/protocol/http/Request.h>
 #include <panda/protocol/http/Response.h>
+#include <panda/unievent/http/common/Response.h>
 #include <panda/uri.h>
 #include <panda/unievent.h>
 #include <panda/unievent/http.h>
@@ -21,9 +22,12 @@ struct XSRequest : client::Request {
     Sub xs_response_cb;
     Sub xs_redirect_cb;
     Sub xs_error_cb;
+
+    using ResponseSP = panda::unievent::http::ResponseSP;
+
     XSRequest(proto::Request::Method method,
         iptr<URI> uri,
-        proto::HeaderSP header,
+        proto::Header&& header,
         proto::BodySP body,
         const string& http_version,
         SV* response_c,
@@ -33,7 +37,7 @@ struct XSRequest : client::Request {
         uint8_t redirection_limit) :
         Request(method,
                 uri,
-                header,
+                std::move(header),
                 body,
                 http_version,
                 response_c ? response_cb : ResponseCallback(nullptr),
@@ -52,7 +56,7 @@ struct XSRequest : client::Request {
         Builder& error_callback (SV* xs_callback) { xs_error_callback_ = xs_callback; return *this; }
 
         XSRequest* build () {
-            return new XSRequest(method_, uri_, header_, body_, http_version_, xs_response_callback_, xs_redirect_callback_, xs_error_callback_, timeout_, redirection_limit_);
+            return new XSRequest(method_, uri_, std::move(header_), body_, http_version_, xs_response_callback_, xs_redirect_callback_, xs_error_callback_, timeout_, redirection_limit_);
         }
 
     private:
@@ -74,7 +78,7 @@ namespace xs {
         static std::string package () { return "UniEvent::HTTP::Request"; }
     };
 
-    template <class TYPE> struct Typemap<panda::unievent::http::client::Response*, TYPE> : TypemapObject<panda::unievent::http::client::Response*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMGBackref> {
+    template <class TYPE> struct Typemap<panda::unievent::http::Response*, TYPE> : TypemapObject<panda::unievent::http::Response*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMGBackref> {
         static std::string package () { return "UniEvent::HTTP::Response"; }
     };
 

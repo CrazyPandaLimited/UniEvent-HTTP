@@ -18,14 +18,12 @@ TEST_CASE("get real sites", "[live]") {
 
     for(auto site : sites) {
         //panda_log_debug("request to: " << site);
-        client::ResponseSP response;
+        ResponseSP response;
         client::RequestSP request = client::Request::Builder()
             .method(protocol::http::Request::Method::GET)
             .uri(site)
-            .header(protocol::http::Header::Builder()
-                    .add_field("Cookie", "session-id-time=2082787201l; session-id=139-0015980-3028813712; skin=noskin")
-                .build())
-            .response_callback([&](client::RequestSP, client::ResponseSP r) {
+            .header(protocol::http::Header().add_field("Cookie", "session-id-time=2082787201l; session-id=139-0015980-3028813712; skin=noskin"))
+            .response_callback([&](client::RequestSP, ResponseSP r) {
                 response = r;
                 //panda_log_debug("response " << response);
             })

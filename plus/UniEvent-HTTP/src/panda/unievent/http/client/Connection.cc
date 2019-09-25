@@ -12,7 +12,6 @@
 #include "../common/HostAndPort.h"
 
 #include "Request.h"
-#include "Response.h"
 #include "ConnectionPool.h"
 
 namespace panda { namespace unievent { namespace http { namespace client {
@@ -103,19 +102,20 @@ void Connection::on_read(string& _buf, const CodeError& err) {
     }
 
     string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
+    using ParseState = protocol::http::ResponseParser::State;
 
-    for(auto pos = response_parser_->parse(buf); pos->state != protocol::http::ResponseParser::State::not_yet; ++pos) {
-        _ETRACETHIS("parser state: %d %zu", static_cast<int>(pos->state), pos->position);
+    for(auto pos = response_parser_->parse(buf); pos->state != ParseState::not_yet; ++pos) {
+        _ETRACETHIS("parser state: %d %zu", pos->state.value_or(ParseState::error), pos->position);
         auto request = static_pointer_cast<Request>(pos->request);
-        if(pos->state == protocol::http::ResponseParser::State::failed) {
+        if(!pos->state) {
             _ETRACETHIS("parser failed: %zu", pos->position);
             on_any_error("parser failed");
             return;
         }
-        else if(pos->state == protocol::http::ResponseParser::State::got_header) {
+        else if(pos->state == ParseState::got_header) {
             _ETRACETHIS("got header: %zu", pos->position);
         }
-        else if(pos->state == protocol::http::ResponseParser::State::got_body) {
+        else if(pos->state == ParseState::done) {
             _ETRACETHIS("got body: %zu", pos->position);
         }
 
@@ -132,8 +132,8 @@ void Connection::on_read(string& _buf, const CodeError& err) {
 }
 
 void Connection::on_response(RequestSP request, ResponseSP response) {
-    _EDEBUGTHIS("on_response: %d", response->code());
-    switch(response->code()) {
+    _EDEBUGTHIS("on_response: %d", response->code);
+    switch(response->code) {
         case 300:
         case 301:
         case 302:
@@ -144,7 +144,7 @@ void Connection::on_response(RequestSP request, ResponseSP response) {
         case 308:
             _ETRACETHIS("on_response, redirect");
             response_parser_->init();
-            request->on_redirect(make_iptr<uri::URI>(response->header()->get_field("Location")));
+            request->on_redirect(make_iptr<uri::URI>(response->headers.get_field("Location")));
             return;
     }
 

@@ -7,7 +7,7 @@
 #include <panda/protocol/http/RequestParser.h>
 
 #include "../common/Defines.h"
-#include "Response.h"
+#include "../common/Response.h"
 
 namespace panda { namespace unievent { namespace http { namespace server {
 

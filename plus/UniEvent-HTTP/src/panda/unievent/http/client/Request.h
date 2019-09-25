@@ -17,7 +17,7 @@
 #include "Connection.h"
 #include "ConnectionPool.h"
 
-#include "Response.h"
+#include "../common/Response.h"
 
 namespace panda { namespace unievent { namespace http {
 namespace client {
@@ -43,7 +43,7 @@ public:
 
     Request(protocol::http::Request::Method method,
         URISP uri,
-        protocol::http::HeaderSP header,
+        protocol::http::Header&& header,
         protocol::http::BodySP body,
         const string& http_version,
         ResponseCallback response_c,
@@ -60,7 +60,7 @@ public:
             connection_pool_(nullptr) {
         _ECTOR();
 
-        init_defaults(method, uri, header, body, http_version);
+        init_defaults(method, uri, std::move(header), body, http_version);
 
         response_callback.add(response_c);
         redirect_callback.add(redirect_c);
@@ -69,32 +69,32 @@ public:
 
     void init_defaults(Method method,
             URISP uri,
-            const protocol::http::HeaderSP& header,
+            protocol::http::Header&& header,
             const protocol::http::BodySP& body,
             const string& http_version) {
-        method_ = method;
-        uri_ = uri;
+        this->method = method;
+        this->uri = uri;
         http_version_ = http_version ? http_version : "1.1";
-        header_ = header ? header : make_iptr<protocol::http::Header>();
+        headers = std::move(header);
 
         if (http_version_ == "1.1") {
-            if (!header_->has_field("Host")) {
-                header_->add_field("Host", to_host(uri_));
+            if (!headers.has_field("Host")) {
+                headers.add_field("Host", to_host(uri));
             }
         }
 
         if (body) {
-            body_ = body;
-            header_->add_field("Content-Length", to_string(body_->content_length()));
-            if (!header_->has_field("Content-Type")) {
-                header_->add_field("Content-Type", "text/plain");
+            this->body = body;
+            headers.add_field("Content-Length", to_string(body->content_length()));
+            if (!headers.has_field("Content-Type")) {
+                headers.add_field("Content-Type", "text/plain");
             }
         } else {
-            body_ = make_iptr<protocol::http::Body>();
+            this->body = make_iptr<protocol::http::Body>();
         }
 
-        if (!header_->has_field("User-Agent")) {
-            header_->add_field(
+        if (!headers.has_field("User-Agent")) {
+            headers.add_field(
                 "User-Agent",
                 "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36 Panda/1.0.1");
         }
@@ -105,8 +105,8 @@ public:
     public:
         Derived& concrete () { return static_cast<Derived&>(*this); }
 
-        Derived& header(protocol::http::HeaderSP header) {
-            header_ = header;
+        Derived& header(protocol::http::Header&& header) {
+            header_ = std::move(header);
             return concrete();
         }
 
@@ -166,11 +166,11 @@ public:
         }
 
         Request* build() {
-            return new Request(method_, uri_, header_, body_, http_version_, response_callback_, redirect_callback_, error_callback_, timeout_, redirection_limit_);
+            return new Request(method_, uri_, std::move(header_), body_, http_version_, response_callback_, redirect_callback_, error_callback_, timeout_, redirection_limit_);
         }
 
         protected:
-            protocol::http::HeaderSP header_;
+            protocol::http::Header header_;
             protocol::http::BodySP body_;
             string http_version_;
             protocol::http::Request::Method method_ = {Method::GET};
@@ -241,16 +241,16 @@ protected:
             return;
         }
 
-        header()->set_field("Host", to_host(uri));
+        headers.set_field("Host", to_host(uri));
 
-        uri_ = uri;
+        this->uri = uri;
 
-        redirect_callback(this, uri_);
+        redirect_callback(this, uri);
 
         detach_connection();
 
         if(connection_pool_) {
-            connection_ = connection_pool_->get(uri_->host(), uri_->port());
+            connection_ = connection_pool_->get(uri->host(), uri->port());
             _EDEBUGTHIS("on_redirect, connection: %p", connection_);
             connection_->request(this);
         }
@@ -336,26 +336,6 @@ std::ostream& operator<<(std::ostream& os, const RequestSP& ptr) {
     return os;
 }
 
-inline std::vector<string> to_vector(RequestSP request_ptr) {
-    std::vector<string> result;
-    result.reserve(1 + request_ptr->body()->parts.size());
-
-    string header_str;
-    header_str += string(to_string(request_ptr->method())) + " " + request_ptr->uri()->relative() + " " + "HTTP/" + request_ptr->http_version() + "\r\n";
-    for(auto field : request_ptr->header()->fields) {
-        header_str += field.name + ": " + field.value + "\r\n";
-    }
-
-    header_str += "\r\n";
-
-    result.emplace_back(header_str);
-    for(auto part : request_ptr->body()->parts) {
-        result.emplace_back(part);
-    }
-
-    return result;
-}
-
 } // namespace client
 
 inline void http_request(panda::unievent::http::client::RequestSP request, panda::unievent::http::client::ConnectionSP connection) {
@@ -378,7 +358,7 @@ inline client::ConnectionSP http_request(
         client::ClientConnectionPool* connection_pool = get_thread_local_connection_pool()) {
     _EDEBUG("http_request, pooled: %p", connection_pool);
     request->connection_pool_ = connection_pool;
-    client::ConnectionSP connection = connection_pool->get(request->uri()->host(), request->uri()->port());
+    client::ConnectionSP connection = connection_pool->get(request->uri->host(), request->uri->port());
     http_request(request, connection);
     return connection;
 }

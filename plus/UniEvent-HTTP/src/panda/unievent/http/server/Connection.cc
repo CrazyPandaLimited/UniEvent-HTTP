@@ -30,18 +30,19 @@ void Connection::on_read(string& _buf, const CodeError& err) {
     }
 
     string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
+    using ParseState = protocol::http::RequestParser::State;
 
-    for(auto pos = request_parser_->parse(buf); pos->state != protocol::http::RequestParser::State::not_yet; ++pos) {
-        _EDEBUGTHIS("parser state: %d %zu", static_cast<int>(pos->state), pos->position);
-        if(pos->state == protocol::http::RequestParser::State::failed) {
+    for(auto pos = request_parser_->parse(buf); pos->state != ParseState::not_yet; ++pos) {
+        _EDEBUGTHIS("parser state: %d %zu", pos->state.value_or(ParseState::error), pos->position);
+        if(!pos->state) {
             _EDEBUGTHIS("parser failed: %zu", pos->position);
             on_any_error("parser failed");
             return;
         }
-        else if(pos->state == protocol::http::RequestParser::State::got_header) {
+        else if(pos->state == ParseState::got_header) {
             _EDEBUGTHIS("got header: %zu", pos->position);
         }
-        else if(pos->state == protocol::http::RequestParser::State::got_body) {
+        else if(pos->state == ParseState::done) {
             _EDEBUGTHIS("got body: %zu", pos->position);
         }
 

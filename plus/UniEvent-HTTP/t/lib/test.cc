@@ -5,7 +5,7 @@ iptr<protocol::http::Request> parse_request(const string& buf) {
     protocol::http::RequestParser::Result result = parser->parse_first(buf);
     //panda_log_debug("parse_request state [" << static_cast<int>(result.state) << "]"
 //<< " " << result.position);
-    if(result.state == protocol::http::RequestParser::State::failed) {
+    if(!result.state) {
         throw std::runtime_error("request parser failed");
     }
 
@@ -17,11 +17,10 @@ iptr<protocol::http::Request> parse_request(const string& buf) {
 }
 
 // Send in request end get it back in reponse body
-std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(
-        iptr<uri::URI> uri,
+std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(iptr<uri::URI> uri,
         protocol::http::Request::Method request_method,
         const string& body,
-        protocol::http::HeaderSP header) {
+        protocol::http::Header header) {
     //panda_log_debug("echo request");
 
     client::Request::Builder builder = client::Request::Builder()
@@ -29,16 +28,16 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(
         .uri(uri)
         .timeout(100);
 
-    if(!header->empty()) {
-        builder.header(header);
+    if(!header.empty()) {
+        builder.header(std::move(header));
     }
 
     if(!body.empty()) {
         builder.body(body);
     }
 
-    client::ResponseSP response;
-    builder.response_callback([&](client::RequestSP, client::ResponseSP r) {
+    ResponseSP response;
+    builder.response_callback([&](client::RequestSP, ResponseSP r) {
         response = r;
     });
 
@@ -49,7 +48,7 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(
     wait(200, Loop::default_loop());
 
     if(response && response->is_valid()) {
-        auto echo_request = parse_request(response->body()->as_buffer());
+        auto echo_request = parse_request(response->body->as_buffer());
         return std::make_tuple(response, echo_request);
     } else {
         return std::make_tuple(nullptr, nullptr);
@@ -59,17 +58,15 @@ std::tuple<protocol::http::ResponseSP, protocol::http::RequestSP> echo_request(
 std::tuple<server::ServerSP, uint16_t> echo_server(const string& name) {
 
     auto server = make_iptr<server::Server>();
-    server->request_callback.add([&](server::ConnectionSP connection, protocol::http::RequestSP request, server::ResponseSP& response) {
+    server->request_callback.add([&](server::ConnectionSP connection, protocol::http::RequestSP request, ResponseSP& response) {
         std::stringstream ss;
         ss << request;
         string request_str(ss.str().c_str());
 
         //panda_log_info("on_request, echoing back: [" << request_str << "]");
 
-        response.reset(server::Response::Builder()
-            .header(protocol::http::Header::Builder()
-                .date(connection->server()->http_date_now())
-                .build())
+        response.reset(Response::Builder()
+            .header(protocol::http::Header().date(connection->server()->http_date_now()))
             .code(200)
             .reason("OK")
             .body(request_str)
@@ -90,13 +87,10 @@ std::tuple<server::ServerSP, uint16_t> redirect_server(const string& name, uint1
     auto server = make_iptr<server::Server>();
     server->request_callback.add([location, server](server::ConnectionSP /* connection */,
                 protocol::http::RequestSP /* request */,
-                server::ResponseSP& response) {
+                ResponseSP& response) {
         //panda_log_debug("request_callback: " << request);
-        response.reset(server::ResponseSP(server::Response::Builder()
-            .header(protocol::http::Header::Builder()
-                .date(server->http_date_now())
-                .location(location)
-                .build())
+        response.reset(ResponseSP(Response::Builder()
+            .header(protocol::http::Header().date(server->http_date_now()).location(location))
             .code(301)
             .reason("Moved Permanently")
             .body("<html><head><title>Moved</title></head><body><h1>Moved</h1><p>This page has moved to <a href=\""
