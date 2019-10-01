@@ -25,9 +25,6 @@ namespace client {
 //    class Response;
 //    using ResponseSP = iptr<Response>;
 
-    using ResponseCallback = function<void(RequestSP, ResponseSP)>;
-    using RedirectCallback = function<void(RequestSP, URISP)>;
-    using ErrorCallback = function<void(RequestSP, const string&)>;
 }
 
 namespace server {
