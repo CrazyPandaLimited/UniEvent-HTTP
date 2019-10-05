@@ -1,6 +1,10 @@
 #include "Pool.h"
 
+static thread_local std::vector<PoolSP> s_instances;
+
 namespace panda { namespace unievent { namespace http {
+
+std::vector<PoolSP> Pool::_instances = &s_instances;
 
 Pool::Pool (const LoopSP& loop, uint32_t timeout) : _loop(loop), _inactivity_timeout(timeout) {
     _inactivity_timer = new Timer(loop);
@@ -14,13 +18,12 @@ Pool::~Pool () {
     }
 }
 
-ClientSP Pool::get (const string& host, uint16_t port) {
-    auto key = NetLoc{host, port};
-    auto pos = _client.find(key);
+ClientSP Pool::get (const NetLoc& netloc) {
+    auto pos = _client.find(netloc);
 
     if (pos == _client.end()) { // no clients to host, create a busy one
         ClientSP client = new Client(this);
-        _clients.emplace(key, NetLocList{{}, {client}});
+        _clients.emplace(netloc, NetLocList{{}, {client}});
         return client;
     }
 

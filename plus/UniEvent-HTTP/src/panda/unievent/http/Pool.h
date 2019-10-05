@@ -1,12 +1,14 @@
 #pragma once
-#include "Error.h"
 #include "Client.h"
 #include <set>
 #include <unordered_map>
 
 namespace panda { namespace unievent { namespace http {
 
-struct Pool : Refcnt, private IClientListener {
+struct Pool;
+using PoolSP = iptr<Pool>;
+
+struct Pool : Refcnt {
     static constexpr const uint64_t DEFAULT_INACTIVITY_TIMEOUT = 10000; // [ms]
 
     Pool (const LoopSP& loop = Loop::default_loop(), uint32_t timeout = DEFAULT_INACTIVITY_TIMEOUT);
@@ -15,15 +17,17 @@ struct Pool : Refcnt, private IClientListener {
 
     const LoopSP& loop () const { return _loop; }
 
-    ClientSP get (const string& host, uint16_t port);
+    ClientSP get (const NetLoc&);
+    ClientSP get (const string& host, uint16_t port) { return get(NetLoc{host, port}); }
 
-//    bool empty() const {
-//        return connections_.empty();
-//    }
-//
-//    void clear() {
-//        connections_.clear();
-//    }
+    void request (const RequestSP& req) { get(req->netloc())->request(req); }
+
+    static const PoolSP& instance (const LoopSP& loop) {
+        auto v = _instances;
+        for (const auto& r : *v) if (r->loop() == loop) return r;
+        v->push_back(new Pool(loop));
+        return v->back();
+    }
 
 private:
     friend Client;
@@ -48,6 +52,8 @@ private:
     };
 
     using Clients = std::unordered_map<NetLoc, NetLocList, Hash>;
+
+    static thread_local std::vector<PoolSP>* _instances;
 
     LoopSP   _loop;
     TimerSP  _inactivity_timer;

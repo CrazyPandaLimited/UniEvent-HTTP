@@ -34,7 +34,6 @@ struct Response : protocol::http::Response {
     }
 
     void write_chunk (const string& chunk, bool is_last = false) {
-        _EDEBUGTHIS("write_chunk, is_last: %d", is_last);
         write_event(chunk, is_last);
     }
 
@@ -55,7 +54,7 @@ struct Response::Builder : protocol::http::Response::BuilderImpl<Builder> {
     }
 
     ResponseSP build () {
-        return new Response(_code, _reason, std::move(_headers), std::move(_body), _http_version, _chunked, _error_callback);
+        return new Response(_code, _message, std::move(_headers), std::move(_body), _http_version, _chunked, _error_callback);
     }
 
 protected:

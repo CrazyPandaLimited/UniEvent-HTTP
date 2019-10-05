@@ -1,19 +1,30 @@
 #pragma once
+#include "Error.h"
 #include "Response.h"
-#include "Connection.h"
+#include <panda/unievent/Timer.h>
 #include <panda/CallbackDispatcher.h>
 #include <panda/protocol/http/Request.h>
 
 namespace panda { namespace unievent { namespace http {
 
+using panda::uri::URISP;
 struct Request;
 using RequestSP = iptr<Request>;
+struct Client;
+
+struct NetLoc {
+    string   host;
+    uint16_t port;
+
+    bool operator== (const NetLoc& other) const { return host == other.host && port == other.port; }
+};
+std::ostream& operator<< (std::ostream& os, const NetLoc& h);
 
 struct Request : protocol::http::Request {
     struct Builder;
     using Method        = protocol::http::Request::Method;
     using response_fptr = void(const RequestSP&, const ResponseSP&, const std::error_code&);
-    using redirect_fptr = void(const RequestSP&, const URISP&);
+    using redirect_fptr = void(const RequestSP&, const ResponseSP&, const URISP&);
     using response_fn   = function<response_fptr>;
     using redirect_fn   = function<redirect_fptr>;
 
@@ -27,54 +38,43 @@ struct Request : protocol::http::Request {
     CallbackDispatcher<response_fptr> response_event;
     CallbackDispatcher<redirect_fptr> redirect_event;
 
+    Request () : port(), timeout(DEFAULT_TIMEOUT), redirection_limit(DEFAULT_REDIRECTION_LIMIT), _client() {}
+
     Request (Method method, const URISP& uri, Header&& header, Body&& body, const string& http_version, bool chunked,
              const response_fn& response_cb, const redirect_fn& redirect_cb, uint64_t timeout, uint8_t redirection_limit,
              const string& host, uint16_t port) :
         protocol::http::Request(method, uri, std::move(header), std::move(body), http_version, chunked),
-        host(host), port(port), timeout(timeout),
-        _original_uri(uri),
-        _redirection_limit(redirection_limit ? redirection_limit : DEFAULT_REDIRECTION_LIMIT),
-        _connection(),
+        host(host), port(port), timeout(timeout), redirection_limit(redirection_limit), _original_uri(uri), _client()
     {
-        if (response_cb) response_callback.add(response_cb);
-        if (redirect_cb) redirect_callback.add(redirect_cb);
+        if (response_cb) response_event.add(response_cb);
+        if (redirect_cb) redirect_event.add(redirect_cb);
     }
 
+    NetLoc       netloc       () const { return { host ? host : uri->host(), port ? port : uri->port() }; }
     const URISP& original_uri () const { return _original_uri; }
 
-    uint64_t timeout () const { return _timeout; }
+    void cancel (const std::error_code& = make_error_code(std::errc::operation_canceled));
 
 protected:
     ~Request () {} // restrict stack allocation
 
-    ResponseSP create_response () const override { return new Response(); }
-
-    virtual void on_redirect (const URISP& uri) {
-        if (_redirection_counter++ >= _redirection_limit) {
-            on_any_error("redirection limit exceeded");
-            return;
-        }
-
-        //headers.set_field("Host", to_host(uri));
-        this->uri = uri;
-
-        redirect_event(this, uri);
-
-        detach_connection();
-
-        if (_connection_pool) {
-            _connection = _connection_pool->get(uri->host(), uri->port());
-            _connection->request(this);
-        }
-    }
+    protocol::http::ResponseSP create_response () const override { return new Response(); }
 
 private:
-    friend Connection;
-    friend void http::http_request(client::RequestSP, client::ConnectionSP);
-    friend ConnectionSP http::http_request(client::RequestSP, client::ClientConnectionPool*);
+    friend Client;
 
     URISP   _original_uri;
     uint8_t _redirection_counter;
+    Client* _client;
+    TimerSP _timer;
+
+    void handle_response (const RequestSP& req, const ResponseSP& res, const std::error_code& err) {
+        response_event(req, res, err);
+    }
+
+    void handle_redirect (const RequestSP& req, const ResponseSP& res, const URISP& to) {
+        redirect_event(req, res, to);
+    }
 };
 
 struct Request::Builder : protocol::http::Request::BuilderImpl<Builder> {
@@ -121,32 +121,7 @@ protected:
     Request::response_fn _response_callback;
     Request::redirect_fn _redirect_callback;
     uint64_t             _timeout = Request::DEFAULT_TIMEOUT;
-    uint8_t              _redirection_limit = 0;
+    uint8_t              _redirection_limit = Request::DEFAULT_REDIRECTION_LIMIT;
 };
-
-inline void http_request (const RequestSP& request, const ClientConnectionSP& connection) {
-    if (request->_connection) {
-        throw ProgrammingError("Can't reuse incompleted request");
-    }
-    request->_connection = connection;
-    connection->request(request);
-}
-
-inline ConnectionPool* get_thread_local_connection_pool () {
-    static thread_local ConnectionPool* _ptr;
-    ConnectionPool* ptr = _ptr;
-    if (!ptr) {
-        static thread_local ConnectionPoolSP sp = new ConnectionPool();
-        ptr = _ptr = panda::get_global_tls_ptr<ConnectionPool>(sp.get(), "instance");
-    }
-    return ptr;
-}
-
-inline ClientConnectionSP http_request (const RequestSP& request, ConnectionPool* pool = get_thread_local_connection_pool()) {
-    request->_connection_pool = pool;
-    auto connection = pool->get(request->uri->host(), request->uri->port());
-    http_request(request, connection);
-    return connection;
-}
 
 }}}

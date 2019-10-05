@@ -1,0 +1,16 @@
+#include "Request.h"
+
+namespace panda { namespace unievent { namespace http {
+
+void Request::cancel (const std::error_code& err) {
+    if (_client) _client->cancel(err);
+}
+
+std::ostream& operator<< (std::ostream& os, const NetLoc& h) {
+    os << h.host;
+    os << ":";
+    os << to_string(h.port);
+    return os;
+}
+
+}}}
