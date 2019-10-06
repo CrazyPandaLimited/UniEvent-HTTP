@@ -14,11 +14,13 @@ struct ErrorCategory : std::error_category {
     const char* name () const throw() override;
     std::string message (int condition) const throw() override;
 };
-extern ErrorCategory error_category;
+extern const ErrorCategory error_category;
 
 inline std::error_code make_error_code (errc code) { return std::error_code((int)code, error_category); }
 
-struct HttpError : panda::exception {};
+struct HttpError : panda::exception {
+    using exception::exception;
+};
 
 }}}
 

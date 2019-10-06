@@ -1,4 +1,5 @@
 #pragma once
+#include <xs/function.h>
 #include <xs/protocol/http.h>
 #include <panda/unievent/http.h>
 

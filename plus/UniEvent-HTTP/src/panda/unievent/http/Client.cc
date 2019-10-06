@@ -4,14 +4,16 @@
 
 namespace panda { namespace unievent { namespace http {
 
-Client::Client (const LoopSP& loop) : Tcp(loop), _pool(), _netloc({"", 0}), _last_activity_time(0), connected_(false) {
+Client::Client (const LoopSP& loop) : Tcp(loop), _pool(), _netloc({"", 0}), _last_activity_time(0) {
     Tcp::event_listener(this);
 }
 
-Client::Client (Pool* pool) : Client(pool->loop()), _pool(pool) {}
+Client::Client (Pool* pool) : Client(pool->loop()) {
+    _pool = pool;
+}
 
 Client::~Client () {
-    stop();
+    cancel();
 }
 
 void Client::request (const RequestSP& request) {
@@ -28,7 +30,7 @@ void Client::request (const RequestSP& request) {
 
     auto netloc = request->netloc();
 
-    if (!connected() || _netloc.host !== netloc.host || _netloc.port != netloc.port) {
+    if (!connected() || _netloc.host != netloc.host || _netloc.port != netloc.port) {
         if (_netloc.host) { // not first use
             Tcp::clear();
             Tcp::event_listener(this);
@@ -38,8 +40,8 @@ void Client::request (const RequestSP& request) {
         connect(_netloc.host, _netloc.port);
     }
 
-    auto data = to_vector(request);
-    _parser.append_request(request);
+    auto data = request->to_vector();
+    _parser.set_request(request);
     read_start();
     write(data.begin(), data.end());
 }
@@ -62,27 +64,27 @@ void Client::on_write (const CodeError& err, const WriteRequestSP&) {
 void Client::on_timer (const TimerSP& t) {
     assert(_request);
     assert(_request->_timer == t);
-    cancel(std::errc::operation_timed_out);
+    cancel(make_error_code(std::errc::timed_out));
 }
 
 void Client::on_read (string& _buf, const CodeError& err) {
     if (err) return cancel(err.code());
 
     string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
-    using ParseState = MessageParser::State;
+    using ParseState = ResponseParser::State;
 
     auto result = _parser.parse(buf);
     if (!result.state) return cancel(errc::parser_error);
-    if (result.state < ParseState::got_header) return;
+    if (result.state.value() < ParseState::got_header) return;
 
-    if (!result.state == ParseState::done) {
+    if (result.state.value() != ParseState::done) {
         _response = static_pointer_cast<Response>(result.response);
-        request->handle_response(_request, _response, {});
+        _request->handle_response(_request, _response, {});
         return;
     }
 
     if (result.position < buf.length()) {
-        panda_log_warning("got garbage after http response");
+        panda_log_warn("got garbage after http response");
         drop_connection();
     }
 
@@ -106,8 +108,8 @@ void Client::analyze_request () {
 
             URISP uri = new URI(uristr);
             auto prev_uri = _request->uri;
-            if (!uri->scheme) uri->scheme(prev_uri->scheme());
-            if (!uri->host) {
+            if (!uri->scheme()) uri->scheme(prev_uri->scheme());
+            if (!uri->host()) {
                 uri->host(prev_uri->host());
                 if (prev_uri->explicit_port()) uri->port(prev_uri->port());
             }
@@ -129,7 +131,7 @@ void Client::analyze_request () {
             return;
     }
 
-    finish_request(_request, _response, {});
+    finish_request({});
 }
 
 void Client::drop_connection () {
@@ -138,26 +140,27 @@ void Client::drop_connection () {
     _request = std::move(req);
 }
 
-void Client::finish_request (const RequestSP& req, const ResponseSP& res, const std::error_code& err) {
+void Client::finish_request (const std::error_code& err) {
+    if (_pool) _pool->putback(this);
+    auto req = std::move(_request);
+    auto res = std::move(_response);
+
     req->_redirection_counter = 0;
     req->_client = nullptr;
     if (req->_timer) {
         req->_timer->event_listener(nullptr);
         req->_timer->stop();
     }
-    if (_pool) _pool->putback(this);
-    auto req = std::move(_request);
-    auto res = std::move(_response);
 
-    if (!res->is_keep_alive()) Tcp::reset();
+    if (!res->keep_alive()) Tcp::reset();
 
-    request->handle_response(req, res, err);
+    req->handle_response(req, res, err);
 }
 
 void Client::on_eof () {
     if (_request) {
         auto result = _parser.eof();
-        if (!result.state) return cancel(std::errc::connection_reset);
+        if (!result.state) return cancel(make_error_code(std::errc::connection_reset));
         analyze_request();
     }
     else Tcp::reset();

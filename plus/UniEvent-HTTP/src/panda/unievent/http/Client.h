@@ -22,6 +22,7 @@ struct Client : Tcp, private ITcpSelfListener, private ITimerListener {
     const NetLoc& last_netloc        () const { return _netloc; }
 
 private:
+    friend Pool;
     using ResponseParser = protocol::http::ResponseParser;
 
     Pool*          _pool;

@@ -7,7 +7,9 @@
 
 namespace panda { namespace unievent { namespace http {
 
+using panda::uri::URI;
 using panda::uri::URISP;
+
 struct Request;
 using RequestSP = iptr<Request>;
 struct Client;

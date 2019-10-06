@@ -1,27 +1,26 @@
 #include "Pool.h"
 
-static thread_local std::vector<PoolSP> s_instances;
-
 namespace panda { namespace unievent { namespace http {
 
-std::vector<PoolSP> Pool::_instances = &s_instances;
+static thread_local std::vector<PoolSP> s_instances;
+thread_local std::vector<PoolSP>* Pool::_instances = &s_instances;
 
 Pool::Pool (const LoopSP& loop, uint32_t timeout) : _loop(loop), _inactivity_timeout(timeout) {
     _inactivity_timer = new Timer(loop);
-    _inactivity_timer->timer_event.add([this]{ check_inactivity(); });
+    _inactivity_timer->event.add([this](auto&){ check_inactivity(); });
 }
 
 Pool::~Pool () {
     // there might be some clients still active, remove event listener as we no longer care about of those clients
     for (auto& list : _clients) {
-        for (auto& client : list.busy) client->event_listener(nullptr);
+        for (auto& client : list.second.busy) client->event_listener(nullptr);
     }
 }
 
 ClientSP Pool::get (const NetLoc& netloc) {
-    auto pos = _client.find(netloc);
+    auto pos = _clients.find(netloc);
 
-    if (pos == _client.end()) { // no clients to host, create a busy one
+    if (pos == _clients.end()) { // no clients to host, create a busy one
         ClientSP client = new Client(this);
         _clients.emplace(netloc, NetLocList{{}, {client}});
         return client;
@@ -56,12 +55,12 @@ void Pool::putback (const ClientSP& client) {
 void Pool::check_inactivity () {
     auto remove_time = _loop->now() - _inactivity_timeout;
     for (auto it = _clients.begin(); it != _clients.end();) {
-        auto& list = it->second;
+        auto& list = it->second.free;
         for (auto it = list.begin(); it != list.end();) {
-            if (it->second->last_activity_time() < remove_time) it = list.erase(it);
+            if ((*it)->last_activity_time() < remove_time) it = list.erase(it);
             else ++it;
         }
-        if (list.empty()) it = _clients.erase(it);
+        if (list.empty() && it->second.busy.empty()) it = _clients.erase(it);
         else ++it;
     }
 }
