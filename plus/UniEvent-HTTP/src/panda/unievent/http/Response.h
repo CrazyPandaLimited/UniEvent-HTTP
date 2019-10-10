@@ -26,12 +26,9 @@ struct Response : protocol::http::Response {
               Header&&        header,
               Body&&          body,
               const string&   http_version,
-              bool            chunked,
-              const error_fn& error_cb)
+              bool            chunked)
         : protocol::http::Response(code, reason, std::move(header), std::move(body), http_version, chunked)
-    {
-        if (error_cb) error_event.add(error_cb);
-    }
+    {}
 
     void write_chunk (const string& chunk, bool is_last = false) {
         write_event(chunk, is_last);

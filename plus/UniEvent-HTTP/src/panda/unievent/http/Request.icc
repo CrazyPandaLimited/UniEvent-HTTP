@@ -7,6 +7,11 @@ void Request::cancel (const std::error_code& err) {
     if (_client) _client->cancel(err);
 }
 
+void Request::respond (const ResponseSP& res) {
+    assert(_sconn);
+    _sconn->respond(this, res);
+}
+
 std::ostream& operator<< (std::ostream& os, const NetLoc& h) {
     os << h.host;
     os << ":";

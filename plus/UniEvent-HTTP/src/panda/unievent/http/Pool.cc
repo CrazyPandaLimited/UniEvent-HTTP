@@ -7,6 +7,7 @@ thread_local std::vector<PoolSP>* Pool::_instances = &s_instances;
 
 Pool::Pool (const LoopSP& loop, uint32_t timeout) : _loop(loop), _inactivity_timeout(timeout) {
     _inactivity_timer = new Timer(loop);
+    _inactivity_timer->weak(true);
     _inactivity_timer->event.add([this](auto&){ check_inactivity(); });
 }
 

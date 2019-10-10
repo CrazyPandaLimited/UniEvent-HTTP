@@ -13,6 +13,7 @@ using panda::uri::URISP;
 struct Request;
 using RequestSP = iptr<Request>;
 struct Client;
+struct ServerConnection;
 
 struct NetLoc {
     string   host;
@@ -26,29 +27,33 @@ struct Request : protocol::http::Request {
     struct Builder;
     using Method        = protocol::http::Request::Method;
     using response_fptr = void(const RequestSP&, const ResponseSP&, const std::error_code&);
+    using partial_fptr  = void(const RequestSP&, const ResponseSP&, Response::State state, const std::error_code&);
     using redirect_fptr = void(const RequestSP&, const ResponseSP&, const URISP&);
     using response_fn   = function<response_fptr>;
+    using partial_fn    = function<partial_fptr>;
     using redirect_fn   = function<redirect_fptr>;
 
     static constexpr const uint64_t DEFAULT_TIMEOUT           = 20000; // [ms]
-    static constexpr const uint64_t DEFAULT_REDIRECTION_LIMIT = 20;    // [hops]
+    static constexpr const uint16_t DEFAULT_REDIRECTION_LIMIT = 20;    // [hops]
 
     string                            host;
     uint16_t                          port;
     uint64_t                          timeout;
-    uint8_t                           redirection_limit;
+    uint16_t                          redirection_limit;
     CallbackDispatcher<response_fptr> response_event;
+    CallbackDispatcher<partial_fptr>  partial_event;
     CallbackDispatcher<redirect_fptr> redirect_event;
 
-    Request () : port(), timeout(DEFAULT_TIMEOUT), redirection_limit(DEFAULT_REDIRECTION_LIMIT), _client() {}
+    Request () : port(), timeout(DEFAULT_TIMEOUT), redirection_limit(DEFAULT_REDIRECTION_LIMIT), _client(), _sconn() {}
 
     Request (Method method, const URISP& uri, Header&& header, Body&& body, const string& http_version, bool chunked,
-             const response_fn& response_cb, const redirect_fn& redirect_cb, uint64_t timeout, uint8_t redirection_limit,
-             const string& host, uint16_t port) :
+             const response_fn& response_cb, const partial_fn& partial_cb, const redirect_fn& redirect_cb,
+             uint64_t timeout, uint16_t redirection_limit, const string& host, uint16_t port) :
         protocol::http::Request(method, uri, std::move(header), std::move(body), http_version, chunked),
-        host(host), port(port), timeout(timeout), redirection_limit(redirection_limit), _original_uri(uri), _client()
+        host(host), port(port), timeout(timeout), redirection_limit(redirection_limit), _original_uri(uri), _redirection_counter(), _client(), _sconn()
     {
         if (response_cb) response_event.add(response_cb);
+        if (partial_cb)  partial_event.add(partial_cb);
         if (redirect_cb) redirect_event.add(redirect_cb);
     }
 
@@ -56,6 +61,8 @@ struct Request : protocol::http::Request {
     const URISP& original_uri () const { return _original_uri; }
 
     void cancel (const std::error_code& = make_error_code(std::errc::operation_canceled));
+
+    void respond (const ResponseSP&);
 
 protected:
     ~Request () {} // restrict stack allocation
@@ -65,10 +72,15 @@ protected:
 private:
     friend Client;
 
-    URISP   _original_uri;
-    uint8_t _redirection_counter;
-    Client* _client;
-    TimerSP _timer;
+    URISP             _original_uri;
+    uint16_t          _redirection_counter;
+    Client*           _client;
+    TimerSP           _timer;
+    ServerConnection* _sconn;
+
+    void handle_partial (const RequestSP& req, const ResponseSP& res, Response::State state, const std::error_code& err) {
+        partial_event(req, res, state, err);
+    }
 
     void handle_response (const RequestSP& req, const ResponseSP& res, const std::error_code& err) {
         response_event(req, res, err);
@@ -95,6 +107,11 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder> {
         return *this;
     }
 
+    Builder& partial_callback (const Request::partial_fn& cb) {
+        _partial_callback = cb;
+        return *this;
+    }
+
     Builder& redirect_callback (const Request::redirect_fn& cb) {
         _redirect_callback = cb;
         return *this;
@@ -105,7 +122,7 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder> {
         return *this;
     }
 
-    Builder& redirection_limit (uint8_t redirection_limit) {
+    Builder& redirection_limit (uint16_t redirection_limit) {
         _redirection_limit = redirection_limit;
         return *this;
     }
@@ -113,7 +130,7 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder> {
     RequestSP build () {
         return new Request(
             _method, _uri, std::move(_headers), std::move(_body), _http_version, _chunked,
-            _response_callback, _redirect_callback, _timeout, _redirection_limit, _host, _port
+            _response_callback, _partial_callback, _redirect_callback, _timeout, _redirection_limit, _host, _port
         );
     }
 
@@ -121,9 +138,10 @@ protected:
     string               _host;
     uint16_t             _port = 0;
     Request::response_fn _response_callback;
+    Request::partial_fn  _partial_callback;
     Request::redirect_fn _redirect_callback;
     uint64_t             _timeout = Request::DEFAULT_TIMEOUT;
-    uint8_t              _redirection_limit = Request::DEFAULT_REDIRECTION_LIMIT;
+    uint16_t             _redirection_limit = Request::DEFAULT_REDIRECTION_LIMIT;
 };
 
 }}}
