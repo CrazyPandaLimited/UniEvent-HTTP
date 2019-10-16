@@ -1,5 +1,5 @@
 #pragma once
-//#include <deque>
+#include <deque>
 #include "Request.h"
 #include <panda/unievent/Tcp.h>
 #include <panda/protocol/http/RequestParser.h>
@@ -15,17 +15,8 @@ struct ServerConnection : Tcp, private ITcpSelfListener, private protocol::http:
 
     uint64_t id () const { return _id; }
 
-    void respond (const RequestSP&, const ResponseSP&);
-
 //    virtual void close(uint16_t code, string payload);
-//
 //    Server* server() const { return server_; }
-//
-//    CallbackDispatcher<void(ConnectionSP, protocol::http::RequestSP, ResponseSP&)> request_callback;
-//    CallbackDispatcher<void(ConnectionSP, const CodeError&)> stream_error_callback;
-//    CallbackDispatcher<void(ConnectionSP, const string&)> any_error_callback;
-//    CallbackDispatcher<void(ConnectionSP, uint16_t, string)> close_callback;
-
 private:
 
 //    virtual void on_request(protocol::http::RequestSP msg);
@@ -36,41 +27,29 @@ private:
 //
 //    void close_tcp();
 //
-//
 //    void write_chunk(const string& buf, bool is_last);
 
 private:
     using RequestParser = protocol::http::RequestParser;
+    using RequestList   = std::deque<ServerRequestSP>;
 
-    struct RequestData {
-        RequestSP      request;
-        ResponseSP     response;
-        bool           partial_called;
-        Request::State state;
-        RequestData (const RequestSP& req) : request(req), partial_called(), responded(), state(Request::State::not_yet) {}
-    };
-    using RequestList = std::deque<RequestData>;
-
-    Server*       _server;
     uint64_t      _id;
-    RequestParser _parser;
-    RequestList   _requests;
+    Server*       server;
+    RequestParser parser;
+    RequestList   requests;
 
-    protocol::http::RequestSP create_request () { return new Request(this); }
+    protocol::http::RequestSP create_request () { return new ServerRequest(this); }
 
-    void on_read (string& buf, const CodeError& err) override;
+    void on_read  (string&, const CodeError&) override;
+    void on_write (const CodeError&, const WriteRequestSP&) override;
 
-    void request_error (RequestData&, const std::error_code& err);
+    void request_error (const ServerRequestSP&, const std::error_code& err);
 
-    RequestData* find_data (const RequestSP& req) {
-        for (auto& rd : _requests) if (rd.request == req) return &rd;
-        return nullptr;
-    }
-
-    bool responded (const RequestSP& req) {
-        auto rd = find_data(req);
-        return !rd || rd.response;
-    }
+    void respond        (const RequestSP&, const ResponseSP&);
+    void write_response ();
+    void send_chunk     (const ResponseSP&, const string& chunk);
+    void end_chunk      (const ResponseSP&);
+    void finish_request ();
 };
 using ServerConnectionSP = iptr<ServerConnection>;
 

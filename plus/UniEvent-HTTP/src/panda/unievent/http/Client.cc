@@ -80,7 +80,7 @@ void Client::on_read (string& _buf, const CodeError& err) {
 
     auto result = _parser.parse(buf);
     if (!result.state) return cancel(errc::parser_error);
-    if (result.state.value() < Response::State::got_header) {
+    if (result.state.value() < State::got_header) {
         panda_log_verbose_debug("got part, headers not finished");
         return;
     }
@@ -88,7 +88,7 @@ void Client::on_read (string& _buf, const CodeError& err) {
     _response = static_pointer_cast<Response>(result.response);
     _request->handle_partial(_request, _response, result.state.value(), {});
 
-    if (result.state.value() != Response::State::done) {
+    if (result.state.value() != State::done) {
         panda_log_verbose_debug("got part, body not finished");
         return;
     }
@@ -175,7 +175,7 @@ void Client::finish_request (const std::error_code& err) {
     Tcp::weak(true);
 
     panda_log_debug("request to " << req->uri->to_string() << " finished, status " << res->code << " " << res->message << ", got " << res->body.length() << " bytes, err=" << err.message());
-    req->handle_partial(req, res, err ? Response::State::error : Response::State::done, err);
+    req->handle_partial(req, res, err ? State::error : State::done, err);
     req->handle_response(req, res, err);
 }
 

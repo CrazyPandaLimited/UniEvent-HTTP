@@ -1,19 +1,15 @@
 #pragma once
 #include "Error.h"
 #include "Response.h"
+#include "BasicRequest.h"
 #include <panda/unievent/Timer.h>
 #include <panda/CallbackDispatcher.h>
-#include <panda/protocol/http/Request.h>
 
 namespace panda { namespace unievent { namespace http {
 
-using panda::uri::URI;
-using panda::uri::URISP;
-
+struct Client;
 struct Request;
 using RequestSP = iptr<Request>;
-struct Client;
-struct ServerConnection;
 
 struct NetLoc {
     string   host;
@@ -23,11 +19,10 @@ struct NetLoc {
 };
 std::ostream& operator<< (std::ostream& os, const NetLoc& h);
 
-struct Request : protocol::http::Request {
+struct Request : BasicRequest {
     struct Builder;
-    using Method        = protocol::http::Request::Method;
     using response_fptr = void(const RequestSP&, const ResponseSP&, const std::error_code&);
-    using partial_fptr  = void(const RequestSP&, const ResponseSP&, Response::State state, const std::error_code&);
+    using partial_fptr  = void(const RequestSP&, const ResponseSP&, State state, const std::error_code&);
     using redirect_fptr = void(const RequestSP&, const ResponseSP&, const URISP&);
     using response_fn   = function<response_fptr>;
     using partial_fn    = function<partial_fptr>;
@@ -44,13 +39,13 @@ struct Request : protocol::http::Request {
     CallbackDispatcher<partial_fptr>  partial_event;
     CallbackDispatcher<redirect_fptr> redirect_event;
 
-    Request () : port(), timeout(DEFAULT_TIMEOUT), redirection_limit(DEFAULT_REDIRECTION_LIMIT), _client(), _sconn() {}
+    Request () : port(), timeout(DEFAULT_TIMEOUT), redirection_limit(DEFAULT_REDIRECTION_LIMIT), _client() {}
 
-    Request (Method method, const URISP& uri, Header&& header, Body&& body, const string& http_version, bool chunked,
+    Request (Method method, const URISP& uri, Header&& header, Body&& body, HttpVersion http_version, bool chunked,
              const response_fn& response_cb, const partial_fn& partial_cb, const redirect_fn& redirect_cb,
              uint64_t timeout, uint16_t redirection_limit, const string& host, uint16_t port) :
         protocol::http::Request(method, uri, std::move(header), std::move(body), http_version, chunked),
-        host(host), port(port), timeout(timeout), redirection_limit(redirection_limit), _original_uri(uri), _redirection_counter(), _client(), _sconn()
+        host(host), port(port), timeout(timeout), redirection_limit(redirection_limit), _original_uri(uri), _redirection_counter(), _client()
     {
         if (response_cb) response_event.add(response_cb);
         if (partial_cb)  partial_event.add(partial_cb);
@@ -60,25 +55,23 @@ struct Request : protocol::http::Request {
     NetLoc       netloc       () const { return { host ? host : uri->host(), port ? port : uri->port() }; }
     const URISP& original_uri () const { return _original_uri; }
 
+    void send_chunk (const string& chunk);
+    void end_chunk  ();
+
     void cancel (const std::error_code& = make_error_code(std::errc::operation_canceled));
 
-    void respond (const ResponseSP&);
-
 protected:
-    ~Request () {} // restrict stack allocation
-
     protocol::http::ResponseSP create_response () const override { return new Response(); }
 
 private:
     friend Client;
 
-    URISP             _original_uri;
-    uint16_t          _redirection_counter;
-    Client*           _client;
-    TimerSP           _timer;
-    ServerConnection* _sconn;
+    URISP    _original_uri;
+    uint16_t _redirection_counter;
+    Client*  _client;
+    TimerSP  _timer;
 
-    void handle_partial (const RequestSP& req, const ResponseSP& res, Response::State state, const std::error_code& err) {
+    void handle_partial (const RequestSP& req, const ResponseSP& res, State state, const std::error_code& err) {
         partial_event(req, res, state, err);
     }
 

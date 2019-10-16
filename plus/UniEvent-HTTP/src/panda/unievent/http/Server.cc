@@ -1,32 +1,14 @@
 #include "Server.h"
 #include <ostream>
-
-//
-//#include "../common/Time.h"
-//#include "../common/Error.h"
-//
-//using namespace std::placeholders;
+#include <panda/time.h>
 
 namespace panda { namespace unievent { namespace http {
 
+string rfc822_date (time::ptime_t);
+
 std::atomic<uint64_t> Server::lastid(0);
 
-Server::Server (const LoopSP& loop) : _loop(loop), _running()/*, _cached_date_timer(new Timer(loop))*/ {
-//    _cached_date_timer->event.add([this](auto&) {
-//        _cached_date.clear();
-//    });
-//    _cached_date_timer->start(1000);
-//    // callback to update http date string every second
-//    _cached_date_timer->event.add([&](Timer*) {
-//        cached_time = std::time(0);
-//        time::datetime dt;
-//        time::gmtime(cached_time, &dt);
-//        *cached_time_string_rfc_ptr = rfc822_date(dt);;
-//        _EDEBUG("ticking timer cache");
-//    });
-//
-//    _cached_date_timer->start(1000, 0);
-}
+Server::Server (const LoopSP& loop) : _loop(loop), _running(), _max_idle() {}
 
 Server::~Server() {
     stop();
@@ -91,63 +73,73 @@ StreamSP Server::create_connection (const StreamSP&) {
 
 ServerConnectionSP Server::new_connection (uint64_t id) {
     ServerConnectionSP conn = new ServerConnection(this, id);
-    //conn->request_callback = request_callback;
     return conn;
 }
 
-//const string& Server::http_date_now() const {
-//    return *cached_time_string_rfc_ptr;
-//}
-//
+void Server::on_connection (const StreamSP& stream, const CodeError& err) {
+    if (err) return;
+    auto connection = dynamic_pointer_cast<ServerConnection>(stream);
+    assert(connection);
+    _connections[connection->id()] = connection;
+    panda_log_debug("client connected to " << stream->sockaddr() << ", total connections: " << _connections.size());
+}
 
+const string& Server::date_header_now () {
+    if (!_hdate_time || _hdate_time <= _loop->now() - 1000) {
+        _hdate_time = _loop->now();
+        _hdate_str  = rfc822_date(std::time(0));
+    }
+    return _hdate_str;
+}
 
+const char month_snames[12][4] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+const char day_snames   [7][4] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 
-//
-//void Server::on_connection(ConnectionSP conn) {
-//    connection_callback(this, conn);
-//}
-//
-//void Server::on_remove_connection(ConnectionSP conn) {
-//    remove_connection_callback(this, conn);
-//}
-//
+// adapted from apr_rfc822_date, https://apr.apache.org
+string rfc822_date (time::ptime_t epoch) {
+    time::datetime dt;
+    time::gmtime(epoch, &dt);
 
-//
+    size_t length = sizeof("Mon, 20 Jan 2020 20:20:20 GMT") - 1;
+    string result(length);
+    result.length(length);
+    char* date_str = result.buf();
 
-//
-//void Server::on_connect(const StreamSP&, const StreamSP& stream, const CodeError& err) {
-//    _EDEBUGTHIS();
-//    if (err) {
-//        return;
-//    }
-//
-//    //if (auto listener = dyn_cast<Listener*>(parent)) {
-//        //_EDEBUGTHIS("connection listener");
-//    //}
-//
-//    auto connection = dynamic_pointer_cast<Connection>(stream);
-//
-//    connections[connection->id()] = connection;
-//    connection->eof_event.add(std::bind(&Server::on_disconnect, this, _1));
-//    connection->run();
-//
-//    on_connection(connection);
-//
-//    _EDEBUGTHIS("connected: %zu", connections.size());
-//}
-//
-//void Server::on_disconnect(Stream* handle) {
-//    _EDEBUGTHIS();
-//    auto conn = dyn_cast<Connection*>(handle);
-//    remove_connection(conn);
-//}
-//
-//void Server::remove_connection(ConnectionSP conn) {
-//    _EDEBUGTHIS();
-//    auto erased = connections.erase(conn->id());
-//    if (!erased) return;
-//    on_remove_connection(conn);
-//}
+    const char* s = &day_snames[dt.wday][0];
+    *date_str++   = *s++;
+    *date_str++   = *s++;
+    *date_str++   = *s++;
+    *date_str++   = ',';
+    *date_str++   = ' ';
+    *date_str++   = dt.mday / 10 + '0';
+    *date_str++   = dt.mday % 10 + '0';
+    *date_str++   = ' ';
+    s             = &month_snames[dt.mon][0];
+    *date_str++   = *s++;
+    *date_str++   = *s++;
+    *date_str++   = *s++;
+    *date_str++   = ' ';
+
+    *date_str++ = dt.year / 1000 + '0';
+    *date_str++ = dt.year % 1000 / 100 + '0';
+    *date_str++ = dt.year % 100 / 10 + '0';
+    *date_str++ = dt.year % 10 + '0';
+    *date_str++ = ' ';
+    *date_str++ = dt.hour / 10 + '0';
+    *date_str++ = dt.hour % 10 + '0';
+    *date_str++ = ':';
+    *date_str++ = dt.min / 10 + '0';
+    *date_str++ = dt.min % 10 + '0';
+    *date_str++ = ':';
+    *date_str++ = dt.sec / 10 + '0';
+    *date_str++ = dt.sec % 10 + '0';
+    *date_str++ = ' ';
+    *date_str++ = 'G';
+    *date_str++ = 'M';
+    *date_str++ = 'T';
+
+    return result;
+}
 
 std::ostream& operator<< (std::ostream& os, const Server::Location& location) {
     os << "Location{";

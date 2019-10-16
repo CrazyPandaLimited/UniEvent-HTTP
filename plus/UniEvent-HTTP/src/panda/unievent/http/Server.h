@@ -5,21 +5,14 @@
 #include <iosfwd>
 #include <vector>
 #include <atomic>
-//#include <ctime>
-
-//#include <panda/refcnt.h>
-//#include <panda/CallbackDispatcher.h>
-//#include <panda/unievent/Timer.h>
-//#include <panda/unievent/Loop.h>
-//#include <panda/unievent/Stream.h>
-//#include <panda/time.h>
 
 struct ssl_ctx_st; typedef ssl_ctx_st SSL_CTX; // avoid including openssl headers
 
 namespace panda { namespace unievent { namespace http {
 
 struct Server : Refcnt, private IStreamSelfListener {
-    static constexpr const int DEFAULT_BACKLOG = 4096;
+    static constexpr const int      DEFAULT_BACKLOG  = 4096;
+    static constexpr const uint32_t DEFAULT_MAX_IDLE = 600; // [s]
 
     struct Location {
         string   host;
@@ -31,10 +24,11 @@ struct Server : Refcnt, private IStreamSelfListener {
 
     struct Config {
         std::vector<Location> locations;
+        uint32_t              max_idle = DEFAULT_MAX_IDLE; // max idle time for keep-alive connection before it is dropped [s]
     };
 
     using request_fptr = void(const RequestSP&, const ServerConnectionSP&);
-    using partial_fptr = void(const RequestSP&, Request::State, const std::error_code&, const ServerConnectionSP&);
+    using partial_fptr = void(const RequestSP&, const std::error_code&, const ServerConnectionSP&);
     using request_fn   = function<request_fptr>;
     using partial_fn   = function<partial_fptr>;
 
@@ -52,6 +46,8 @@ struct Server : Refcnt, private IStreamSelfListener {
     virtual void run  ();
     virtual void stop ();
 
+    const string& date_header_now ();
+
 protected:
     virtual ServerConnectionSP new_connection (uint64_t id);
 
@@ -67,65 +63,34 @@ private:
     Locations   _locations;
     Listeners   _listeners;
     bool        _running;
+    uint32_t    _max_idle;
     Connections _connections;
-    //string      _cached_date;
-    //TimerSP     _cached_date_timer;
+    uint64_t    _hdate_time;
+    string      _hdate_str;
 
     void start_listening ();
     void stop_listening  ();
 
     StreamSP create_connection (const StreamSP&) override;
 
-    void on_connection (const StreamSP&, const StreamSP&, const CodeError&) override;
+    void on_connection (const StreamSP&, const CodeError&) override;
 
-    void handle_partial (const RequestSP& req, Request::State state, const std::error_code& err, const ServerConnectionSP& conn) {
-        partial_event(req, state, err, conn);
+    void handle_partial (const RequestSP& req, const std::error_code& err, const ServerConnectionSP& conn) {
+        partial_event(req, err, conn);
     }
 
-    void handle_request (const RequestSP& req, const std::error_code& err, const ServerConnectionSP& conn) {
-        request_event(req, err, conn);
+    void handle_request (const RequestSP& req, const ServerConnectionSP& conn) {
+        request_event(req, conn);
+    }
+
+    void handle_eof (const ServerConnectionSP& conn) {
+        _connections.erase(conn->id());
     }
 
     // disable copying
     Server (const Server&) = delete;
     Server& operator= (const Server&) = delete;
     ~Server (); // restrict stack allocation
-
-//    void remove_connection(ConnectionSP conn);
-//
-//    // gets cached http date string, keeps us from calling strftime every now and again
-//    const string& http_date_now() const;
-//
-//    CallbackDispatcher<void(ServerSP, ConnectionSP)> connection_callback;
-//    CallbackDispatcher<void(ServerSP, ConnectionSP)> remove_connection_callback;
-//
-//
-//    virtual void on_connection(ConnectionSP conn);
-//    virtual void on_remove_connection(ConnectionSP conn);
-//
-//    ConnectionSP get_connection(uint64_t id) {
-//        auto pos = connections.find(id);
-//        if(pos == connections.end()) {
-//            return nullptr;
-//        } else {
-//            return pos->second;
-//        }
-//    }
-//
-//private:
-//
-//    void on_connect(const StreamSP&, const StreamSP&, const CodeError&);
-//    void on_disconnect(Stream* handle);
-//
-//private:
-//
-//    // time() and strftime() cache updater
-//    iptr<Timer> _cached_date_timer;
-//
-//    static time_t cached_time;
-//
-//    static thread_local string  cached_time_string_rfc;
-//    static thread_local string* cached_time_string_rfc_ptr;
 };
 
 std::ostream& operator<< (std::ostream&, const Server::Location&);
