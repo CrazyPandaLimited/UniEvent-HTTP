@@ -1,0 +1,17 @@
+#include "ServerResponse.h"
+#include "ServerRequest.h"
+#include "ServerConnection.h"
+
+namespace panda { namespace unievent { namespace http {
+
+void ServerResponse::send_chunk (const string& chunk) {
+    if (completed) throw HttpError("can't send chunk: response has already been completed");
+    request->connection->send_chunk(this, chunk);
+}
+
+void ServerResponse::end_chunk () {
+    if (completed) throw HttpError("can't send chunk: response has already been completed");
+    request->connection->end_chunk(this);
+}
+
+}}}
