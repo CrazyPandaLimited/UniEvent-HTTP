@@ -44,7 +44,7 @@ struct Request : BasicRequest {
     Request (Method method, const URISP& uri, Header&& header, Body&& body, HttpVersion http_version, bool chunked,
              const response_fn& response_cb, const partial_fn& partial_cb, const redirect_fn& redirect_cb,
              uint64_t timeout, uint16_t redirection_limit, const string& host, uint16_t port) :
-        protocol::http::Request(method, uri, std::move(header), std::move(body), http_version, chunked),
+        BasicRequest(method, uri, std::move(header), std::move(body), http_version, chunked),
         host(host), port(port), timeout(timeout), redirection_limit(redirection_limit), _original_uri(uri), _redirection_counter(), _client()
     {
         if (response_cb) response_event.add(response_cb);

@@ -73,22 +73,22 @@ void Client::on_timer (const TimerSP& t) {
 }
 
 void Client::on_read (string& _buf, const CodeError& err) {
-    if (err) return cancel(err.code());
+    if (err) return cancel(errc::parse_error);
     panda_log_verbose_debug("read:\n" << _buf);
 
     string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
 
     auto result = _parser.parse(buf);
-    if (!result.state) return cancel(errc::parser_error);
-    if (result.state.value() < State::got_header) {
+    if (result.error) return cancel(errc::parse_error);
+    if (result.state < State::got_header) {
         panda_log_verbose_debug("got part, headers not finished");
         return;
     }
 
     _response = static_pointer_cast<Response>(result.response);
-    _request->handle_partial(_request, _response, result.state.value(), {});
+    _request->handle_partial(_request, _response, result.state, {});
 
-    if (result.state.value() != State::done) {
+    if (result.state != State::done) {
         panda_log_verbose_debug("got part, body not finished");
         return;
     }
@@ -184,7 +184,7 @@ void Client::on_eof () {
     if (_request) {
         panda_log_debug("sending eof to parser");
         auto result = _parser.eof();
-        if (!result.state) return cancel(make_error_code(std::errc::connection_reset));
+        if (result.error) return cancel(make_error_code(std::errc::connection_reset));
         analyze_request();
     }
     else Tcp::reset();

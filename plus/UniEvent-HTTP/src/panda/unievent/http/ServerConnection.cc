@@ -11,7 +11,7 @@
 
 namespace panda { namespace unievent { namespace http {
 
-ServerConnection::ServerConnection (Server* server, uint64_t id) : Tcp(server->loop()), server(server), _id(id), parser(this) {
+ServerConnection::ServerConnection (Server* server, uint64_t id) : Tcp(server->loop()), _id(id), server(server), parser(this) {
     Tcp::event_listener(this);
 }
 
@@ -21,9 +21,9 @@ ServerConnection::~ServerConnection () {
 void ServerConnection::on_read (string& _buf, const CodeError& err) {
     if (err) {
         panda_log_info("read error: " << err.whats());
-        if (!requests.size() || requests.back()->state == State::done) requests.emplace_back(new ServerRequest(this));
+        if (!requests.size() || requests.back()->_state == State::done) requests.emplace_back(new ServerRequest(this));
         requests.back()->_state = State::error;
-        return request_error(requests.back(), err.code());
+        return request_error(requests.back(), errc::parse_error);
     }
     string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
 
@@ -33,27 +33,34 @@ void ServerConnection::on_read (string& _buf, const CodeError& err) {
         auto req = static_pointer_cast<ServerRequest>(result.request);
         if (!requests.size() || requests.back() != req) requests.emplace_back(req);
 
-        if (!result.state) {
-            req->_state = State::error;
-            panda_log_info("parser error: " << result.state.error());
-            return request_error(req, result.state.error());
-        }
-        req->_state = result.state.value();
+        req->_state = result.state;
 
-        if (req->_state < State::got_header) {
+        if (result.error) {
+            panda_log_info("parser error: " << result.error);
+            return request_error(req, errc::parse_error);
+        }
+
+        if (result.state < State::got_header) {
             panda_log_verbose_debug("got part, headers not finished");
             return;
         }
 
-        req->partial_called = true;
-        server->handle_partial(req, {}, this);
+        panda_log_verbose_debug("got part, body finished = " << (result.state == State::done));
 
-        if (req->_state != State::done) {
-            panda_log_verbose_debug("got part, body not finished");
+        if (!req->_routed) {
+            req->_routed = true;
+            server->route_event(req);
+        }
+
+        if (req->_partial) {
+            req->partial_event(req, {});
             return;
         }
 
-        server->handle_request(req, this);
+        if (result.state == State::done) {
+            req->receive_event(req);
+            server->receive_event(req);
+        }
     }
 }
 
@@ -63,10 +70,10 @@ void ServerConnection::respond (const RequestSP& req, const ResponseSP& res) {
     req->_response = res;
     res->_request = req;
     if (!res->chunked || res->body.length()) res->_completed = true;
-    if (_requests.front() == req) write_response();
+    if (_requests.front() == req) write_next_response();
 }
 
-void ServerConnection::write_response () {
+void ServerConnection::write_next_response () {
     auto req = _requests.front();
     auto res = req->_response;
 
@@ -78,13 +85,18 @@ void ServerConnection::write_response () {
     if (!res->headers.has_field("Date")) res->headers.date(_server->date_header_now());
 
     std::vector<string> tmp_chunks;
-    if (!res->_completed && res->body.parts.size()) tmp_chunks = std::move(res->body.parts);
+    if (res->chunked && !res->_completed && res->body.parts.size()) tmp_chunks = std::move(res->body.parts);
 
     auto v = res->to_vector(req);
     write(v.begin(), b.end());
 
     if (!res->_completed) {
-        if (tmp_chunks.size()) res->body.parts = std::move(tmp_chunks);
+        if (tmp_chunks.size()) {
+            for (auto& chunk : tmp_chunks) {
+                auto v = res->make_chunk(chunk);
+                write(v.begin(), v.end());
+            }
+        }
         return;
     }
 
@@ -106,14 +118,11 @@ void ServerConnection::send_chunk (const ServerResponseSP& res, const string& ch
 
 void ServerConnection::end_chunk (const ServerResponseSP& res) {
     assert(_requests.size());
-
-    if (_requests.front()->_response == res) {
-        write(res->end_chunk());
-        finish_request();
-        return;
-    }
-
     res->_completed = true;
+    if (_requests.front()->_response != res) return;
+
+    write(res->end_chunk());
+    finish_request();
 }
 
 void ServerConnection::finish_request () {
@@ -123,21 +132,47 @@ void ServerConnection::finish_request () {
 
     req->_connection = nullptr;
     _requests.pop_front();
-    if (_requests.front()._response) write_response();
+    if (_requests.front()._response && Tcp::connected()) write_next_response();
 }
 
 void ServerConnection::on_write (const CodeError& err, const WriteRequestSP&) {
     if (!err) return;
     panda_log_info("write error: " << err);
+    event_listener(nullptr);
+    reset();
+    close(make_error_code(std::errc::connection_reset));
+}
+
+void ServerConnection::on_eof () {
+    panda_log_debug("eof");
+    event_listener(nullptr);
+    disconnect();
+    close(make_error_code(std::errc::connection_reset));
+    server->handle_eof(this);
+}
+
+void ServerConnection::close (const std::error_code& err) {
+    while (_requests.size()) {
+        auto req = _requests.front();
+        // remove request from pool first, because no one listen for responses,
+        // we need request/response objects to completely ignore any calls to respond(), send_chunk(), end_chunk()
+        finish_request(req);
+        if (req->_state != State::done) {
+            if (req->_partial) req->partial_event(req, err);
+            else               server->error_event(req, err);
+        } else {
+            if (req->_response && req->_response->_completed) {} // nothing to do. user already processed and forgot this request
+            else req->drop_event(req, err);
+        }
+    }
 }
 
 void ServerConnection::request_error (const ServerRequestSP& req, const std::error_code& err) {
     read_stop();
-    if (req->partial_called) server->handle_partial(req, err, this);
-    if (!req->response) respond(req, new ServerResponse(400, "Bad Request", Header(), Body(), HttpVersion::any, false));
+    if (req->_partial) req->partial_event(req, err);
+    else               server->error_event(req, err);
+    if (!req->_response) respond(req, new ServerResponse(400, "Bad Request", Header(), Body(), HttpVersion::any, false));
 }
-
-
 
 //void Connection::close(uint16_t, string) {
 //    server_->remove_connection(this);

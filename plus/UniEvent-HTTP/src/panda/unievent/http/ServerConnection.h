@@ -1,6 +1,6 @@
 #pragma once
 #include <deque>
-#include "Request.h"
+#include "ServerRequest.h"
 #include <panda/unievent/Tcp.h>
 #include <panda/protocol/http/RequestParser.h>
 
@@ -30,6 +30,8 @@ private:
 //    void write_chunk(const string& buf, bool is_last);
 
 private:
+    friend ServerRequest; friend ServerResponse;
+
     using RequestParser = protocol::http::RequestParser;
     using RequestList   = std::deque<ServerRequestSP>;
 
@@ -42,14 +44,16 @@ private:
 
     void on_read  (string&, const CodeError&) override;
     void on_write (const CodeError&, const WriteRequestSP&) override;
+    void on_eof   () override;
 
     void request_error (const ServerRequestSP&, const std::error_code& err);
 
-    void respond        (const RequestSP&, const ResponseSP&);
-    void write_response ();
-    void send_chunk     (const ResponseSP&, const string& chunk);
-    void end_chunk      (const ResponseSP&);
-    void finish_request ();
+    void respond             (const ServerRequestSP&, const ServerResponseSP&);
+    void write_next_response ();
+    void send_chunk          (const ServerResponseSP&, const string& chunk);
+    void end_chunk           (const ServerResponseSP&);
+    void finish_request      ();
+    void close               (const std::error_code&);
 };
 using ServerConnectionSP = iptr<ServerConnection>;
 

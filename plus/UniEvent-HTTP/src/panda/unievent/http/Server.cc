@@ -81,7 +81,7 @@ void Server::on_connection (const StreamSP& stream, const CodeError& err) {
     auto connection = dynamic_pointer_cast<ServerConnection>(stream);
     assert(connection);
     _connections[connection->id()] = connection;
-    panda_log_debug("client connected to " << stream->sockaddr() << ", total connections: " << _connections.size());
+    panda_log_debug("client connected to " << connection->sockaddr() << ", total connections: " << _connections.size());
 }
 
 const string& Server::date_header_now () {

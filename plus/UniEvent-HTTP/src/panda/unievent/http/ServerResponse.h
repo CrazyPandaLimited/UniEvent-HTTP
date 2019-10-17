@@ -24,7 +24,8 @@ struct ServerResponse : BasicResponse {
     void end_chunk  ();
 
 private:
-    friend ServerConnection;
+    friend ServerRequest;
+    friend struct ServerConnection;
 
     ServerRequest* _request;
     bool           _completed;

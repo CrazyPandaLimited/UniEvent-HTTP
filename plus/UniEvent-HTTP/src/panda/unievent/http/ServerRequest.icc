@@ -4,7 +4,7 @@
 namespace panda { namespace unievent { namespace http {
 
 void ServerRequest::respond (const ServerResponseSP& res) {
-    if (!_connection) throw HttpError("cannot respond: request has already been completed");
+    if (!_connection) return; // response after client disconnection
     _connection->respond(this, res);
 }
 

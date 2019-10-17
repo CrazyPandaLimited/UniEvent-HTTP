@@ -8,7 +8,7 @@ const char* ErrorCategory::name () const throw() { return "unievent-http"; }
 
 std::string ErrorCategory::message (int condition) const throw() {
     switch ((errc)condition) {
-        case errc::parser_error      : return "parser error";
+        case errc::parse_error       : return "error parsing request";
         case errc::no_redirect_uri   : return "server did not return valid Location header in redirection response";
         case errc::redirection_limit : return "redirection limit exceeded";
     }

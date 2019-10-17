@@ -27,13 +27,13 @@ struct Server : Refcnt, private IStreamSelfListener {
         uint32_t              max_idle = DEFAULT_MAX_IDLE; // max idle time for keep-alive connection before it is dropped [s]
     };
 
-    using request_fptr = void(const RequestSP&, const ServerConnectionSP&);
-    using partial_fptr = void(const RequestSP&, const std::error_code&, const ServerConnectionSP&);
-    using request_fn   = function<request_fptr>;
-    using partial_fn   = function<partial_fptr>;
+    using route_fptr   = void(const ServerRequestSP&);
+    using receive_fptr = ServerRequest::receive_fptr;
+    using error_fptr   = void(const ServerRequestSP&, const std::error_code&);
 
-    CallbackDispatcher<request_fptr> request_event;
-    CallbackDispatcher<partial_fptr> partial_event;
+    CallbackDispatcher<route_fptr>   route_event;
+    CallbackDispatcher<receive_fptr> receive_event;
+    CallbackDispatcher<error_fptr>   error_event;
 
     Server (const LoopSP& loop = Loop::default_loop());
 
@@ -74,14 +74,6 @@ private:
     StreamSP create_connection (const StreamSP&) override;
 
     void on_connection (const StreamSP&, const CodeError&) override;
-
-    void handle_partial (const RequestSP& req, const std::error_code& err, const ServerConnectionSP& conn) {
-        partial_event(req, err, conn);
-    }
-
-    void handle_request (const RequestSP& req, const ServerConnectionSP& conn) {
-        request_event(req, conn);
-    }
 
     void handle_eof (const ServerConnectionSP& conn) {
         _connections.erase(conn->id());
