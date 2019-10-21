@@ -15,20 +15,6 @@ struct ServerConnection : Tcp, private ITcpSelfListener, private protocol::http:
 
     uint64_t id () const { return _id; }
 
-//    virtual void close(uint16_t code, string payload);
-//    Server* server() const { return server_; }
-private:
-
-//    virtual void on_request(protocol::http::RequestSP msg);
-//    virtual void on_stream_error(const CodeError& err);
-//    virtual void on_any_error(const string& err);
-//
-//    virtual void on_eof() override;
-//
-//    void close_tcp();
-//
-//    void write_chunk(const string& buf, bool is_last);
-
 private:
     friend ServerRequest; friend ServerResponse;
 
@@ -51,7 +37,7 @@ private:
     void respond             (const ServerRequestSP&, const ServerResponseSP&);
     void write_next_response ();
     void send_chunk          (const ServerResponseSP&, const string& chunk);
-    void end_chunk           (const ServerResponseSP&);
+    void finalize_chunk      (const ServerResponseSP&);
     void finish_request      ();
     void close               (const std::error_code&);
 };

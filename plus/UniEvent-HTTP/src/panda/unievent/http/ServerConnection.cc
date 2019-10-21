@@ -1,14 +1,6 @@
 #include "ServerConnection.h"
 #include "Server.h"
 
-//#include <panda/string.h>
-//#include <panda/function.h>
-//#include <panda/protocol/http/Request.h>
-//#include <panda/protocol/http/Response.h>
-//
-//#include "Server.h"
-//#include "../common/Dump.h"
-
 namespace panda { namespace unievent { namespace http {
 
 ServerConnection::ServerConnection (Server* server, uint64_t id) : Tcp(server->loop()), _id(id), server(server), parser(this) {
@@ -53,7 +45,7 @@ void ServerConnection::on_read (string& _buf, const CodeError& err) {
         }
 
         if (req->_partial) {
-            req->partial_event(req, {});
+            req->partial_event(req, std::error_code());
             return;
         }
 
@@ -64,17 +56,17 @@ void ServerConnection::on_read (string& _buf, const CodeError& err) {
     }
 }
 
-void ServerConnection::respond (const RequestSP& req, const ResponseSP& res) {
+void ServerConnection::respond (const ServerRequestSP& req, const ServerResponseSP& res) {
     assert(req->_connection == this);
     if (req->_response) throw HttpError("double response for request given");
     req->_response = res;
     res->_request = req;
     if (!res->chunked || res->body.length()) res->_completed = true;
-    if (_requests.front() == req) write_next_response();
+    if (requests.front() == req) write_next_response();
 }
 
 void ServerConnection::write_next_response () {
-    auto req = _requests.front();
+    auto req = requests.front();
     auto res = req->_response;
 
     if (!res->code) {
@@ -82,13 +74,13 @@ void ServerConnection::write_next_response () {
         res->message = "OK";
     }
 
-    if (!res->headers.has_field("Date")) res->headers.date(_server->date_header_now());
+    if (!res->headers.has_field("Date")) res->headers.date(server->date_header_now());
 
-    std::vector<string> tmp_chunks;
+    decltype(res->body.parts) tmp_chunks;
     if (res->chunked && !res->_completed && res->body.parts.size()) tmp_chunks = std::move(res->body.parts);
 
     auto v = res->to_vector(req);
-    write(v.begin(), b.end());
+    write(v.begin(), v.end());
 
     if (!res->_completed) {
         if (tmp_chunks.size()) {
@@ -104,10 +96,10 @@ void ServerConnection::write_next_response () {
 }
 
 void ServerConnection::send_chunk (const ServerResponseSP& res, const string& chunk) {
-    assert(_requests.size());
+    assert(requests.size());
     if (!chunk) return;
 
-    if (_requests.front()->_response == res) {
+    if (requests.front()->_response == res) {
         auto v = res->make_chunk(chunk);
         write(v.begin(), v.end());
         return;
@@ -116,28 +108,28 @@ void ServerConnection::send_chunk (const ServerResponseSP& res, const string& ch
     res->body.parts.push_back(chunk);
 }
 
-void ServerConnection::end_chunk (const ServerResponseSP& res) {
-    assert(_requests.size());
+void ServerConnection::finalize_chunk (const ServerResponseSP& res) {
+    assert(requests.size());
     res->_completed = true;
-    if (_requests.front()->_response != res) return;
+    if (requests.front()->_response != res) return;
 
-    write(res->end_chunk());
+    write(res->final_chunk());
     finish_request();
 }
 
 void ServerConnection::finish_request () {
-    auto req = _requests.front();
+    auto req = requests.front();
     auto res = req->_response;
     assert(res->_completed);
 
     req->_connection = nullptr;
-    _requests.pop_front();
-    if (_requests.front()._response && Tcp::connected()) write_next_response();
+    requests.pop_front();
+    if (requests.front()->_response && Tcp::connected()) write_next_response();
 }
 
 void ServerConnection::on_write (const CodeError& err, const WriteRequestSP&) {
     if (!err) return;
-    panda_log_info("write error: " << err);
+    panda_log_info("write error: " << err.whats());
     event_listener(nullptr);
     reset();
     close(make_error_code(std::errc::connection_reset));
@@ -152,11 +144,11 @@ void ServerConnection::on_eof () {
 }
 
 void ServerConnection::close (const std::error_code& err) {
-    while (_requests.size()) {
-        auto req = _requests.front();
+    while (requests.size()) {
+        auto req = requests.front();
         // remove request from pool first, because no one listen for responses,
         // we need request/response objects to completely ignore any calls to respond(), send_chunk(), end_chunk()
-        finish_request(req);
+        finish_request();
         if (req->_state != State::done) {
             if (req->_partial) req->partial_event(req, err);
             else               server->error_event(req, err);
@@ -173,63 +165,5 @@ void ServerConnection::request_error (const ServerRequestSP& req, const std::err
     else               server->error_event(req, err);
     if (!req->_response) respond(req, new ServerResponse(400, "Bad Request", Header(), Body(), HttpVersion::any, false));
 }
-
-//void Connection::close(uint16_t, string) {
-//    server_->remove_connection(this);
-//}
-//
-//void Connection::on_request(protocol::http::RequestSP request) {
-//    _EDEBUGTHIS("on_request");
-//
-//    //if (Log::should_log(logger::DEBUG, _panda_code_point_)){
-//        //Log logger = Log(_panda_code_point_, logger::DEBUG);
-//        //logger << "on_request: payload=\n";
-//        //logger << request;
-//    //}
-//
-//    ResponseSP response;
-//    request_callback(this, request, response);
-//
-//    response->write_callback.add(function_details::tmp_abstract_function(&Connection::write_chunk, iptr<Connection>(this)));
-//
-//    if(response->chunked()) {
-//        responses_.emplace_back(response);
-//    }
-//
-//    auto response_vector = to_vector(response);
-//    //for(auto part : response_vector)
-//        //panda_log_debug("on_request" << part);
-//    //panda_log_debug("on_request response: " << response);
-//    write(response_vector.begin(), response_vector.end());
-//}
-//
-//void Connection::write_chunk(const string& buf, bool is_last) {
-//    _EDEBUGTHIS("write_chunk, is_last=%d", is_last);
-//    std::vector<panda::string> chunk_with_length = { string::from_number(buf.length(), 16) + "\r\n", buf, "\r\n" };
-//    if(is_last) {
-//        chunk_with_length.push_back("0\r\n\r\n");
-//    }
-//    write(begin(chunk_with_length), end(chunk_with_length));
-//}
-//
-//void Connection::on_stream_error(const CodeError& err) {
-//    _EDEBUGTHIS("on_stream_error");
-//    stream_error_callback(this, err);
-//    //on_any_error(err.what());
-//}
-//
-//void Connection::on_any_error(const string& err) {
-//    _EDEBUGTHIS("on_any_error");
-//    any_error_callback(this, err);
-//}
-//
-//void Connection::on_eof() {
-//    _EDEBUGTHIS("on_eof");
-//}
-//
-//void Connection::close_tcp() {
-//    shutdown();
-//    disconnect();
-//}
 
 }}}

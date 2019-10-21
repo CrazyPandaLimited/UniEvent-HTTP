@@ -8,20 +8,14 @@ struct ServerRequest;
 struct ServerResponse : BasicResponse {
     struct Builder;
 
-//    using error_fptr = void(const ResponseSP&, const string&);
-//    using error_fn   = function<error_fptr>;
-//    using write_fptr = void(const string& chunk, bool is_last);
-//    CallbackDispatcher<error_fptr> error_event;
-//    CallbackDispatcher<write_fptr> write_event;
-
     ServerResponse () : _request(), _completed() {}
 
     ServerResponse (int code, const string& reason, Header&& header, Body&& body, HttpVersion http_version, bool chunked)
         : BasicResponse(code, reason, std::move(header), std::move(body), http_version, chunked), _request(), _completed()
     {}
 
-    void send_chunk (const string& chunk);
-    void end_chunk  ();
+    void send_chunk     (const string& chunk);
+    void finalize_chunk ();
 
 private:
     friend ServerRequest;
