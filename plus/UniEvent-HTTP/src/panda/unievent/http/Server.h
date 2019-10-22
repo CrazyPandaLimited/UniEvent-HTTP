@@ -20,6 +20,7 @@ struct Server : Refcnt, private IStreamSelfListener {
         bool     reuse_port = true; // several listeners(servers) can be bound to the same port if true, useful for threaded apps
         int      backlog    = DEFAULT_BACKLOG; // max accept queue
         SSL_CTX* ssl_ctx    = nullptr; // if set, will use SSL
+        int      domain     = AF_INET;
     };
 
     struct Config {
@@ -27,19 +28,21 @@ struct Server : Refcnt, private IStreamSelfListener {
         uint32_t              max_idle = DEFAULT_MAX_IDLE; // max idle time for keep-alive connection before it is dropped [s]
     };
 
+    using Listeners    = std::vector<TcpSP>;
     using route_fptr   = void(const ServerRequestSP&);
     using receive_fptr = ServerRequest::receive_fptr;
     using error_fptr   = void(const ServerRequestSP&, const std::error_code&);
 
     CallbackDispatcher<route_fptr>   route_event;
-    CallbackDispatcher<receive_fptr> receive_event;
+    CallbackDispatcher<receive_fptr> request_event;
     CallbackDispatcher<error_fptr>   error_event;
 
     Server (const LoopSP& loop = Loop::default_loop());
 
     void configure (const Config& config);
 
-    const LoopSP& loop () const { return _loop; }
+    const LoopSP&    loop      () const { return _loop; }
+    const Listeners& listeners () const { return _listeners; }
 
     bool running () const { return _running; }
 
@@ -54,7 +57,6 @@ protected:
 private:
     friend ServerConnection;
     using Locations   = std::vector<Location>;
-    using Listeners   = std::vector<TcpSP>;
     using Connections = std::map<uint64_t, ServerConnectionSP>;
 
     static std::atomic<uint64_t> lastid;
@@ -84,6 +86,7 @@ private:
     Server& operator= (const Server&) = delete;
     ~Server (); // restrict stack allocation
 };
+using ServerSP = iptr<Server>;
 
 std::ostream& operator<< (std::ostream&, const Server::Location&);
 std::ostream& operator<< (std::ostream&, const Server::Config&);

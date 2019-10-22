@@ -46,7 +46,7 @@ void Server::stop () {
 
 void Server::start_listening () {
     for (auto& loc : _locations) {
-        TcpSP lst = new Tcp(_loop);
+        TcpSP lst = new Tcp(_loop, loc.domain);
         lst->event_listener(this);
 
         if (loc.reuse_port) {

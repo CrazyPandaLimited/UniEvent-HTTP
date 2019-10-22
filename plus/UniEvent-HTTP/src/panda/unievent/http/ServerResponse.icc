@@ -10,10 +10,10 @@ void ServerResponse::send_chunk (const string& chunk) {
     _request->_connection->send_chunk(this, chunk);
 }
 
-void ServerResponse::finalize_chunk () {
+void ServerResponse::send_final_chunk () {
     if (_completed) throw HttpError("can't send chunk: response has already been completed");
     if (!_request || !_request->_connection) return;
-    _request->_connection->finalize_chunk(this);
+    _request->_connection->send_final_chunk(this);
 }
 
 }}}

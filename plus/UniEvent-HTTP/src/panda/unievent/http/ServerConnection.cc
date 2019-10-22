@@ -3,7 +3,7 @@
 
 namespace panda { namespace unievent { namespace http {
 
-ServerConnection::ServerConnection (Server* server, uint64_t id) : Tcp(server->loop()), _id(id), server(server), parser(this) {
+ServerConnection::ServerConnection (Server* server, uint64_t id) : Tcp(server->loop()), _id(id), server(server), parser(this), closing() {
     Tcp::event_listener(this);
 }
 
@@ -17,6 +17,12 @@ void ServerConnection::on_read (string& _buf, const CodeError& err) {
         requests.back()->_state = State::error;
         return request_error(requests.back(), errc::parse_error);
     }
+
+    if (closing) {
+        panda_log_debug("got data in closing state");
+        return;
+    }
+
     string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
 
     while (buf) {
@@ -51,7 +57,7 @@ void ServerConnection::on_read (string& _buf, const CodeError& err) {
 
         if (result.state == State::done) {
             req->receive_event(req);
-            server->receive_event(req);
+            server->request_event(req);
         }
     }
 }
@@ -69,11 +75,7 @@ void ServerConnection::write_next_response () {
     auto req = requests.front();
     auto res = req->_response;
 
-    if (!res->code) {
-        res->code = 200;
-        res->message = "OK";
-    }
-
+    if (!res->code) res->code = 200;
     if (!res->headers.has_field("Date")) res->headers.date(server->date_header_now());
 
     decltype(res->body.parts) tmp_chunks;
@@ -81,6 +83,15 @@ void ServerConnection::write_next_response () {
 
     auto v = res->to_vector(req);
     write(v.begin(), v.end());
+
+    if (!res->keep_alive()) {
+        closing = true;
+        if (requests.size() > 1) { // drop all pipelined requests
+            requests.pop_front();
+            close(make_error_code(std::errc::connection_reset));
+            requests.push_front(req);
+        }
+    }
 
     if (!res->_completed) {
         if (tmp_chunks.size()) {
@@ -108,7 +119,7 @@ void ServerConnection::send_chunk (const ServerResponseSP& res, const string& ch
     res->body.parts.push_back(chunk);
 }
 
-void ServerConnection::finalize_chunk (const ServerResponseSP& res) {
+void ServerConnection::send_final_chunk (const ServerResponseSP& res) {
     assert(requests.size());
     res->_completed = true;
     if (requests.front()->_response != res) return;
@@ -118,13 +129,21 @@ void ServerConnection::finalize_chunk (const ServerResponseSP& res) {
 }
 
 void ServerConnection::finish_request () {
-    auto req = requests.front();
-    auto res = req->_response;
-    assert(res->_completed);
+    cleanup_request();
+    if (closing) {
+        assert(!requests.size());
+        event_listener(nullptr);
+        disconnect();
+        server->handle_eof(this);
+        return;
+    }
+    if (requests.size() && requests.front()->_response) write_next_response();
+}
 
+void ServerConnection::cleanup_request () {
+    auto req = requests.front();
     req->_connection = nullptr;
     requests.pop_front();
-    if (requests.front()->_response && Tcp::connected()) write_next_response();
 }
 
 void ServerConnection::on_write (const CodeError& err, const WriteRequestSP&) {
@@ -148,7 +167,7 @@ void ServerConnection::close (const std::error_code& err) {
         auto req = requests.front();
         // remove request from pool first, because no one listen for responses,
         // we need request/response objects to completely ignore any calls to respond(), send_chunk(), end_chunk()
-        finish_request();
+        cleanup_request();
         if (req->_state != State::done) {
             if (req->_partial) req->partial_event(req, err);
             else               server->error_event(req, err);
@@ -159,11 +178,36 @@ void ServerConnection::close (const std::error_code& err) {
     }
 }
 
+static ServerResponseSP default_error_response (int code) {
+    ServerResponseSP ret = new ServerResponse(code);
+
+    string body(600);
+    body +=
+        "<html>\n"
+        "<head><title>";
+    body += ret->full_message();
+    body +=
+        "</title></head>\n"
+        "<body bgcolor=\"white\">\n"
+        "<center><h1>";
+    body += ret->full_message();
+    body +=
+        "</h1></center>\n"
+        "<hr><center>UniEvent-HTTP</center>\n"
+        "</body>\n"
+        "</html>\n";
+    for (int i = 0; i < 6; ++i) body += "<!-- a padding to disable MSIE and Chrome friendly error page -->\n";
+
+    ret->body = body;
+
+    return ret;
+}
+
 void ServerConnection::request_error (const ServerRequestSP& req, const std::error_code& err) {
     read_stop();
     if (req->_partial) req->partial_event(req, err);
     else               server->error_event(req, err);
-    if (!req->_response) respond(req, new ServerResponse(400, "Bad Request", Header(), Body(), HttpVersion::any, false));
+    if (!req->_response) respond(req, default_error_response(400));
 }
 
 }}}

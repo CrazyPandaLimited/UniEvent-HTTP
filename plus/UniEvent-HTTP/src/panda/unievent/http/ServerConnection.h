@@ -25,6 +25,7 @@ private:
     Server*       server;
     RequestParser parser;
     RequestList   requests;
+    bool          closing;
 
     protocol::http::RequestSP create_request () { return new ServerRequest(this); }
 
@@ -37,8 +38,9 @@ private:
     void respond             (const ServerRequestSP&, const ServerResponseSP&);
     void write_next_response ();
     void send_chunk          (const ServerResponseSP&, const string& chunk);
-    void finalize_chunk      (const ServerResponseSP&);
+    void send_final_chunk    (const ServerResponseSP&);
     void finish_request      ();
+    void cleanup_request     ();
     void close               (const std::error_code&);
 };
 using ServerConnectionSP = iptr<ServerConnection>;

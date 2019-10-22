@@ -1,11 +1,42 @@
 #pragma once
 #include <catch.hpp>
 #include <panda/unievent/http.h>
+#include <panda/unievent/http/Server.h>
 #include <panda/unievent/test/AsyncTest.h>
 
 using namespace panda;
+using panda::unievent::Tcp;
 using panda::unievent::Loop;
+using panda::unievent::TcpSP;
+using panda::unievent::LoopSP;
+using namespace panda::unievent::test;
 using namespace panda::unievent::http;
+
+#define VSSL "[v-ssl]"
+
+extern bool secure;
+
+struct ServerPair {
+    using ResponseSP = panda::protocol::http::ResponseSP;
+    using Parser     = panda::protocol::http::ResponseParser;
+    using Responses  = std::deque<ServerResponseSP>;
+
+    ServerSP   server;
+    TcpSP      conn;
+
+    ServerPair () : autores() {}
+
+    ResponseSP get_response ();
+    ResponseSP get_response (const string& s) { conn->write(s); return get_response(); }
+    void       autorespond  (const ServerResponseSP&);
+
+private:
+    Parser     parser;
+    Responses  response_queue;
+    bool       autores;
+};
+
+ServerPair make_server_pair (const LoopSP&);
 
 //#include <algorithm>
 //#include <cstring>

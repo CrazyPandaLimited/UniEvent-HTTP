@@ -1,4 +1,84 @@
 #include "test.h"
+#include <openssl/err.h>
+#include <openssl/dh.h>
+#include <openssl/ssl.h>
+#include <openssl/conf.h>
+#include <openssl/engine.h>
+
+bool secure = false;
+
+SSL_CTX* get_ssl_ctx () {
+    static SSL_CTX* ctx = nullptr;
+    if (ctx) return ctx;
+    ctx = SSL_CTX_new(SSLv23_server_method());
+    SSL_CTX_use_certificate_file(ctx, "t/cert/cert.pem", SSL_FILETYPE_PEM);
+    SSL_CTX_use_PrivateKey_file(ctx, "t/cert/key.pem", SSL_FILETYPE_PEM);
+    SSL_CTX_check_private_key(ctx);
+    return ctx;
+}
+
+ServerPair make_server_pair (const LoopSP& loop) {
+    ServerPair ret;
+    ret.server = new Server(loop);
+
+    Server::Config cfg;
+    Server::Location loc;
+    loc.host = "127.0.0.1";
+    if (secure) loc.ssl_ctx = get_ssl_ctx();
+    cfg.locations.push_back(loc);
+    ret.server->configure(cfg);
+
+    ret.server->run();
+
+    ret.conn = new Tcp(loop);
+    if (secure) ret.conn->use_ssl();
+    ret.conn->connect_event.add([&](auto, auto& err, auto){ if (err) throw err; loop->stop(); });
+    ret.conn->connect(ret.server->listeners().front()->sockaddr());
+    loop->run();
+
+    return ret;
+}
+
+panda::protocol::http::ResponseSP ServerPair::get_response () {
+    parser.set_request(new panda::protocol::http::Request(Request::Method::GET, new URI("/")));
+    ResponseSP ret;
+
+    conn->read_event.remove_all();
+    conn->eof_event.remove_all();
+
+    conn->read_event.add([&, this](auto, auto& str, auto& err) {
+        if (err) throw err;
+        //WARN("recv:\n" << str);
+        auto result = parser.parse(str);
+        //WARN("state = " << (int)result.state);
+        if (result.error) throw result.error;
+        if (result.state != State::done) return;
+        ret = result.response;
+        conn->loop()->stop();
+    });
+    conn->eof_event.add([&, this](auto){
+        auto result = parser.eof();
+        if (result.error) throw result.error;
+        ret = result.response;
+        conn->loop()->stop();
+    });
+    conn->loop()->run();
+
+    return ret;
+}
+
+void ServerPair::autorespond (const ServerResponseSP& res) {
+    if (!autores) {
+        autores = true;
+        server->request_event.add([this](auto& req){
+            if (!response_queue.size()) return;
+            auto res = response_queue.front();
+            response_queue.pop_front();
+            req->respond(res);
+        });
+    }
+    response_queue.push_back(res);
+}
 
 //iptr<protocol::http::Request> parse_request(const string& buf) {
 //    auto parser = make_iptr<protocol::http::RequestParser>();
