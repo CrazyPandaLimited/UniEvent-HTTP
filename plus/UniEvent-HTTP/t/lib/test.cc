@@ -5,6 +5,9 @@
 #include <openssl/conf.h>
 #include <openssl/engine.h>
 
+using panda::unievent::Timer;
+using panda::unievent::TimerSP;
+
 bool secure = false;
 
 SSL_CTX* get_ssl_ctx () {
@@ -39,9 +42,9 @@ ServerPair make_server_pair (const LoopSP& loop) {
     return ret;
 }
 
-panda::protocol::http::ResponseSP ServerPair::get_response () {
+RawResponseSP ServerPair::get_response () {
     parser.set_request(new panda::protocol::http::Request(Request::Method::GET, new URI("/")));
-    ResponseSP ret;
+    RawResponseSP ret;
 
     conn->read_event.remove_all();
     conn->eof_event.remove_all();
@@ -57,12 +60,16 @@ panda::protocol::http::ResponseSP ServerPair::get_response () {
         conn->loop()->stop();
     });
     conn->eof_event.add([&, this](auto){
+        eof = true;
         auto result = parser.eof();
         if (result.error) throw result.error;
-        ret = result.response;
+        if (result.response) ret = result.response;
         conn->loop()->stop();
     });
     conn->loop()->run();
+
+    conn->read_event.remove_all();
+    conn->eof_event.remove_all();
 
     return ret;
 }
@@ -78,6 +85,23 @@ void ServerPair::autorespond (const ServerResponseSP& res) {
         });
     }
     response_queue.push_back(res);
+}
+
+bool ServerPair::wait_eof (int tmt) {
+    if (eof) return eof;
+
+    TimerSP timer;
+    if (tmt) timer = Timer::once(tmt, [this](auto) {
+        conn->loop()->stop();
+    }, conn->loop());
+
+    conn->eof_event.add([this](auto){
+        eof = true;
+        conn->loop()->stop();
+    });
+
+    conn->loop()->run();
+    return eof;
 }
 
 //iptr<protocol::http::Request> parse_request(const string& buf) {
