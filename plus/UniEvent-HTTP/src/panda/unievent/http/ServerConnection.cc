@@ -86,11 +86,11 @@ void ServerConnection::write_next_response () {
 
     auto v = res->to_vector(req);
     write(v.begin(), v.end());
-    printf("========================= writing: =====================\n");
-    for (auto it = v.begin(); it != v.end(); ++it) {
-        printf("%s", it->c_str());
-    }
-    printf("\n=====================================\n");
+    //printf("========================= writing: =====================\n");
+    //for (auto it = v.begin(); it != v.end(); ++it) {
+    //    printf("%s", it->c_str());
+    //}
+    //printf("\n=====================================\n");
 
     if (!res->keep_alive()) {
         closing = true;
@@ -121,11 +121,11 @@ void ServerConnection::send_chunk (const ServerResponseSP& res, const string& ch
     if (requests.front()->_response == res) {
         auto v = res->make_chunk(chunk);
         write(v.begin(), v.end());
-        printf("========================= writing chunk: =====================\n");
-        for (auto it = v.begin(); it != v.end(); ++it) {
-            printf("%s", it->c_str());
-        }
-        printf("\n=====================================\n");
+        //printf("========================= writing chunk: =====================\n");
+        //for (auto it = v.begin(); it != v.end(); ++it) {
+        //    printf("%s", it->c_str());
+        //}
+        //printf("\n=====================================\n");
         return;
     }
 
@@ -138,7 +138,7 @@ void ServerConnection::send_final_chunk (const ServerResponseSP& res) {
     if (requests.front()->_response != res) return;
 
     write(res->final_chunk());
-    printf("writing final chunk\n");
+    //printf("writing final chunk\n");
     finish_request();
 }
 

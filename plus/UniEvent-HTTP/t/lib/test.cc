@@ -49,11 +49,11 @@ RawResponseSP ServerPair::get_response () {
 
         conn->read_event.add([&, this](auto, auto& str, auto& err) {
             if (err) throw err;
-            WARN("recv:\n" << str);
+            //WARN("recv:\n" << str);
             while (str) {
                 if (!parser.request()) parser.set_request(new RawRequest(Request::Method::GET, new URI("/")));
                 auto result = parser.parse_shift(str);
-                WARN("state = " << (int)result.state);
+                //WARN("state = " << (int)result.state);
                 if (result.error) {
                     WARN(result.error);
                     throw result.error;
