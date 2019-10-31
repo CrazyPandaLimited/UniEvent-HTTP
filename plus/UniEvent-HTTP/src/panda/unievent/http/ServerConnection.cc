@@ -79,16 +79,24 @@ void ServerConnection::write_next_response () {
     if (!res->headers.has_field("Date")) res->headers.date(server->date_header_now());
 
     decltype(res->body.parts) tmp_chunks;
-    if (res->chunked && !res->_completed && res->body.parts.size()) tmp_chunks = std::move(res->body.parts);
+    if (res->chunked && !res->_completed && res->body.length()) {
+        tmp_chunks = std::move(res->body.parts);
+        res->body.parts.clear();
+    }
 
     auto v = res->to_vector(req);
     write(v.begin(), v.end());
+    printf("========================= writing: =====================\n");
+    for (auto it = v.begin(); it != v.end(); ++it) {
+        printf("%s", it->c_str());
+    }
+    printf("\n=====================================\n");
 
     if (!res->keep_alive()) {
         closing = true;
         if (requests.size() > 1) { // drop all pipelined requests
             requests.pop_front();
-            close(make_error_code(std::errc::connection_reset));
+            drop_requests(make_error_code(std::errc::connection_reset));
             requests.push_front(req);
         }
     }
@@ -113,6 +121,11 @@ void ServerConnection::send_chunk (const ServerResponseSP& res, const string& ch
     if (requests.front()->_response == res) {
         auto v = res->make_chunk(chunk);
         write(v.begin(), v.end());
+        printf("========================= writing chunk: =====================\n");
+        for (auto it = v.begin(); it != v.end(); ++it) {
+            printf("%s", it->c_str());
+        }
+        printf("\n=====================================\n");
         return;
     }
 
@@ -125,6 +138,7 @@ void ServerConnection::send_final_chunk (const ServerResponseSP& res) {
     if (requests.front()->_response != res) return;
 
     write(res->final_chunk());
+    printf("writing final chunk\n");
     finish_request();
 }
 
@@ -132,9 +146,7 @@ void ServerConnection::finish_request () {
     cleanup_request();
     if (closing) {
         assert(!requests.size());
-        event_listener(nullptr);
-        disconnect();
-        server->handle_eof(this);
+        close({}, true);
         return;
     }
     if (requests.size() && requests.front()->_response) write_next_response();
@@ -149,20 +161,15 @@ void ServerConnection::cleanup_request () {
 void ServerConnection::on_write (const CodeError& err, const WriteRequestSP&) {
     if (!err) return;
     panda_log_info("write error: " << err.whats());
-    event_listener(nullptr);
-    reset();
-    close(make_error_code(std::errc::connection_reset));
+    close(make_error_code(std::errc::connection_reset), false);
 }
 
 void ServerConnection::on_eof () {
     panda_log_debug("eof");
-    event_listener(nullptr);
-    disconnect();
-    close(make_error_code(std::errc::connection_reset));
-    server->handle_eof(this);
+    close(make_error_code(std::errc::connection_reset), true);
 }
 
-void ServerConnection::close (const std::error_code& err) {
+void ServerConnection::drop_requests (const std::error_code& err) {
     while (requests.size()) {
         auto req = requests.front();
         // remove request from pool first, because no one listen for responses,
@@ -176,6 +183,14 @@ void ServerConnection::close (const std::error_code& err) {
             else req->drop_event(req, err);
         }
     }
+}
+
+void ServerConnection::close (const std::error_code& err, bool soft) {
+    panda_log_info("close: " << err);
+    event_listener(nullptr);
+    soft ? disconnect() : reset();
+    drop_requests(err);
+    server->handle_eof(this);
 }
 
 static ServerResponseSP default_error_response (int code) {

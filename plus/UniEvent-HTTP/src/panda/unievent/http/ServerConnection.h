@@ -15,6 +15,8 @@ struct ServerConnection : Tcp, private ITcpSelfListener, private protocol::http:
 
     uint64_t id () const { return _id; }
 
+    void close (const std::error_code&, bool soft = false);
+
 private:
     friend ServerRequest; friend ServerResponse;
 
@@ -41,7 +43,7 @@ private:
     void send_final_chunk    (const ServerResponseSP&);
     void finish_request      ();
     void cleanup_request     ();
-    void close               (const std::error_code&);
+    void drop_requests       (const std::error_code&);
 };
 using ServerConnectionSP = iptr<ServerConnection>;
 

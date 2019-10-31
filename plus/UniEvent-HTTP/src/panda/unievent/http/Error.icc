@@ -11,6 +11,7 @@ std::string ErrorCategory::message (int condition) const throw() {
         case errc::parse_error       : return "error parsing request";
         case errc::no_redirect_uri   : return "server did not return valid Location header in redirection response";
         case errc::redirection_limit : return "redirection limit exceeded";
+        case errc::server_stopping   : return "server is stopping";
     }
     return {};
 }

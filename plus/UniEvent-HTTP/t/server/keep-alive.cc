@@ -1,8 +1,8 @@
 #include "../lib/test.h"
 
-#define TGROUP "[server-keep-alive]"
+#define TEST(name) TEST_CASE("server-keep-alive: " name, "[server-keep-alive]" VSSL)
 
-TEST_CASE("server closes", TGROUP VSSL) {
+TEST("server closes") {
     AsyncTest test(1000);
     auto p = make_server_pair(test.loop);
     p.autorespond(new ServerResponse(200));
@@ -22,7 +22,7 @@ TEST_CASE("server closes", TGROUP VSSL) {
     CHECK(res->code == 200);
 }
 
-TEST_CASE("server persists", TGROUP VSSL) {
+TEST("server persists") {
     AsyncTest test(1000);
     auto p = make_server_pair(test.loop);
     p.autorespond(new ServerResponse(200));
@@ -42,7 +42,7 @@ TEST_CASE("server persists", TGROUP VSSL) {
     CHECK(res->code == 200);
 }
 
-TEST_CASE("server: if req is <close>, then response also <close> regardless of user's choice in headers", TGROUP VSSL) {
+TEST("if req is <close>, then response also <close> regardless of user's choice in headers") {
     AsyncTest test(1000);
     auto p = make_server_pair(test.loop);
     p.autorespond(new ServerResponse(200, Header().connection("keep-alive")));
@@ -60,7 +60,7 @@ TEST_CASE("server: if req is <close>, then response also <close> regardless of u
     CHECK(res->headers.connection() == "close");
 }
 
-TEST_CASE("server: if user's response says <close> then don't give a fuck what request says", TGROUP VSSL) {
+TEST("if user's response says <close> then don't give a fuck what request says") {
     AsyncTest test(1000);
     auto p = make_server_pair(test.loop);
     p.autorespond(new ServerResponse(200, Header().connection("close")));

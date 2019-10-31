@@ -1,8 +1,8 @@
 #include "../lib/test.h"
 
-#define TGROUP "[server-basic]"
+#define TEST(name) TEST_CASE("server-basic: " name, "[server-basic]" VSSL)
 
-TEST_CASE("server request without body", TGROUP VSSL) {
+TEST("request without body") {
     AsyncTest test(1000, 1);
     auto p = make_server_pair(test.loop);
 
@@ -24,7 +24,7 @@ TEST_CASE("server request without body", TGROUP VSSL) {
     test.run();
 }
 
-TEST_CASE("server request with body", TGROUP VSSL) {
+TEST("request with body") {
     AsyncTest test(1000, 1);
     auto p = make_server_pair(test.loop);
 
@@ -46,7 +46,7 @@ TEST_CASE("server request with body", TGROUP VSSL) {
     test.run();
 }
 
-TEST_CASE("server request with chunks", TGROUP VSSL) {
+TEST("request with chunks") {
     AsyncTest test(1000, 1);
     auto p = make_server_pair(test.loop);
 
@@ -72,7 +72,7 @@ TEST_CASE("server request with chunks", TGROUP VSSL) {
     test.run();
 }
 
-TEST_CASE("server response without body", TGROUP VSSL) {
+TEST("response without body") {
     AsyncTest test(1000, 1);
     auto p = make_server_pair(test.loop);
 
@@ -92,7 +92,7 @@ TEST_CASE("server response without body", TGROUP VSSL) {
     CHECK(!res->body.length());
 }
 
-TEST_CASE("server response with body", TGROUP VSSL) {
+TEST("response with body") {
     AsyncTest test(1000, 1);
     auto p = make_server_pair(test.loop);
 
@@ -112,7 +112,7 @@ TEST_CASE("server response with body", TGROUP VSSL) {
     CHECK(res->body.to_string() == "epta-epta");
 }
 
-TEST_CASE("server response with chunks", TGROUP VSSL) {
+TEST("response with chunks") {
     AsyncTest test(1000, 1);
     auto p = make_server_pair(test.loop);
 
@@ -138,7 +138,7 @@ TEST_CASE("server response with chunks", TGROUP VSSL) {
     CHECK(res->chunked);
 }
 
-TEST_CASE("server delayed response", TGROUP VSSL) {
+TEST("delayed response") {
     AsyncTest test(1000, 1);
     auto p = make_server_pair(test.loop);
 
@@ -160,7 +160,7 @@ TEST_CASE("server delayed response", TGROUP VSSL) {
     CHECK(!res->body.length());
 }
 
-TEST_CASE("server response with delayed chunks", TGROUP VSSL) {
+TEST("response with delayed chunks") {
     AsyncTest test(1000, 1);
     auto p = make_server_pair(test.loop);
 
@@ -190,4 +190,60 @@ TEST_CASE("server response with delayed chunks", TGROUP VSSL) {
     CHECK(res->body.parts.size() == 2);
     CHECK(res->body.to_string() == "1 2");
     CHECK(res->chunked);
+}
+
+TEST("request parsing error") {
+    AsyncTest test(1000, 1);
+    auto p = make_server_pair(test.loop);
+
+    int check_code;
+    SECTION("automatic error response")     { check_code = 400; }
+    SECTION("user's custom error response") { check_code = 404; }
+
+    p.server->error_event.add([&](auto& req, auto& err){
+        test.happens();
+        CHECK(req->headers.host() == "epta.ru");
+        CHECK(err == errc::parse_error);
+        if (check_code != 400) req->respond(new ServerResponse(check_code));
+    });
+
+    p.server->request_event.add(fail_cb);
+
+    auto res = p.get_response(
+        "GET / HTTP/1.1\r\n"
+        "Host: epta.ru\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "\r\n"
+        "something not looking like chunk"
+    );
+    CHECK(res->code == check_code);
+}
+
+TEST("request drop event when client disconnects and response not yet completed") {
+    AsyncTest test(1000, 2);
+    auto p = make_server_pair(test.loop);
+
+    SECTION("no response at all") {}
+    SECTION("partial response") {
+        p.autorespond(new ServerResponse(200, Header(), Body(), true));
+    }
+
+    p.server->request_event.add([&](auto& req){
+        test.happens();
+        req->drop_event.add([&](auto& req, auto& err){
+            test.happens();
+            CHECK(err == std::errc::connection_reset);
+            CHECK(req->headers.host() == "epta.ru");
+            test.loop->stop();
+        });
+        p.conn->disconnect();
+    });
+
+    p.conn->write(
+        "GET / HTTP/1.1\r\n"
+        "Host: epta.ru\r\n"
+        "\r\n"
+    );
+
+    test.run();
 }

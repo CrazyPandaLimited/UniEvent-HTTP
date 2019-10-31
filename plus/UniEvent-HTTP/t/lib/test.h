@@ -11,15 +11,20 @@ using panda::unievent::TcpSP;
 using panda::unievent::LoopSP;
 using namespace panda::unievent::test;
 using namespace panda::unievent::http;
+using RawRequest    = panda::protocol::http::Request;
+using RawRequestSP  = panda::protocol::http::RequestSP;
 using RawResponseSP = panda::protocol::http::ResponseSP;
 
 #define VSSL "[v-ssl]"
 
 extern bool secure;
 
+static auto fail_cb = [](auto...){ FAIL(); };
+
 struct ServerPair {
-    using Parser    = panda::protocol::http::ResponseParser;
-    using Responses = std::deque<ServerResponseSP>;
+    using Parser       = panda::protocol::http::ResponseParser;
+    using Responses    = std::deque<ServerResponseSP>;
+    using RawResponses = std::deque<RawResponseSP>;
 
     ServerSP   server;
     TcpSP      conn;
@@ -32,10 +37,11 @@ struct ServerPair {
     bool          wait_eof     (int tmt = 0);
 
 private:
-    Parser    parser;
-    Responses response_queue;
-    bool      autores;
-    bool      eof;
+    Parser       parser;
+    Responses    autoresponse_queue;
+    RawResponses response_queue;
+    bool         autores;
+    bool         eof;
 };
 
 ServerPair make_server_pair (const LoopSP&);

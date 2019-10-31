@@ -1,8 +1,8 @@
 #include "../lib/test.h"
 
-#define TGROUP "[server-version]"
+#define TEST(name) TEST_CASE("server-version: " name, "[server-version]" VSSL)
 
-TEST_CASE("server preserves version 1.0", TGROUP VSSL) {
+TEST("preserves version 1.0") {
     AsyncTest test(1000);
     auto p = make_server_pair(test.loop);
     p.autorespond(new ServerResponse(200));
@@ -10,7 +10,7 @@ TEST_CASE("server preserves version 1.0", TGROUP VSSL) {
     CHECK(res->http_version == HttpVersion::v1_0);
 }
 
-TEST_CASE("server preserves version 1.1", TGROUP VSSL) {
+TEST("preserves version 1.1") {
     AsyncTest test(1000);
     auto p = make_server_pair(test.loop);
     p.autorespond(new ServerResponse(200));
@@ -18,7 +18,7 @@ TEST_CASE("server preserves version 1.1", TGROUP VSSL) {
     CHECK(res->http_version == HttpVersion::v1_1);
 }
 
-TEST_CASE("server forces version 1.1 when chunks", TGROUP VSSL) {
+TEST("forces version 1.1 when chunks") {
     AsyncTest test(1000);
     auto p = make_server_pair(test.loop);
     p.autorespond(new ServerResponse(200, Header(), Body({"stsuka ", "nah"}), true));

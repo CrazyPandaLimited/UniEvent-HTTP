@@ -43,34 +43,42 @@ ServerPair make_server_pair (const LoopSP& loop) {
 }
 
 RawResponseSP ServerPair::get_response () {
-    parser.set_request(new panda::protocol::http::Request(Request::Method::GET, new URI("/")));
-    RawResponseSP ret;
+    if (!response_queue.size()) {
+        conn->read_event.remove_all();
+        conn->eof_event.remove_all();
 
-    conn->read_event.remove_all();
-    conn->eof_event.remove_all();
+        conn->read_event.add([&, this](auto, auto& str, auto& err) {
+            if (err) throw err;
+            WARN("recv:\n" << str);
+            while (str) {
+                if (!parser.request()) parser.set_request(new RawRequest(Request::Method::GET, new URI("/")));
+                auto result = parser.parse_shift(str);
+                WARN("state = " << (int)result.state);
+                if (result.error) {
+                    WARN(result.error);
+                    throw result.error;
+                }
+                if (result.state != State::done) return;
+                response_queue.push_back(result.response);
+            }
+            if (response_queue.size()) conn->loop()->stop();
+        });
+        conn->eof_event.add([&, this](auto){
+            eof = true;
+            auto result = parser.eof();
+            if (result.error) throw result.error;
+            if (result.response) response_queue.push_back(result.response);
+            conn->loop()->stop();
+        });
+        conn->loop()->run();
 
-    conn->read_event.add([&, this](auto, auto& str, auto& err) {
-        if (err) throw err;
-        //WARN("recv:\n" << str);
-        auto result = parser.parse(str);
-        //WARN("state = " << (int)result.state);
-        if (result.error) throw result.error;
-        if (result.state != State::done) return;
-        ret = result.response;
-        conn->loop()->stop();
-    });
-    conn->eof_event.add([&, this](auto){
-        eof = true;
-        auto result = parser.eof();
-        if (result.error) throw result.error;
-        if (result.response) ret = result.response;
-        conn->loop()->stop();
-    });
-    conn->loop()->run();
+        conn->read_event.remove_all();
+        conn->eof_event.remove_all();
+    }
 
-    conn->read_event.remove_all();
-    conn->eof_event.remove_all();
-
+    if (!response_queue.size()) throw "no response";
+    auto ret = response_queue.front();
+    response_queue.pop_front();
     return ret;
 }
 
@@ -78,13 +86,13 @@ void ServerPair::autorespond (const ServerResponseSP& res) {
     if (!autores) {
         autores = true;
         server->request_event.add([this](auto& req){
-            if (!response_queue.size()) return;
-            auto res = response_queue.front();
-            response_queue.pop_front();
+            if (!autoresponse_queue.size()) return;
+            auto res = autoresponse_queue.front();
+            autoresponse_queue.pop_front();
             req->respond(res);
         });
     }
-    response_queue.push_back(res);
+    autoresponse_queue.push_back(res);
 }
 
 bool ServerPair::wait_eof (int tmt) {

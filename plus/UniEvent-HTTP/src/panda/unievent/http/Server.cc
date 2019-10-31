@@ -40,7 +40,7 @@ void Server::run () {
 void Server::stop () {
     if (!_running) return;
     stop_listening();
-    _connections.clear();
+    while (_connections.size()) _connections.begin()->second->close(errc::server_stopping);
     _running = false;
 }
 

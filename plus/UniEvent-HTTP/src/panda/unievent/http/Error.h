@@ -8,6 +8,7 @@ enum class errc {
     parse_error       = 1,
     no_redirect_uri   = 2,
     redirection_limit = 3,
+    server_stopping   = 4,
 };
 
 struct ErrorCategory : std::error_category {

@@ -17,6 +17,8 @@ struct ServerResponse : BasicResponse {
     void send_chunk       (const string& chunk);
     void send_final_chunk ();
 
+    bool completed () const { return _completed; }
+
 private:
     friend ServerRequest;
     friend struct ServerConnection;
