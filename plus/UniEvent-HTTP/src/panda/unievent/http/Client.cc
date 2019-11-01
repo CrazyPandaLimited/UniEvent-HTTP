@@ -44,6 +44,11 @@ void Client::request (const RequestSP& request) {
     Tcp::weak(false);
     _request = request;
 
+    if (!request->headers.has("User-Agent")) request->headers.add(
+        "User-Agent",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36 UniEvent-HTTP/1.0"
+    );
+
     auto data = request->to_vector();
     _parser.set_request(request);
     read_start();
@@ -114,7 +119,7 @@ void Client::analyze_request () {
         case 308:
             if (_request->redirection_limit && ++_request->_redirection_counter > _request->redirection_limit) return cancel(errc::redirection_limit);
 
-            auto uristr = _response->headers.get_field("Location");
+            auto uristr = _response->headers.get("Location");
             if (!uristr) return cancel(errc::no_redirect_uri);
 
             URISP uri = new URI(uristr);
@@ -129,7 +134,7 @@ void Client::analyze_request () {
 
             _request->_original_uri = prev_uri;
             _request->uri = uri;
-            _request->headers.remove_field("Host"); // will be filled from new uri
+            _request->headers.remove("Host"); // will be filled from new uri
             panda_log_debug("following redirect: " << prev_uri->to_string() << " -> " << uri->to_string() << " (" << _request->_redirection_counter << " of " << _request->redirection_limit << ")");
             auto netloc = _request->netloc();
 

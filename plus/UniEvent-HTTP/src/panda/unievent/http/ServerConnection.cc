@@ -79,7 +79,7 @@ void ServerConnection::write_next_response () {
     auto res = req->_response;
 
     if (!res->code) res->code = 200;
-    if (!res->headers.has_field("Date")) res->headers.date(server->date_header_now());
+    if (!res->headers.has("Date")) res->headers.date(server->date_header_now());
 
     decltype(res->body.parts) tmp_chunks;
     if (res->chunked && !res->_completed && res->body.length()) {
@@ -245,7 +245,7 @@ void ServerConnection::request_error (const ServerRequestSP& req, const std::err
 
     auto res = req->_response;
     if (!res) respond(req, default_error_response(400));
-    else if (res->keep_alive()) res->headers.set_field("Connection", "close");
+    else if (res->keep_alive()) res->headers.set("Connection", "close");
 }
 
 }}}

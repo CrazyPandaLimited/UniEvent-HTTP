@@ -247,3 +247,15 @@ TEST("request drop event when client disconnects and response not yet completed"
 
     test.run();
 }
+
+TEST("date header") {
+    AsyncTest test(1000);
+    auto p = make_server_pair(test.loop);
+
+    for (int i = 0; i < 2; ++i) {
+        p.autorespond(new ServerResponse(200));
+        auto res = p.get_response("GET / HTTP/1.1\r\n\r\n");
+        auto s = res->headers.date();
+        CHECK(s);
+    }
+}
