@@ -9,6 +9,8 @@ using panda::unievent::Tcp;
 using panda::unievent::Loop;
 using panda::unievent::TcpSP;
 using panda::unievent::LoopSP;
+using panda::unievent::Timer;
+using panda::unievent::TimerSP;
 using namespace panda::unievent::test;
 using namespace panda::unievent::http;
 using RawRequest    = panda::protocol::http::Request;
@@ -44,7 +46,7 @@ private:
     bool         eof;
 };
 
-ServerPair make_server_pair (const LoopSP&);
+ServerPair make_server_pair (const LoopSP&, Server::Config = {});
 
 //#include <algorithm>
 //#include <cstring>

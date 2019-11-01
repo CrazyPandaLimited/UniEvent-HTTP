@@ -3,24 +3,30 @@
 
 namespace panda { namespace unievent { namespace http {
 
-ServerConnection::ServerConnection (Server* server, uint64_t id) : Tcp(server->loop()), _id(id), server(server), parser(this), closing() {
-    Tcp::event_listener(this);
+ServerConnection::ServerConnection (Server* server, uint64_t id, const Config& conf) : Tcp(server->loop()), server(server), _id(id), conf(conf), parser(this), closing() {
+    event_listener(this);
+
+    if (conf.idle_timeout) {
+        idle_timer = new Timer(server->loop());
+        idle_timer->event.add([this](auto&){
+            assert(!requests.size());
+            close({}, true);
+        });
+        idle_timer->once(conf.idle_timeout);
+    }
 }
 
-ServerConnection::~ServerConnection () {
-}
-
-void ServerConnection::on_read (string& _buf, const CodeError& err) {
+void ServerConnection::on_read (string& buf, const CodeError& err) {
     if (err) {
+        if (idle_timer) idle_timer->stop();
         panda_log_info("read error: " << err.whats());
         if (!requests.size() || requests.back()->_state == State::done) requests.emplace_back(new ServerRequest(this));
         requests.back()->_state = State::error;
         return request_error(requests.back(), errc::parse_error);
     }
 
-    string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
-
     while (buf) {
+        if (idle_timer) idle_timer->stop(); // we must stop timer every request because user might have responded to previous and timer might have been activated again
         auto result = parser.parse_shift(buf);
 
         auto req = static_pointer_cast<ServerRequest>(result.request);
@@ -89,11 +95,6 @@ void ServerConnection::write_next_response () {
 
     auto v = res->to_vector(req);
     write(v.begin(), v.end());
-    //printf("========================= writing: =====================\n");
-    //for (auto it = v.begin(); it != v.end(); ++it) {
-    //    printf("%s", it->c_str());
-    //}
-    //printf("\n=====================================\n");
 
     if (!res->keep_alive() || !req->keep_alive()) {
         closing = true;
@@ -129,11 +130,6 @@ void ServerConnection::send_chunk (const ServerResponseSP& res, const string& ch
     if (requests.front()->_response == res) {
         auto v = res->make_chunk(chunk);
         write(v.begin(), v.end());
-        //printf("========================= writing chunk: =====================\n");
-        //for (auto it = v.begin(); it != v.end(); ++it) {
-        //    printf("%s", it->c_str());
-        //}
-        //printf("\n=====================================\n");
         return;
     }
 
@@ -146,7 +142,6 @@ void ServerConnection::send_final_chunk (const ServerResponseSP& res) {
     if (requests.front()->_response != res) return;
 
     write(res->final_chunk());
-    //printf("writing final chunk\n");
     finish_request();
 }
 
@@ -167,7 +162,13 @@ void ServerConnection::finish_request () {
         return;
     }
 
-    if (requests.size() && requests.front()->_response) write_next_response();
+    if (requests.size()) {
+        if (requests.front()->_response) write_next_response();
+    }
+    else if (idle_timer) {
+        assert(!idle_timer->active());
+        idle_timer->once(conf.idle_timeout);
+    }
 }
 
 void ServerConnection::cleanup_request () {
@@ -208,7 +209,13 @@ void ServerConnection::close (const std::error_code& err, bool soft) {
     event_listener(nullptr);
     soft ? disconnect() : reset();
     drop_requests(err);
-    server->handle_eof(this);
+
+    if (idle_timer) {
+        idle_timer->stop();
+        idle_timer = nullptr;
+    }
+
+    server->remove(this); // after this line <this> is probably a junk
 }
 
 ServerResponseSP ServerConnection::default_error_response (int code) {

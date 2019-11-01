@@ -9,9 +9,13 @@ namespace panda { namespace unievent { namespace http {
 struct Server;
 
 struct ServerConnection : Tcp, private ITcpSelfListener, private protocol::http::IRequestFactory {
-    ServerConnection (Server*, uint64_t id);
+    struct Config {
+        uint32_t idle_timeout;
+    };
 
-    ~ServerConnection ();
+    ServerConnection (Server*, uint64_t id, const Config&);
+
+    ~ServerConnection () {}
 
     uint64_t id () const { return _id; }
 
@@ -23,10 +27,12 @@ private:
     using RequestParser = protocol::http::RequestParser;
     using RequestList   = std::deque<ServerRequestSP>;
 
-    uint64_t      _id;
     Server*       server;
+    uint64_t      _id;
+    Config        conf;
     RequestParser parser;
     RequestList   requests;
+    TimerSP       idle_timer;
     bool          closing;
 
     protocol::http::RequestSP create_request () { return new ServerRequest(this); }

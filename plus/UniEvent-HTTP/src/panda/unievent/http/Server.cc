@@ -8,7 +8,7 @@ string rfc822_date (time::ptime_t);
 
 std::atomic<uint64_t> Server::lastid(0);
 
-Server::Server (const LoopSP& loop) : _loop(loop), _running(), _max_idle() {}
+Server::Server (const LoopSP& loop) : _loop(loop), _running(), _hdate_time() {}
 
 Server::~Server() {
     stop();
@@ -23,8 +23,8 @@ void Server::configure (const Config& conf) {
 
     if (_running) stop_listening();
 
-    _locations = conf.locations;
-    for (auto& loc : _locations) {
+    _conf = conf;
+    for (auto& loc : _conf.locations) {
         if (!loc.backlog) loc.backlog = DEFAULT_BACKLOG;
     }
 
@@ -40,12 +40,13 @@ void Server::run () {
 void Server::stop () {
     if (!_running) return;
     stop_listening();
+    panda_log_debug("stopping " << _connections.size() << " connections");
     while (_connections.size()) _connections.begin()->second->close(errc::server_stopping);
     _running = false;
 }
 
 void Server::start_listening () {
-    for (auto& loc : _locations) {
+    for (auto& loc : _conf.locations) {
         TcpSP lst = new Tcp(_loop, loc.domain);
         lst->event_listener(this);
 
@@ -68,11 +69,13 @@ void Server::stop_listening () {
 }
 
 StreamSP Server::create_connection (const StreamSP&) {
-    return new_connection(++lastid);
+    ServerConnection::Config cfg;
+    cfg.idle_timeout = _conf.idle_timeout;
+    return new_connection(++lastid, cfg);
 }
 
-ServerConnectionSP Server::new_connection (uint64_t id) {
-    ServerConnectionSP conn = new ServerConnection(this, id);
+ServerConnectionSP Server::new_connection (uint64_t id, const ServerConnection::Config& conf) {
+    ServerConnectionSP conn = new ServerConnection(this, id, conf);
     return conn;
 }
 
@@ -81,7 +84,7 @@ void Server::on_connection (const StreamSP& stream, const CodeError& err) {
     auto connection = dynamic_pointer_cast<ServerConnection>(stream);
     assert(connection);
     _connections[connection->id()] = connection;
-    panda_log_debug("client connected to " << connection->sockaddr() << ", total connections: " << _connections.size());
+    panda_log_debug("client connected to " << connection->sockaddr() << ", id=" << connection->id() << ", total connections: " << _connections.size());
 }
 
 const string& Server::date_header_now () {

@@ -11,8 +11,8 @@ struct ssl_ctx_st; typedef ssl_ctx_st SSL_CTX; // avoid including openssl header
 namespace panda { namespace unievent { namespace http {
 
 struct Server : Refcnt, private IStreamSelfListener {
-    static constexpr const int      DEFAULT_BACKLOG  = 4096;
-    static constexpr const uint32_t DEFAULT_MAX_IDLE = 600; // [s]
+    static constexpr const int      DEFAULT_BACKLOG      = 4096;
+    static constexpr const uint32_t DEFAULT_IDLE_TIMEOUT = 600000; // [ms]
 
     struct Location {
         string   host;
@@ -25,7 +25,7 @@ struct Server : Refcnt, private IStreamSelfListener {
 
     struct Config {
         std::vector<Location> locations;
-        uint32_t              max_idle = DEFAULT_MAX_IDLE; // max idle time for keep-alive connection before it is dropped [s]
+        uint32_t              idle_timeout = DEFAULT_IDLE_TIMEOUT; // max idle time for keep-alive connection before it is dropped [ms]
     };
 
     using Listeners    = std::vector<TcpSP>;
@@ -52,7 +52,7 @@ struct Server : Refcnt, private IStreamSelfListener {
     const string& date_header_now ();
 
 protected:
-    virtual ServerConnectionSP new_connection (uint64_t id);
+    virtual ServerConnectionSP new_connection (uint64_t id, const ServerConnection::Config&);
 
 private:
     friend ServerConnection;
@@ -62,10 +62,9 @@ private:
     static std::atomic<uint64_t> lastid;
 
     LoopSP      _loop;
-    Locations   _locations;
+    Config      _conf;
     Listeners   _listeners;
     bool        _running;
-    uint32_t    _max_idle;
     Connections _connections;
     uint64_t    _hdate_time;
     string      _hdate_str;
@@ -77,7 +76,7 @@ private:
 
     void on_connection (const StreamSP&, const CodeError&) override;
 
-    void handle_eof (const ServerConnectionSP& conn) {
+    void remove (const ServerConnectionSP& conn) {
         _connections.erase(conn->id());
     }
 

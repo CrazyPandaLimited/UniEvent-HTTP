@@ -248,6 +248,8 @@ TEST("request drop event when client disconnects and response not yet completed"
     test.run();
 }
 
+#include <unistd.h>
+
 TEST("date header") {
     AsyncTest test(1000);
     auto p = make_server_pair(test.loop);

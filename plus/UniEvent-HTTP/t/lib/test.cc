@@ -20,11 +20,10 @@ SSL_CTX* get_ssl_ctx () {
     return ctx;
 }
 
-ServerPair make_server_pair (const LoopSP& loop) {
+ServerPair make_server_pair (const LoopSP& loop, Server::Config cfg) {
     ServerPair ret;
     ret.server = new Server(loop);
 
-    Server::Config cfg;
     Server::Location loc;
     loc.host = "127.0.0.1";
     if (secure) loc.ssl_ctx = get_ssl_ctx();
