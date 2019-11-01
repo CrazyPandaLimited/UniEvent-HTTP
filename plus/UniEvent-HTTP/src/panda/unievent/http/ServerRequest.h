@@ -26,7 +26,7 @@ struct ServerRequest : BasicRequest {
     void respond (const ServerResponseSP&);
 
 protected:
-    ServerRequest (ServerConnection* conn) : _connection(conn), _state(State::not_yet), _routed(), _partial() {}
+    ServerRequest (ServerConnection* conn) : _connection(conn), _state(State::not_yet), _routed(), _partial(), _finish_on_receive() {}
 
     ~ServerRequest () {
         // remove garbage from response in case if user holds response without request after response is finished
@@ -41,6 +41,7 @@ private:
     State             _state;
     bool              _routed;
     bool              _partial;
+    bool              _finish_on_receive;
 };
 
 }}}

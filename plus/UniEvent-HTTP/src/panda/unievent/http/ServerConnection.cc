@@ -18,11 +18,6 @@ void ServerConnection::on_read (string& _buf, const CodeError& err) {
         return request_error(requests.back(), errc::parse_error);
     }
 
-    if (closing) {
-        panda_log_debug("got data in closing state");
-        return;
-    }
-
     string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
 
     while (buf) {
@@ -35,6 +30,7 @@ void ServerConnection::on_read (string& _buf, const CodeError& err) {
 
         if (result.error) {
             panda_log_info("parser error: " << result.error);
+            req->_state = State::error; // TODO: remove when bug in procotol-http is fixed
             return request_error(req, errc::parse_error);
         }
 
@@ -52,12 +48,19 @@ void ServerConnection::on_read (string& _buf, const CodeError& err) {
 
         if (req->_partial) {
             req->partial_event(req, std::error_code());
-            return;
+        }
+        else if (result.state == State::done) {
+            req->receive_event(req);
+            server->request_event(req);
         }
 
         if (result.state == State::done) {
-            req->receive_event(req);
-            server->request_event(req);
+            // if request is non-KA or non-KA response is already started, stop receiving any further requests
+            if (req->_finish_on_receive) finish_request();
+            else if (closing || !req->keep_alive()) {
+                read_stop();
+                break; // skip parsing possible rest of the buffer
+            }
         }
     }
 }
@@ -92,8 +95,13 @@ void ServerConnection::write_next_response () {
     //}
     //printf("\n=====================================\n");
 
-    if (!res->keep_alive()) {
+    if (!res->keep_alive() || !req->keep_alive()) {
         closing = true;
+
+        // stop accepting further requests if this request is fully received.
+        // if not, we'll continue receiving current request until it's done (read_stop() will be called later by on_read() because closing==true)
+        if (req->state() == State::done) read_stop();
+
         if (requests.size() > 1) { // drop all pipelined requests
             requests.pop_front();
             drop_requests(make_error_code(std::errc::connection_reset));
@@ -143,12 +151,22 @@ void ServerConnection::send_final_chunk (const ServerResponseSP& res) {
 }
 
 void ServerConnection::finish_request () {
+    auto req = requests.front();
+    assert(req->_response && req->_response->_completed);
+    if (req->state() != State::done && req->state() != State::error) {
+        // response is complete but request is not yet fully received -> wait until end of request (on_read() will call finish_request() again)
+        req->_finish_on_receive = true;
+        return;
+    }
+
     cleanup_request();
+
     if (closing) {
         assert(!requests.size());
         close({}, true);
         return;
     }
+
     if (requests.size() && requests.front()->_response) write_next_response();
 }
 
@@ -193,19 +211,21 @@ void ServerConnection::close (const std::error_code& err, bool soft) {
     server->handle_eof(this);
 }
 
-static ServerResponseSP default_error_response (int code) {
-    ServerResponseSP ret = new ServerResponse(code);
+ServerResponseSP ServerConnection::default_error_response (int code) {
+    ServerResponseSP res = new ServerResponse(code);
+    res->keep_alive(false);
+    res->headers.date(server->date_header_now());
 
     string body(600);
     body +=
         "<html>\n"
         "<head><title>";
-    body += ret->full_message();
+    body += res->full_message();
     body +=
         "</title></head>\n"
         "<body bgcolor=\"white\">\n"
         "<center><h1>";
-    body += ret->full_message();
+    body += res->full_message();
     body +=
         "</h1></center>\n"
         "<hr><center>UniEvent-HTTP</center>\n"
@@ -213,16 +233,19 @@ static ServerResponseSP default_error_response (int code) {
         "</html>\n";
     for (int i = 0; i < 6; ++i) body += "<!-- a padding to disable MSIE and Chrome friendly error page -->\n";
 
-    ret->body = body;
+    res->body = body;
 
-    return ret;
+    return res;
 }
 
 void ServerConnection::request_error (const ServerRequestSP& req, const std::error_code& err) {
     read_stop();
     if (req->_partial) req->partial_event(req, err);
     else               server->error_event(req, err);
-    if (!req->_response) respond(req, default_error_response(400));
+
+    auto res = req->_response;
+    if (!res) respond(req, default_error_response(400));
+    else if (res->keep_alive()) res->headers.set_field("Connection", "close");
 }
 
 }}}

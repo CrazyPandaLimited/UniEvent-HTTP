@@ -123,10 +123,15 @@ TEST("client disconnects or request error while in partial mode") {
             CHECK(!err);
             CHECK(req->state() != State::done);
             req->partial_event.remove_all();
-            req->partial_event.add([&](auto&, auto& err) {
+            req->partial_event.add([&](auto& req, auto& err) {
                 test.happens();
-                if (send_junk) CHECK(err == errc::parse_error);
-                else           CHECK(err == std::errc::connection_reset);
+                if (send_junk) {
+                    CHECK(req->state() == State::error);
+                    CHECK(err == errc::parse_error);
+                }
+                else {
+                    CHECK(err == std::errc::connection_reset);
+                }
                 test.loop->stop();
             });
             if (partial_response) req->respond(new ServerResponse(200, Header(), Body(), true));
@@ -182,4 +187,70 @@ TEST("client disconnects when partial mode is finished") {
     );
 
     test.run();
+}
+
+// this test checks that we are able to receive remaining request parts even if we have given a complete response for this request
+// and if our response is non-KA or request was non-KA, then connection closes only after request if fully received
+TEST("response is complete before request fully received") {
+    AsyncTest test(1000, 2);
+    auto p = make_server_pair(test.loop);
+
+    bool chunked = GENERATE(false, true);
+    int closed   = GENERATE(0, 1, 2); // 1 - closed by request, 2 - closed by response
+    SECTION(string(chunked ? "chunked" : "non-chunked") + ' ' + (closed ? (closed == 1 ? "request-close" : "response-close") : "keep-alive")) {}
+
+    p.server->route_event.add([&](auto& req) {
+        req->enable_partial();
+        req->partial_event.add([&](auto& req, auto& err) {
+            test.happens();
+            CHECK(!err);
+            CHECK(req->state() != State::done);
+            ServerResponseSP res = new ServerResponse(200);
+            if (closed == 2) res->keep_alive(false);
+
+            if (chunked) {
+                res->chunked = true;
+                req->respond(res);
+                req->response()->send_chunk("ans");
+                req->response()->send_final_chunk();
+            }
+            else {
+                res->body = "ans";
+                req->respond(res);
+            }
+
+            req->partial_event.remove_all();
+            req->partial_event.add([&](auto& req, auto& err) {
+                test.happens();
+                CHECK(!err);
+                CHECK(req->state() == State::done);
+                CHECK(req->body.to_string() == "1234");
+                test.loop->stop();
+            });
+        });
+    });
+
+    if (closed == 1)
+        p.conn->write(
+            "GET / HTTP/1.0\r\n"
+            "Content-Length: 4\r\n"
+            "\r\n"
+        );
+    else
+        p.conn->write(
+            "GET / HTTP/1.1\r\n"
+            "Content-Length: 4\r\n"
+            "\r\n"
+        );
+
+    auto res = p.get_response();
+    CHECK(res->body.to_string() == "ans");
+    CHECK(res->keep_alive() == bool(!closed));
+
+    p.conn->write("1234");
+    test.run();
+
+    if (closed) CHECK(p.wait_eof(50));
+    else        CHECK(!p.wait_eof(10));
+
 }

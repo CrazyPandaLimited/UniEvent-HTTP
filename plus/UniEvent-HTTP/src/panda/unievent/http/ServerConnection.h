@@ -44,6 +44,8 @@ private:
     void finish_request      ();
     void cleanup_request     ();
     void drop_requests       (const std::error_code&);
+
+    ServerResponseSP default_error_response (int code);
 };
 using ServerConnectionSP = iptr<ServerConnection>;
 

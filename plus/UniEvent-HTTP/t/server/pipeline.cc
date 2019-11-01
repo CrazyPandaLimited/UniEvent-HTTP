@@ -202,3 +202,68 @@ TEST("request connection close waits until all previous requests are done") {
 
     CHECK(p.wait_eof(50));
 }
+
+TEST("all requests after one with connection=close are ignored") {
+    AsyncTest test(1000);
+    auto p = make_server_pair(test.loop);
+
+    p.server->request_event.add([&](auto& req){
+        p.conn->write("GET /c HTTP/1.0\r\n\r\n");
+        req->respond(new ServerResponse(200));
+        p.server->request_event.remove_all();
+        p.server->request_event.add(fail_cb);
+    });
+    p.server->error_event.add(fail_cb);
+
+    p.conn->write(
+        "GET /a HTTP/1.0\r\n\r\n"
+        "GET /b HTTP/1.0\r\n\r\n"
+    );
+
+    auto res = p.get_response();
+    CHECK(res->code == 200);
+
+    CHECK(p.wait_eof(50));
+}
+
+TEST("response connection=close cancels all further requests") {
+    AsyncTest test(1000, {"drop", "partial-err"});
+    auto p = make_server_pair(test.loop);
+
+    std::vector<ServerRequestSP> reqs;
+
+    p.server->route_event.add([&](auto& req){
+        reqs.push_back(req);
+        if (reqs.size() == 2) req->drop_event.add([&](auto&, auto& err){
+            test.happens("drop");
+            CHECK(err == std::errc::connection_reset);
+        });
+        if (reqs.size() < 3) return;
+        req->enable_partial();
+        req->partial_event.add([&](auto& req, auto& err){
+            CHECK_FALSE(err);
+            CHECK(req->state() != State::done);
+            req->partial_event.remove_all();
+            req->partial_event.add([&](auto&, auto& err){
+                CHECK(err == std::errc::connection_reset);
+                test.happens("partial-err");
+            });
+            reqs[0]->respond(new ServerResponse(200, Header().connection("close"), Body("hello")));
+        });
+    });
+    p.server->error_event.add(fail_cb);
+
+    p.conn->write(
+        "GET /a HTTP/1.1\r\n\r\n"
+        "GET /b HTTP/1.1\r\n\r\n"
+        "GET /c HTTP/1.1\r\n"
+        "Content-Length: 4\r\n"
+        "\r\n"
+    );
+
+    auto res = p.get_response();
+    CHECK(res->body.to_string() == "hello");
+    CHECK(!res->keep_alive());
+
+    CHECK(p.wait_eof(50));
+}
