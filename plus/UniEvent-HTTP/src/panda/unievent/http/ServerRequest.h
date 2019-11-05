@@ -1,5 +1,5 @@
 #pragma once
-#include "BasicRequest.h"
+#include "msg.h"
 #include "ServerResponse.h"
 #include <panda/CallbackDispatcher.h>
 
@@ -9,7 +9,7 @@ struct ServerRequest;
 using ServerRequestSP = iptr<ServerRequest>;
 struct ServerConnection;
 
-struct ServerRequest : BasicRequest {
+struct ServerRequest : protocol::http::Request {
     using receive_fptr = void(const ServerRequestSP&);
     using partial_fptr = void(const ServerRequestSP&, const std::error_code&);
     using drop_fptr    = void(const ServerRequestSP&, const std::error_code&);

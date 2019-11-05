@@ -1,7 +1,7 @@
 #pragma once
+#include "msg.h"
 #include "Error.h"
 #include "Response.h"
-#include "BasicRequest.h"
 #include <panda/unievent/Timer.h>
 #include <panda/CallbackDispatcher.h>
 
@@ -19,7 +19,7 @@ struct NetLoc {
 };
 std::ostream& operator<< (std::ostream& os, const NetLoc& h);
 
-struct Request : BasicRequest {
+struct Request : protocol::http::Request {
     struct Builder;
     using response_fptr = void(const RequestSP&, const ResponseSP&, const std::error_code&);
     using partial_fptr  = void(const RequestSP&, const ResponseSP&, State state, const std::error_code&);
@@ -44,7 +44,7 @@ struct Request : BasicRequest {
     Request (Method method, const URISP& uri, Header&& header, Body&& body, HttpVersion http_version, bool chunked,
              const response_fn& response_cb, const partial_fn& partial_cb, const redirect_fn& redirect_cb,
              uint64_t timeout, uint16_t redirection_limit, const string& host, uint16_t port) :
-        BasicRequest(method, uri, std::move(header), std::move(body), chunked, http_version),
+        protocol::http::Request(method, uri, std::move(header), std::move(body), chunked, http_version),
         host(host), port(port), timeout(timeout), redirection_limit(redirection_limit), _original_uri(uri), _redirection_counter(), _client()
     {
         if (response_cb) response_event.add(response_cb);

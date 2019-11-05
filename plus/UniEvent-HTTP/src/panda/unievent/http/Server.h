@@ -11,8 +11,10 @@ struct ssl_ctx_st; typedef ssl_ctx_st SSL_CTX; // avoid including openssl header
 namespace panda { namespace unievent { namespace http {
 
 struct Server : Refcnt, private IStreamSelfListener {
-    static constexpr const int      DEFAULT_BACKLOG      = 4096;
-    static constexpr const uint32_t DEFAULT_IDLE_TIMEOUT = 600000; // [ms]
+    static constexpr const int      DEFAULT_BACKLOG          = 4096;
+    static constexpr const uint32_t DEFAULT_IDLE_TIMEOUT     = 300000; // [ms]
+    static constexpr const uint32_t DEFAULT_MAX_HEADERS_SIZE = 16384;
+    static constexpr const uint64_t DEFAULT_MAX_BODY_SIZE    = 0;
 
     struct Location {
         string   host;
@@ -25,7 +27,9 @@ struct Server : Refcnt, private IStreamSelfListener {
 
     struct Config {
         std::vector<Location> locations;
-        uint32_t              idle_timeout = DEFAULT_IDLE_TIMEOUT; // max idle time for keep-alive connection before it is dropped [ms]
+        uint32_t              idle_timeout     = DEFAULT_IDLE_TIMEOUT;     // max idle time connection before it is dropped [ms], 0 = unlimited
+        uint32_t              max_headers_size = DEFAULT_MAX_HEADERS_SIZE; // max size from the start of request to end of headers, 0 = unlimited
+        uint64_t              max_body_size    = DEFAULT_MAX_BODY_SIZE;    // 0 = unlimited
     };
 
     using Listeners    = std::vector<TcpSP>;

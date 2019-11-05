@@ -1,15 +1,15 @@
 #pragma once
-#include "BasicResponse.h"
 #include <panda/protocol/http/Request.h>
+#include <panda/protocol/http/Response.h>
 
 namespace panda { namespace unievent { namespace http {
 
+using protocol::http::Body;
+using protocol::http::State;
+using protocol::http::Header;
+using protocol::http::HttpVersion;
+
 using panda::uri::URI;
 using panda::uri::URISP;
-
-struct BasicRequest : protocol::http::Request {
-    using Method = protocol::http::Request::Method;
-    using Request::Request;
-};
 
 }}}

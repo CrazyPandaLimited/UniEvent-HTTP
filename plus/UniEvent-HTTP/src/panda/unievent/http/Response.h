@@ -1,9 +1,9 @@
 #pragma once
-#include "BasicResponse.h"
+#include "msg.h"
 
 namespace panda { namespace unievent { namespace http {
 
-struct Response : BasicResponse {
+struct Response : protocol::http::Response {
     Response () {}
 };
 using ResponseSP = iptr<Response>;

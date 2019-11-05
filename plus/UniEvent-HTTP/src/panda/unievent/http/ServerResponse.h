@@ -1,17 +1,17 @@
 #pragma once
-#include "BasicResponse.h"
+#include "msg.h"
 
 namespace panda { namespace unievent { namespace http {
 
 struct ServerRequest;
 
-struct ServerResponse : BasicResponse {
+struct ServerResponse : protocol::http::Response {
     struct Builder;
 
     ServerResponse () : _request(), _completed() {}
 
     ServerResponse (int code, Header&& header = Header(), Body&& body = Body(), bool chunked = false, HttpVersion http_version = HttpVersion::any, const string& message = {})
-        : BasicResponse(code, std::move(header), std::move(body), chunked, http_version, message), _request(), _completed()
+        : protocol::http::Response(code, std::move(header), std::move(body), chunked, http_version, message), _request(), _completed()
     {}
 
     void send_chunk       (const string& chunk);
