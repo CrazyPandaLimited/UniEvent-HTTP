@@ -11,6 +11,8 @@ struct Server;
 struct ServerConnection : Tcp, private ITcpSelfListener, private protocol::http::IRequestFactory {
     struct Config {
         uint32_t idle_timeout;
+        size_t   max_headers_size;
+        size_t   max_body_size;
     };
 
     ServerConnection (Server*, uint64_t id, const Config&);
@@ -29,9 +31,9 @@ private:
 
     Server*       server;
     uint64_t      _id;
-    Config        conf;
     RequestParser parser;
     RequestList   requests;
+    uint32_t      idle_timeout;
     TimerSP       idle_timer;
     bool          closing;
 

@@ -3,10 +3,15 @@
 
 namespace panda { namespace unievent { namespace http {
 
-ServerConnection::ServerConnection (Server* server, uint64_t id, const Config& conf) : Tcp(server->loop()), server(server), _id(id), conf(conf), parser(this), closing() {
+ServerConnection::ServerConnection (Server* server, uint64_t id, const Config& conf)
+    : Tcp(server->loop()), server(server), _id(id), parser(this), idle_timeout(conf.idle_timeout), closing()
+{
     event_listener(this);
 
-    if (conf.idle_timeout) {
+    parser.max_headers_size = conf.max_headers_size;
+    parser.max_body_size    = conf.max_body_size;
+
+    if (idle_timeout) {
         idle_timer = new Timer(server->loop());
         idle_timer->event.add([this](auto&){
             assert(!requests.size());
@@ -167,7 +172,7 @@ void ServerConnection::finish_request () {
     }
     else if (idle_timer) {
         assert(!idle_timer->active());
-        idle_timer->once(conf.idle_timeout);
+        idle_timer->once(idle_timeout);
     }
 }
 

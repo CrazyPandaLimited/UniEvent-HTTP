@@ -248,8 +248,6 @@ TEST("request drop event when client disconnects and response not yet completed"
     test.run();
 }
 
-#include <unistd.h>
-
 TEST("date header") {
     AsyncTest test(1000);
     auto p = make_server_pair(test.loop);
@@ -259,5 +257,48 @@ TEST("date header") {
         auto res = p.get_response("GET / HTTP/1.1\r\n\r\n");
         auto s = res->headers.date();
         CHECK(s);
+    }
+}
+
+TEST("max headers size") {
+    AsyncTest test(1000);
+    Server::Config cfg;
+    SECTION("allowed") { cfg.max_headers_size = 15; }
+    SECTION("denied")  { cfg.max_headers_size = 14; }
+    auto p = make_server_pair(test.loop, cfg);
+    p.autorespond(new ServerResponse(200));
+
+    auto res = p.get_response(
+        "GET / HTTP/1.1\r\n"
+        "Header: value\r\n" // len=15
+        "\r\n"
+    );
+
+    if (cfg.max_headers_size == 15) {
+        CHECK(res->code == 200);
+    } else {
+        CHECK(res->code == 400);
+    }
+}
+
+TEST("max body size") {
+    AsyncTest test(1000);
+    Server::Config cfg;
+    SECTION("allowed") { cfg.max_body_size = 10; }
+    SECTION("denied")  { cfg.max_body_size = 9; }
+    auto p = make_server_pair(test.loop, cfg);
+    p.autorespond(new ServerResponse(200));
+
+    auto res = p.get_response(
+        "GET / HTTP/1.1\r\n"
+        "Content-Length: 10\r\n"
+        "\r\n"
+        "0123456789"
+    );
+
+    if (cfg.max_body_size == 10) {
+        CHECK(res->code == 200);
+    } else {
+        CHECK(res->code == 400);
     }
 }

@@ -69,8 +69,7 @@ void Server::stop_listening () {
 }
 
 StreamSP Server::create_connection (const StreamSP&) {
-    ServerConnection::Config cfg;
-    cfg.idle_timeout = _conf.idle_timeout;
+    ServerConnection::Config cfg {_conf.idle_timeout, _conf.max_headers_size, _conf.max_body_size};
     return new_connection(++lastid, cfg);
 }
 
