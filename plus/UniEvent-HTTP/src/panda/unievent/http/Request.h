@@ -41,7 +41,7 @@ struct Request : protocol::http::Request {
 
     Request () : port(), timeout(DEFAULT_TIMEOUT), redirection_limit(DEFAULT_REDIRECTION_LIMIT), _client() {}
 
-    Request (Method method, const URISP& uri, Header&& header, Body&& body, HttpVersion http_version, bool chunked,
+    Request (Method method, const URISP& uri, Header&& header, Body&& body, int http_version, bool chunked,
              const response_fn& response_cb, const partial_fn& partial_cb, const redirect_fn& redirect_cb,
              uint64_t timeout, uint16_t redirection_limit, const string& host, uint16_t port) :
         protocol::http::Request(method, uri, std::move(header), std::move(body), chunked, http_version),
