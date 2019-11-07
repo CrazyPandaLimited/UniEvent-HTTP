@@ -45,7 +45,7 @@ struct Server : Refcnt, private IStreamSelfListener {
 
     Server (const LoopSP& loop = Loop::default_loop());
 
-    void configure (const Config& config);
+    virtual void configure (const Config& config);
 
     const LoopSP&    loop      () const { return _loop; }
     const Listeners& listeners () const { return _listeners; }
@@ -54,6 +54,9 @@ struct Server : Refcnt, private IStreamSelfListener {
 
     virtual void run  ();
     virtual void stop ();
+
+    virtual void start_listening ();
+    virtual void stop_listening  ();
 
     const string& date_header_now ();
 
@@ -74,9 +77,6 @@ private:
     Connections _connections;
     uint64_t    _hdate_time;
     string      _hdate_str;
-
-    void start_listening ();
-    void stop_listening  ();
 
     StreamSP create_connection (const StreamSP&) override;
 

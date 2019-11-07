@@ -4,7 +4,7 @@
 
 TEST("request receive") {
     AsyncTest test(1000, 5);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     p.server->route_event.add([&](auto& req){
         test.happens();
@@ -45,7 +45,7 @@ TEST("request receive") {
 
 TEST("full response on route event") {
     AsyncTest test(1000, 3);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     p.server->route_event.add([&](auto& req) {
         test.happens();
@@ -75,7 +75,7 @@ TEST("full response on route event") {
 
 TEST("full response on partial event when request is not yet fully parsed") {
     AsyncTest test(1000, 3);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     p.server->route_event.add([&](auto& req) {
         test.happens();
@@ -105,7 +105,7 @@ TEST("full response on partial event when request is not yet fully parsed") {
 
 TEST("client disconnects or request error while in partial mode") {
     AsyncTest test(1000, 2);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     bool send_junk = false;
     bool partial_response = false;
@@ -152,7 +152,7 @@ TEST("client disconnects or request error while in partial mode") {
 
 TEST("client disconnects when partial mode is finished") {
     AsyncTest test(1000, 3);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     p.server->error_event.add(fail_cb);
 
@@ -193,7 +193,7 @@ TEST("client disconnects when partial mode is finished") {
 // and if our response is non-KA or request was non-KA, then connection closes only after request if fully received
 TEST("response is complete before request fully received") {
     AsyncTest test(1000, 2);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     bool chunked = GENERATE(false, true);
     int closed   = GENERATE(0, 1, 2); // 1 - closed by request, 2 - closed by response

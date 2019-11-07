@@ -4,7 +4,7 @@
 
 TEST("basic") {
     AsyncTest test(1000);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     bool async = false, reverse = false;
     SECTION("sync response") {}
@@ -57,7 +57,7 @@ TEST("basic") {
 
 TEST("chunked response captured and sent later") {
     AsyncTest test(1000);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     bool full;
     string check = "1234";
@@ -102,7 +102,7 @@ TEST("chunked response captured and sent later") {
 
 TEST("request connection close") {
     AsyncTest test(1000);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     bool chunked = GENERATE(false, true);
     SECTION(chunked ? "response chunked" : "response full") {}
@@ -147,7 +147,7 @@ TEST("request connection close") {
 
 TEST("request connection close waits until all previous requests are done") {
     AsyncTest test(1000);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     bool chunked1 = GENERATE(false, true);
     bool chunked2 = GENERATE(false, true);
@@ -205,7 +205,7 @@ TEST("request connection close waits until all previous requests are done") {
 
 TEST("all requests after one with connection=close are ignored") {
     AsyncTest test(1000);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     p.server->request_event.add([&](auto& req){
         p.conn->write("GET /c HTTP/1.0\r\n\r\n");
@@ -228,7 +228,7 @@ TEST("all requests after one with connection=close are ignored") {
 
 TEST("response connection=close cancels all further requests") {
     AsyncTest test(1000, {"drop", "partial-err"});
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     std::vector<ServerRequestSP> reqs;
 

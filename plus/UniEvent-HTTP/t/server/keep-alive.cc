@@ -4,7 +4,7 @@
 
 TEST("server closes") {
     AsyncTest test(1000);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
     p.autorespond(new ServerResponse(200));
     RawResponseSP res;
 
@@ -24,7 +24,7 @@ TEST("server closes") {
 
 TEST("server persists") {
     AsyncTest test(1000);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
     p.autorespond(new ServerResponse(200));
     RawResponseSP res;
 
@@ -44,7 +44,7 @@ TEST("server persists") {
 
 TEST("if req is <close>, then response also <close> regardless of user's choice in headers") {
     AsyncTest test(1000);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
     p.autorespond(new ServerResponse(200, Header().connection("keep-alive")));
     RawResponseSP res;
 
@@ -62,7 +62,7 @@ TEST("if req is <close>, then response also <close> regardless of user's choice 
 
 TEST("if user's response says <close> then don't give a fuck what request says") {
     AsyncTest test(1000);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
     p.autorespond(new ServerResponse(200, Header().connection("close")));
     RawResponseSP res;
 
@@ -85,7 +85,7 @@ TEST("idle timeout before any requests") {
     AsyncTest test(1000);
     Server::Config cfg;
     cfg.idle_timeout = 10;
-    auto p = make_server_pair(test.loop, cfg);
+    ServerPair p(test.loop, cfg);
     CHECK(!p.wait_eof(5));
     CHECK(p.wait_eof(50));
 }
@@ -95,7 +95,7 @@ TEST("idle timeout during and after request") {
     Server::Config cfg;
     cfg.idle_timeout = 10;
 
-    auto p = make_server_pair(test.loop, cfg);
+    ServerPair p(test.loop, cfg);
     TimerSP t = new Timer(test.loop);
 
     p.server->request_event.add([&](auto& req){

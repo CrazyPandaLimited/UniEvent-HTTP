@@ -20,25 +20,22 @@ SSL_CTX* get_ssl_ctx () {
     return ctx;
 }
 
-ServerPair make_server_pair (const LoopSP& loop, Server::Config cfg) {
-    ServerPair ret;
-    ret.server = new Server(loop);
+ServerPair::ServerPair (const LoopSP& loop, Server::Config cfg) : autores(), eof() {
+    server = new Server(loop);
 
     Server::Location loc;
     loc.host = "127.0.0.1";
     if (secure) loc.ssl_ctx = get_ssl_ctx();
     cfg.locations.push_back(loc);
-    ret.server->configure(cfg);
+    server->configure(cfg);
 
-    ret.server->run();
+    server->run();
 
-    ret.conn = new Tcp(loop);
-    if (secure) ret.conn->use_ssl();
-    ret.conn->connect_event.add([&](auto, auto& err, auto){ if (err) throw err; loop->stop(); });
-    ret.conn->connect(ret.server->listeners().front()->sockaddr());
+    conn = new Tcp(loop);
+    if (secure) conn->use_ssl();
+    conn->connect_event.add([](auto& conn, auto& err, auto){ if (err) throw err; conn->loop()->stop(); });
+    conn->connect(server->listeners().front()->sockaddr());
     loop->run();
-
-    return ret;
 }
 
 RawResponseSP ServerPair::get_response () {

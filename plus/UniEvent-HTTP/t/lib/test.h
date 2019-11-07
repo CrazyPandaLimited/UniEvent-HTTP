@@ -31,7 +31,7 @@ struct ServerPair {
     ServerSP   server;
     TcpSP      conn;
 
-    ServerPair () : autores(), eof() {}
+    ServerPair (const LoopSP&, Server::Config = {});
 
     RawResponseSP get_response ();
     RawResponseSP get_response (const string& s) { conn->write(s); return get_response(); }
@@ -45,8 +45,6 @@ private:
     bool         autores;
     bool         eof;
 };
-
-ServerPair make_server_pair (const LoopSP&, Server::Config = {});
 
 //#include <algorithm>
 //#include <cstring>

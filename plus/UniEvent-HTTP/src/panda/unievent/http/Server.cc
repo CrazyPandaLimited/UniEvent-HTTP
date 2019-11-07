@@ -46,6 +46,7 @@ void Server::stop () {
 }
 
 void Server::start_listening () {
+    if (_listeners.size()) throw HttpError("server is already listening");
     for (auto& loc : _conf.locations) {
         TcpSP lst = new Tcp(_loop, loc.domain);
         lst->event_listener(this);

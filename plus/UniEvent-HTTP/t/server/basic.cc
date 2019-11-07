@@ -4,7 +4,7 @@
 
 TEST("request without body") {
     AsyncTest test(1000, 1);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     p.server->request_event.add([&](auto req) {
         test.happens();
@@ -26,7 +26,7 @@ TEST("request without body") {
 
 TEST("request with body") {
     AsyncTest test(1000, 1);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     p.server->request_event.add([&](auto req) {
         test.happens();
@@ -48,7 +48,7 @@ TEST("request with body") {
 
 TEST("request with chunks") {
     AsyncTest test(1000, 1);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     p.server->request_event.add([&](auto req) {
         test.happens();
@@ -74,7 +74,7 @@ TEST("request with chunks") {
 
 TEST("response without body") {
     AsyncTest test(1000, 1);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     p.server->request_event.add([&](auto req) {
         test.happens();
@@ -94,7 +94,7 @@ TEST("response without body") {
 
 TEST("response with body") {
     AsyncTest test(1000, 1);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     p.server->request_event.add([&](auto req) {
         test.happens();
@@ -114,7 +114,7 @@ TEST("response with body") {
 
 TEST("response with chunks") {
     AsyncTest test(1000, 1);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     p.server->request_event.add([&](auto req) {
         test.happens();
@@ -140,7 +140,7 @@ TEST("response with chunks") {
 
 TEST("delayed response") {
     AsyncTest test(1000, 1);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     p.server->request_event.add([&](auto req) {
         test.happens();
@@ -162,7 +162,7 @@ TEST("delayed response") {
 
 TEST("response with delayed chunks") {
     AsyncTest test(1000, 1);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     p.server->request_event.add([&](auto req) {
         test.happens();
@@ -194,7 +194,7 @@ TEST("response with delayed chunks") {
 
 TEST("request parsing error") {
     AsyncTest test(1000, 1);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     int check_code;
     SECTION("automatic error response")     { check_code = 400; }
@@ -221,7 +221,7 @@ TEST("request parsing error") {
 
 TEST("request drop event when client disconnects and response not yet completed") {
     AsyncTest test(1000, 2);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     SECTION("no response at all") {}
     SECTION("partial response") {
@@ -250,7 +250,7 @@ TEST("request drop event when client disconnects and response not yet completed"
 
 TEST("date header") {
     AsyncTest test(1000);
-    auto p = make_server_pair(test.loop);
+    ServerPair p(test.loop);
 
     for (int i = 0; i < 2; ++i) {
         p.autorespond(new ServerResponse(200));
@@ -265,7 +265,7 @@ TEST("max headers size") {
     Server::Config cfg;
     SECTION("allowed") { cfg.max_headers_size = 15; }
     SECTION("denied")  { cfg.max_headers_size = 14; }
-    auto p = make_server_pair(test.loop, cfg);
+    ServerPair p(test.loop, cfg);
     p.autorespond(new ServerResponse(200));
 
     auto res = p.get_response(
@@ -286,7 +286,7 @@ TEST("max body size") {
     Server::Config cfg;
     SECTION("allowed") { cfg.max_body_size = 10; }
     SECTION("denied")  { cfg.max_body_size = 9; }
-    auto p = make_server_pair(test.loop, cfg);
+    ServerPair p(test.loop, cfg);
     p.autorespond(new ServerResponse(200));
 
     auto res = p.get_response(
