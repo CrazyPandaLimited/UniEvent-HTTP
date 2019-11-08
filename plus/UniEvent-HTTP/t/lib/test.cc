@@ -20,8 +20,8 @@ SSL_CTX* get_ssl_ctx () {
     return ctx;
 }
 
-ServerPair::ServerPair (const LoopSP& loop, Server::Config cfg) : autores(), eof() {
-    server = new Server(loop);
+TServerSP make_server (const LoopSP& loop, Server::Config cfg) {
+    TServerSP server = new TServer(loop);
 
     Server::Location loc;
     loc.host = "127.0.0.1";
@@ -30,6 +30,88 @@ ServerPair::ServerPair (const LoopSP& loop, Server::Config cfg) : autores(), eof
     server->configure(cfg);
 
     server->run();
+    return server;
+}
+
+void TServer::enable_echo () {
+    request_event.remove_all();
+    request_event.add([](auto& req){
+        auto h = std::move(req->headers);
+        h.remove("Host");
+        req->respond(new ServerResponse(200, std::move(h), Body(req->body.to_string())));
+    });
+}
+
+void TServer::autorespond (const ServerResponseSP& res) {
+    if (!autores) {
+        autores = true;
+        request_event.add([this](auto& req){
+            if (!autoresponse_queue.size()) return;
+            auto res = autoresponse_queue.front();
+            autoresponse_queue.pop_front();
+            req->respond(res);
+        });
+    }
+    autoresponse_queue.push_back(res);
+}
+
+string TServer::location () const {
+    auto sa = sockaddr();
+    return sa.ip() + ':' + panda::to_string(sa.port());
+}
+
+void TClient::request (const RequestSP& req) {
+    if (sa) {
+        req->uri->host(sa.ip());
+        req->uri->port(sa.port());
+    }
+    if (secure) req->uri->scheme("https");
+    Client::request(req);
+}
+
+ResponseSP TClient::get_response (const RequestSP& req) {
+    ResponseSP response;
+
+    req->response_event.add([this, &response](auto, auto& res, auto& err){
+        if (err) throw err;
+        response = res;
+        loop()->stop();
+    });
+
+    request(req);
+    loop()->run();
+
+    return response;
+}
+
+ResponseSP TClient::get_response (const string& uri, Header&& headers, Body&& body, bool chunked) {
+    auto b = Request::Builder().uri(uri).headers(std::move(headers)).body(std::move(body));
+    if (chunked) b.chunked();
+    return get_response(b.build());
+}
+
+std::error_code TClient::get_error (const RequestSP& req) {
+    std::error_code error;
+
+    req->response_event.add([this, &error](auto, auto, auto& err){
+        error = err;
+        loop()->stop();
+    });
+
+    request(req);
+    loop()->run();
+
+    return error;
+}
+
+ClientPair::ClientPair (const LoopSP& loop) {
+    server = make_server(loop, {});
+    client = new TClient(loop);
+    client->sa = server->sockaddr();
+}
+
+ServerPair::ServerPair (const LoopSP& loop, Server::Config cfg) {
+    server = make_server(loop, cfg);
 
     conn = new Tcp(loop);
     if (secure) conn->use_ssl();
@@ -45,11 +127,9 @@ RawResponseSP ServerPair::get_response () {
 
         conn->read_event.add([&, this](auto, auto& str, auto& err) {
             if (err) throw err;
-            //WARN("recv:\n" << str);
             while (str) {
                 if (!parser.request()) parser.set_request(new RawRequest(Request::Method::GET, new URI("/")));
                 auto result = parser.parse_shift(str);
-                //WARN("state = " << (int)result.state);
                 if (result.error) {
                     WARN(result.error);
                     throw result.error;
@@ -76,19 +156,6 @@ RawResponseSP ServerPair::get_response () {
     auto ret = response_queue.front();
     response_queue.pop_front();
     return ret;
-}
-
-void ServerPair::autorespond (const ServerResponseSP& res) {
-    if (!autores) {
-        autores = true;
-        server->request_event.add([this](auto& req){
-            if (!autoresponse_queue.size()) return;
-            auto res = autoresponse_queue.front();
-            autoresponse_queue.pop_front();
-            req->respond(res);
-        });
-    }
-    autoresponse_queue.push_back(res);
 }
 
 bool ServerPair::wait_eof (int tmt) {

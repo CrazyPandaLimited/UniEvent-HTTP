@@ -3,6 +3,6 @@ use lib 't/lib';
 use MyTest;
 use Test::More;
 
-variate_catch('[server-partial]', 'ssl');
+variate_catch('[client-keep-alive]', 'ssl');
 
 done_testing();

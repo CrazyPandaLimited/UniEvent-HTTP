@@ -225,7 +225,7 @@ TEST("request drop event when client disconnects and response not yet completed"
 
     SECTION("no response at all") {}
     SECTION("partial response") {
-        p.autorespond(new ServerResponse(200, Header(), Body(), true));
+        p.server->autorespond(new ServerResponse(200, Header(), Body(), true));
     }
 
     p.server->request_event.add([&](auto& req){
@@ -253,7 +253,7 @@ TEST("date header") {
     ServerPair p(test.loop);
 
     for (int i = 0; i < 2; ++i) {
-        p.autorespond(new ServerResponse(200));
+        p.server->autorespond(new ServerResponse(200));
         auto res = p.get_response("GET / HTTP/1.1\r\n\r\n");
         auto s = res->headers.date();
         CHECK(s);
@@ -266,7 +266,7 @@ TEST("max headers size") {
     SECTION("allowed") { cfg.max_headers_size = 15; }
     SECTION("denied")  { cfg.max_headers_size = 14; }
     ServerPair p(test.loop, cfg);
-    p.autorespond(new ServerResponse(200));
+    p.server->autorespond(new ServerResponse(200));
 
     auto res = p.get_response(
         "GET / HTTP/1.1\r\n"
@@ -287,7 +287,7 @@ TEST("max body size") {
     SECTION("allowed") { cfg.max_body_size = 10; }
     SECTION("denied")  { cfg.max_body_size = 9; }
     ServerPair p(test.loop, cfg);
-    p.autorespond(new ServerResponse(200));
+    p.server->autorespond(new ServerResponse(200));
 
     auto res = p.get_response(
         "GET / HTTP/1.1\r\n"

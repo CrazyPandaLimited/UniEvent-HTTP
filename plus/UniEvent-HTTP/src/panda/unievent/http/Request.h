@@ -31,28 +31,26 @@ struct Request : protocol::http::Request {
     static constexpr const uint64_t DEFAULT_TIMEOUT           = 20000; // [ms]
     static constexpr const uint16_t DEFAULT_REDIRECTION_LIMIT = 20;    // [hops]
 
-    string                            host;
-    uint16_t                          port;
     uint64_t                          timeout;
     uint16_t                          redirection_limit;
     CallbackDispatcher<response_fptr> response_event;
     CallbackDispatcher<partial_fptr>  partial_event;
     CallbackDispatcher<redirect_fptr> redirect_event;
 
-    Request () : port(), timeout(DEFAULT_TIMEOUT), redirection_limit(DEFAULT_REDIRECTION_LIMIT), _client() {}
+    Request () : timeout(DEFAULT_TIMEOUT), redirection_limit(DEFAULT_REDIRECTION_LIMIT), _client() {}
 
-    Request (Method method, const URISP& uri, Header&& header, Body&& body, int http_version, bool chunked,
-             const response_fn& response_cb, const partial_fn& partial_cb, const redirect_fn& redirect_cb,
-             uint64_t timeout, uint16_t redirection_limit, const string& host, uint16_t port) :
+    Request (Method method, const URISP& uri, Header&& header, Body&& body, bool chunked,
+             const response_fn& response_cb, const partial_fn& partial_cb = {}, const redirect_fn& redirect_cb = {},
+             uint64_t timeout = DEFAULT_TIMEOUT, uint16_t redirection_limit = DEFAULT_REDIRECTION_LIMIT, int http_version = 0) :
         protocol::http::Request(method, uri, std::move(header), std::move(body), chunked, http_version),
-        host(host), port(port), timeout(timeout), redirection_limit(redirection_limit), _original_uri(uri), _redirection_counter(), _client()
+        timeout(timeout), redirection_limit(redirection_limit), _original_uri(uri), _redirection_counter(), _client()
     {
         if (response_cb) response_event.add(response_cb);
         if (partial_cb)  partial_event.add(partial_cb);
         if (redirect_cb) redirect_event.add(redirect_cb);
     }
 
-    NetLoc       netloc       () const { return { host ? host : uri->host(), port ? port : uri->port() }; }
+    NetLoc       netloc       () const { return { uri->host(), uri->port() }; }
     const URISP& original_uri () const { return _original_uri; }
 
     void send_chunk (const string& chunk);
@@ -85,16 +83,6 @@ private:
 };
 
 struct Request::Builder : protocol::http::Request::BuilderImpl<Builder> {
-    Builder& host (const string& host) {
-        _host = host;
-        return *this;
-    }
-
-    Builder& port (uint16_t port) {
-        _port = port;
-        return *this;
-    }
-
     Builder& response_callback (const Request::response_fn& cb) {
         _response_callback = cb;
         return *this;
@@ -122,14 +110,12 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder> {
 
     RequestSP build () {
         return new Request(
-            _method, _uri, std::move(_headers), std::move(_body), _http_version, _chunked,
-            _response_callback, _partial_callback, _redirect_callback, _timeout, _redirection_limit, _host, _port
+            _method, _uri, std::move(_headers), std::move(_body), _chunked,
+            _response_callback, _partial_callback, _redirect_callback, _timeout, _redirection_limit, _http_version
         );
     }
 
 protected:
-    string               _host;
-    uint16_t             _port = 0;
     Request::response_fn _response_callback;
     Request::partial_fn  _partial_callback;
     Request::redirect_fn _redirect_callback;

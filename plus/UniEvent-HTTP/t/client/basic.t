@@ -3,7 +3,7 @@ use lib 't/lib';
 use MyTest;
 use Test::More;
 
-Test::Catch::run('[client-basic]');
+variate_catch('[client-basic]', 'ssl');
 
 #sub test_live_default_loop {
 #    my $loop = new UniEvent::Loop->default_loop;

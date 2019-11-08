@@ -1,19 +1,20 @@
 #include "../lib/test.h"
 
-TEST_CASE("get real sites", "[client-live]") {
-    auto l = Loop::default_loop();
+#define TEST(name) TEST_CASE("client-live: " name, "[client-live]" VSSL)
+
+TEST("get real sites") {
     std::vector<string> sites = {
         "http://google.com",
         "http://youtube.com",
         "http://facebook.com",
         "http://wikipedia.org",
-        "https://yandex.ru",
+        "http://yandex.ru",
         "http://rbc.ru",
         "http://ya.ru",
         "http://example.com"
     };
 
-    std::vector<ResponseSP> resps;
+    AsyncTest test(5000, sites.size());
 
     for (auto site : sites) {
         panda_log_debug("request to: " << site);
@@ -21,18 +22,13 @@ TEST_CASE("get real sites", "[client-live]") {
             .uri(site)
             .response_callback([&](auto&, auto& res, auto& err) {
                 panda_log_debug("GOT response " << res << ", " << res->body.length() << " bytes, err=" << err);
-                CHECK(!err);
-                resps.push_back(res);
+                test.happens();
+                CHECK_FALSE(err);
+                CHECK(res->code == 200);
             })
-            .timeout(5000)
             .build();
-        http_request(req, l);
+        http_request(req, test.loop);
     }
 
-    l->run();
-
-    CHECK(resps.size() == sites.size());
-    for (auto res : resps) {
-        CHECK(res->code == 200);
-    }
+    test.run();
 }

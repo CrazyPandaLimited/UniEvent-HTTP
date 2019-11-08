@@ -58,10 +58,14 @@ struct Server : Refcnt, private IStreamSelfListener {
     virtual void start_listening ();
     virtual void stop_listening  ();
 
+    net::SockAddr sockaddr () const { return _listeners.size() ? _listeners.front()->sockaddr() : net::SockAddr(); }
+
     const string& date_header_now ();
 
 protected:
     virtual ServerConnectionSP new_connection (uint64_t id, const ServerConnection::Config&);
+
+    ~Server (); // restrict stack allocation
 
 private:
     friend ServerConnection;
@@ -89,7 +93,6 @@ private:
     // disable copying
     Server (const Server&) = delete;
     Server& operator= (const Server&) = delete;
-    ~Server (); // restrict stack allocation
 };
 using ServerSP = iptr<Server>;
 

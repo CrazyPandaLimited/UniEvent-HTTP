@@ -4,4 +4,5 @@ use MyTest;
 use Test::More;
 
 variate_catch('[server-version]', 'ssl');
+
 done_testing();

@@ -3,8 +3,8 @@ use lib 't/lib';
 use MyTest;
 use Test::More;
 
-plan skip_all => "set TEST_LIVE to test requests to live servers" unless $ENV{TEST_LIVE};
+plan skip_all => "set TEST_FULL to test requests to live servers" unless $ENV{TEST_FULL};
 
-Test::Catch::run('[client-live]');
+variate_catch('[client-live]', 'ssl');
 
 done_testing();

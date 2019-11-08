@@ -28,7 +28,10 @@ void Client::request (const RequestSP& request) {
         if (!request->_timer->active()) request->_timer->once(request->timeout); // if active it may be redirected request
     }
 
+    if (!request->uri->scheme()) request->uri->scheme("http");
+
     auto netloc = request->netloc();
+    if (!netloc.host) throw HttpError("uri must have host");
 
     if (!connected() || _netloc.host != netloc.host || _netloc.port != netloc.port) {
         panda_log_debug("connecting to " << netloc);
@@ -77,11 +80,9 @@ void Client::on_timer (const TimerSP& t) {
     cancel(make_error_code(std::errc::timed_out));
 }
 
-void Client::on_read (string& _buf, const CodeError& err) {
+void Client::on_read (string& buf, const CodeError& err) {
     if (err) return cancel(errc::parse_error);
-    panda_log_verbose_debug("read:\n" << _buf);
-
-    string buf = string(_buf.data(), _buf.length()); // TODO - REMOVE COPYING
+    panda_log_verbose_debug("read:\n" << buf);
 
     auto result = _parser.parse(buf);
     if (result.error) return cancel(errc::parse_error);
@@ -176,10 +177,12 @@ void Client::finish_request (const std::error_code& err) {
         req->_timer->stop();
     }
 
-    if (!res->keep_alive()) Tcp::reset();
+    if (!err && !res->keep_alive()) Tcp::reset();
     Tcp::weak(true);
 
-    panda_log_debug("request to " << req->uri->to_string() << " finished, status " << res->code << " " << res->message << ", got " << res->body.length() << " bytes, err=" << err.message());
+    if (err) { panda_log_debug("request to " << req->uri->to_string() << " finished, err=" << err.message()); }
+    else     { panda_log_debug("request to " << req->uri->to_string() << " finished, status " << res->code << " " << res->message << ", got " << res->body.length() << " bytes"); }
+
     req->handle_partial(req, res, err ? State::error : State::done, err);
     req->handle_response(req, res, err);
 }

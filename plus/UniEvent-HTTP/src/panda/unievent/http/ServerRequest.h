@@ -25,6 +25,9 @@ struct ServerRequest : protocol::http::Request {
 
     void respond (const ServerResponseSP&);
 
+    void redirect (const string&);
+    void redirect (const URISP& uri) { redirect(uri->to_string()); }
+
 protected:
     ServerRequest (ServerConnection* conn) : _connection(conn), _state(State::not_yet), _routed(), _partial(), _finish_on_receive() {}
 

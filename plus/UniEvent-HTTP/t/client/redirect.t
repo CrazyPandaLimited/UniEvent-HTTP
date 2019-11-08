@@ -3,6 +3,6 @@ use lib 't/lib';
 use MyTest;
 use Test::More;
 
-variate_catch('[server-partial]', 'ssl');
+variate_catch('[client-redirect]', 'ssl');
 
 done_testing();
