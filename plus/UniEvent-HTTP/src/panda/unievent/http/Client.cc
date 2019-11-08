@@ -85,14 +85,16 @@ void Client::on_read (string& buf, const CodeError& err) {
     panda_log_verbose_debug("read:\n" << buf);
 
     auto result = _parser.parse(buf);
+    _response = static_pointer_cast<Response>(result.response);
+    _response->_state = result.state;
+
     if (result.error) return cancel(errc::parse_error);
     if (result.state < State::got_header) {
         panda_log_verbose_debug("got part, headers not finished");
         return;
     }
 
-    _response = static_pointer_cast<Response>(result.response);
-    _request->handle_partial(_request, _response, result.state, {});
+    _request->partial_event(_request, _response, {});
 
     if (result.state != State::done) {
         panda_log_verbose_debug("got part, body not finished");
@@ -131,7 +133,7 @@ void Client::analyze_request () {
                 if (prev_uri->explicit_port()) uri->port(prev_uri->port());
             }
 
-            _request->handle_redirect(_request, _response, uri);
+            _request->redirect_event(_request, _response, uri);
 
             _request->_original_uri = prev_uri;
             _request->uri = uri;
@@ -183,8 +185,8 @@ void Client::finish_request (const std::error_code& err) {
     if (err) { panda_log_debug("request to " << req->uri->to_string() << " finished, err=" << err.message()); }
     else     { panda_log_debug("request to " << req->uri->to_string() << " finished, status " << res->code << " " << res->message << ", got " << res->body.length() << " bytes"); }
 
-    req->handle_partial(req, res, err ? State::error : State::done, err);
-    req->handle_response(req, res, err);
+    req->partial_event(req, res, err);
+    req->response_event(req, res, err);
 }
 
 void Client::on_eof () {

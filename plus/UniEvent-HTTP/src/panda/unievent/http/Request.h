@@ -22,7 +22,7 @@ std::ostream& operator<< (std::ostream& os, const NetLoc& h);
 struct Request : protocol::http::Request {
     struct Builder;
     using response_fptr = void(const RequestSP&, const ResponseSP&, const std::error_code&);
-    using partial_fptr  = void(const RequestSP&, const ResponseSP&, State state, const std::error_code&);
+    using partial_fptr  = void(const RequestSP&, const ResponseSP&, const std::error_code&);
     using redirect_fptr = void(const RequestSP&, const ResponseSP&, const URISP&);
     using response_fn   = function<response_fptr>;
     using partial_fn    = function<partial_fptr>;
@@ -68,18 +68,6 @@ private:
     uint16_t _redirection_counter;
     Client*  _client;
     TimerSP  _timer;
-
-    void handle_partial (const RequestSP& req, const ResponseSP& res, State state, const std::error_code& err) {
-        partial_event(req, res, state, err);
-    }
-
-    void handle_response (const RequestSP& req, const ResponseSP& res, const std::error_code& err) {
-        response_event(req, res, err);
-    }
-
-    void handle_redirect (const RequestSP& req, const ResponseSP& res, const URISP& to) {
-        redirect_event(req, res, to);
-    }
 };
 
 struct Request::Builder : protocol::http::Request::BuilderImpl<Builder> {
