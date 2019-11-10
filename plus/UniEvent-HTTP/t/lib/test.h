@@ -29,6 +29,7 @@ struct TServer : Server {
     void   enable_echo ();
     void   autorespond (const ServerResponseSP&);
     string location    () const;
+    NetLoc netloc      () const;
 
 private:
     using Responses = std::deque<ServerResponseSP>;
@@ -51,8 +52,21 @@ struct TClient : Client {
     std::error_code get_error (const RequestSP& req);
 
     ~TClient () { panda_log_debug("~"); }
+
+    friend struct TPool;
 };
 using TClientSP = iptr<TClient>;
+
+struct TPool : Pool {
+    using Pool::Pool;
+
+    TClientSP get (const NetLoc& nl)                  { return dynamic_pointer_cast<TClient>(Pool::get(nl)); }
+    TClientSP get (const string& host, uint16_t port) { return dynamic_pointer_cast<TClient>(Pool::get(host, port)); }
+
+protected:
+    ClientSP new_client () override { return new TClient(this); }
+};
+using TPoolSP = iptr<TPool>;
 
 
 struct ClientPair {

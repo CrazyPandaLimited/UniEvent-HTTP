@@ -5,10 +5,13 @@ namespace panda { namespace unievent { namespace http {
 static thread_local std::vector<PoolSP> s_instances;
 thread_local std::vector<PoolSP>* Pool::_instances = &s_instances;
 
-Pool::Pool (const LoopSP& loop, uint32_t timeout) : _loop(loop), _inactivity_timeout(timeout) {
-    _inactivity_timer = new Timer(loop);
-    _inactivity_timer->weak(true);
-    _inactivity_timer->event.add([this](auto&){ check_inactivity(); });
+Pool::Pool (const LoopSP& loop, Config cfg) : _loop(loop), _idle_timeout(cfg.idle_timeout) {
+    if (_idle_timeout) {
+        _idle_timer = new Timer(loop);
+        _idle_timer->weak(true);
+        _idle_timer->event.add([this](auto&){ check_inactivity(); });
+        _idle_timer->start(_idle_timeout >= 1000 ? 1000 : _idle_timeout);
+    }
 }
 
 Pool::~Pool () {
@@ -22,14 +25,14 @@ ClientSP Pool::get (const NetLoc& netloc) {
     auto pos = _clients.find(netloc);
 
     if (pos == _clients.end()) { // no clients to host, create a busy one
-        ClientSP client = new Client(this);
+        ClientSP client = new_client();
         _clients.emplace(netloc, NetLocList{{}, {client}});
         return client;
     }
 
     if (pos->second.free.empty()) { // all clients are busy -> create new client
         //TODO: limit connections?
-        ClientSP client = new Client(this);
+        ClientSP client = new_client();
         pos->second.busy.insert(client);
         return client;
     }
@@ -54,7 +57,7 @@ void Pool::putback (const ClientSP& client) {
 }
 
 void Pool::check_inactivity () {
-    auto remove_time = _loop->now() - _inactivity_timeout;
+    auto remove_time = _loop->now() - _idle_timeout;
     for (auto it = _clients.begin(); it != _clients.end();) {
         auto& list = it->second.free;
         for (auto it = list.begin(); it != list.end();) {
@@ -64,6 +67,21 @@ void Pool::check_inactivity () {
         if (list.empty() && it->second.busy.empty()) it = _clients.erase(it);
         else ++it;
     }
+}
+
+size_t Pool::size () const {
+    size_t ret = 0;
+    for (auto& row : _clients) {
+        ret += row.second.free.size();
+        ret += row.second.busy.size();
+    }
+    return ret;
+}
+
+size_t Pool::nbusy () const {
+    size_t ret = 0;
+    for (auto& row : _clients) ret += row.second.busy.size();
+    return ret;
 }
 
 }}}

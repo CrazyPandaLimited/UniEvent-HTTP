@@ -65,13 +65,14 @@ TEST("different server") {
 }
 
 TEST("redirection limit") {
-    AsyncTest test(1000, {});
+    AsyncTest test(1000);
 
     auto req = Request::Builder().uri("/").build();
 
     int count = 10;
     SECTION("beyond limit") { req->redirection_limit = count; }
     SECTION("above limit")  { req->redirection_limit = count - 1; }
+    SECTION("disallowed")   { req->redirection_limit = 0; }
 
     std::vector<TServerSP> backends = { make_server(test.loop) };
     backends[0]->autorespond(new ServerResponse(404));
@@ -97,11 +98,27 @@ TEST("redirection limit") {
         auto res = client->get_response(req);
         CHECK(res->code == 404);
         CHECK(rcnt == count);
-    } else {
+    } else if (req->redirection_limit) {
         auto err = client->get_error(req);
         CHECK(err == errc::redirection_limit);
         CHECK(rcnt == count - 1);
+    } else {
+        auto err = client->get_error(req);
+        CHECK(err == errc::unexpected_redirect);
+        CHECK(rcnt == 0);
     }
+}
+
+TEST("do not follow redirections") {
+    AsyncTest test(1000);
+    ClientPair p(test.loop);
+
+    p.server->autorespond(new ServerResponse(302, Header().location("http://ya.ru")));
+
+    auto req = Request::Builder().uri("/").follow_redirect(false).build();
+    auto res = p.client->get_response(req);
+    CHECK(res->code == 302);
+    CHECK(res->headers.get("Location") == "http://ya.ru");
 }
 
 TEST("timeout") { // timeout is for whole request including all redirections

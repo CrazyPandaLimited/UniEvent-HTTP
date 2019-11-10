@@ -5,10 +5,12 @@
 namespace panda { namespace unievent { namespace http {
 
 enum class errc {
-    parse_error       = 1,
-    no_redirect_uri   = 2,
-    redirection_limit = 3,
-    server_stopping   = 4,
+    parse_error = 1,
+    no_redirect_uri,
+    redirection_limit,
+    unexpected_redirect,
+    transfer_aborted,
+    server_stopping,
 };
 
 struct ErrorCategory : std::error_category {

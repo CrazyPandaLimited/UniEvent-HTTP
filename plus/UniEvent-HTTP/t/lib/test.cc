@@ -60,6 +60,10 @@ string TServer::location () const {
     return sa.ip() + ':' + panda::to_string(sa.port());
 }
 
+NetLoc TServer::netloc () const {
+    return { sockaddr().ip(), sockaddr().port() };
+}
+
 void TClient::request (const RequestSP& req) {
     if (sa) {
         req->uri->host(sa.ip());

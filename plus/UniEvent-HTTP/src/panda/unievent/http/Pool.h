@@ -9,9 +9,14 @@ struct Pool;
 using PoolSP = iptr<Pool>;
 
 struct Pool : Refcnt {
-    static constexpr const uint64_t DEFAULT_INACTIVITY_TIMEOUT = 10000; // [ms]
+    static constexpr const uint64_t DEFAULT_IDLE_TIMEOUT = 60000; // [ms]
 
-    Pool (const LoopSP& loop = Loop::default_loop(), uint32_t timeout = DEFAULT_INACTIVITY_TIMEOUT);
+    struct Config {
+        uint32_t idle_timeout = DEFAULT_IDLE_TIMEOUT;
+        Config () {}
+    };
+
+    Pool (const LoopSP& loop = Loop::default_loop(), Config = {});
 
     ~Pool ();
 
@@ -28,6 +33,12 @@ struct Pool : Refcnt {
         v->push_back(new Pool(loop));
         return v->back();
     }
+
+    size_t size  () const;
+    size_t nbusy () const;
+
+protected:
+    virtual ClientSP new_client () { return new Client(this); }
 
 private:
     friend Client;
@@ -56,8 +67,8 @@ private:
     static thread_local std::vector<PoolSP>* _instances;
 
     LoopSP   _loop;
-    TimerSP  _inactivity_timer;
-    uint32_t _inactivity_timeout;
+    TimerSP  _idle_timer;
+    uint32_t _idle_timeout;
     Clients  _clients;
 
     void check_inactivity ();

@@ -1,229 +1,181 @@
 #include "../lib/test.h"
 
-//TEST_CASE("trivial pool", "[pool]") {
-//    server::ServerSP echo;
-//    uint16_t echo_port;
-//    std::tie(echo, echo_port) = echo_server("trivial_pool");
-//
-//    string uri_str = "http://127.0.0.1:" + to_string(echo_port);
-//    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
-//
-//    protocol::http::ResponseSP response;
-//    protocol::http::RequestSP request;
-//    std::tie(response, request) = echo_request(uri, protocol::http::Request::Method::GET);
-//
-//    REQUIRE(response);
-//    REQUIRE(response->is_valid());
-//    REQUIRE(response->http_version() == "1.1");
-//    REQUIRE(request->headers.get_field("Host") == uri->explicit_location());
-//}
-//
-//TEST_CASE("timeouted connection from pool", "[pool]") {
-//    server::ServerSP echo;
-//    uint16_t echo_port;
-//    std::tie(echo, echo_port) = echo_server("trivial_pool");
-//
-//    string uri_str = "http://127.0.0.1:" + to_string(echo_port);
-//    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
-//
-//    client::ClientConnectionPool pool(Loop::default_loop(), 50);
-//
-//    ResponseSP response1;
-//    client::RequestSP request1 = client::Request::Builder()
-//        .method(protocol::http::Request::Method::GET)
-//        .uri(uri)
-//        .response_callback([&](client::RequestSP, ResponseSP r) {
-//            response1 = r;
-//        })
-//        .timeout(100)
-//        .build();
-//
-//    ResponseSP response2;
-//    client::RequestSP request2 = client::Request::Builder()
-//        .method(protocol::http::Request::Method::GET)
-//        .uri(uri)
-//        .response_callback([&](client::RequestSP, ResponseSP r) {
-//            response2 = r;
-//        })
-//        .timeout(100)
-//        .build();
-//
-//    http_request(request1, &pool);
-//    http_request(request2, &pool);
-//
-//    wait(100, Loop::default_loop());
-//
-//    // all connections are expired
-//    REQUIRE(pool.empty());
-//
-//    REQUIRE(response1);
-//    REQUIRE(response2);
-//    REQUIRE(response1->is_valid());
-//    REQUIRE(response2->is_valid());
-//}
-//
-//TEST_CASE("sequential requests", "[pool]") {
-//    server::ServerSP echo;
-//    uint16_t echo_port;
-//    std::tie(echo, echo_port) = echo_server("trivial_pool");
-//
-//    string uri_str = "http://127.0.0.1:" + to_string(echo_port);
-//    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
-//
-//    client::ClientConnectionPool pool(Loop::default_loop(), 50);
-//
-//    ResponseSP response1;
-//    client::RequestSP request1 = client::Request::Builder()
-//        .method(protocol::http::Request::Method::GET)
-//        .uri(uri)
-//        .response_callback([&](client::RequestSP, ResponseSP r) {
-//            response1 = r;
-//        })
-//        .timeout(100)
-//        .build();
-//
-//    ResponseSP response2;
-//    client::RequestSP request2 = client::Request::Builder()
-//        .method(protocol::http::Request::Method::GET)
-//        .uri(uri)
-//        .response_callback([&](client::RequestSP, ResponseSP r) {
-//            response2 = r;
-//        })
-//        .timeout(100)
-//        .build();
-//
-//    http_request(request1, &pool);
-//
-//    wait(100, Loop::default_loop());
-//
-//    http_request(request2, &pool);
-//
-//    wait(100, Loop::default_loop());
-//
-//    // all connections are expired
-//    REQUIRE(pool.empty());
-//
-//    REQUIRE(response1);
-//    REQUIRE(response2);
-//    REQUIRE(response1->is_valid());
-//    REQUIRE(response2->is_valid());
-//}
-//
-//TEST_CASE("same request using pool", "[pool]") {
-//    server::ServerSP echo;
-//    uint16_t echo_port;
-//    std::tie(echo, echo_port) = echo_server("trivial_pool");
-//
-//    string uri_str = "http://127.0.0.1:" + to_string(echo_port);
-//    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
-//
-//    client::ClientConnectionPool pool(Loop::default_loop(), 50);
-//
-//    ResponseSP response;
-//    client::RequestSP request = client::Request::Builder()
-//        .method(protocol::http::Request::Method::GET)
-//        .uri(uri)
-//        .response_callback([&](client::RequestSP, ResponseSP r) {
-//            response = r;
-//        })
-//        .timeout(100)
-//        .build();
-//
-//    // cant reuse not completed request
-//    REQUIRE_THROWS_AS([&]{
-//        http_request(request, &pool);
-//        http_request(request, &pool);
-//    }(), ProgrammingError);
-//}
-//
-//TEST_CASE("timeouted pool request", "[pool]") {
-//    server::ServerSP echo;
-//    uint16_t echo_port;
-//    std::tie(echo, echo_port) = echo_server("timeouted_pool");
-//
-//    string uri_str = "http://127.0.0.1:" + to_string(echo_port);
-//    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
-//
-//    string err;
-//    ResponseSP response;
-//    auto request = client::Request::Builder()
-//        .method(protocol::http::Request::Method::GET)
-//        .uri(uri)
-//        .timeout(1)
-//        .response_callback([&](client::RequestSP, ResponseSP r) {
-//            response = r;
-//        })
-//        .error_callback([&](client::RequestSP, const string& details) {
-//            err = details;
-//        })
-//        .build();
-//
-//    http_request(request);
-//
-//    wait(200, Loop::default_loop());
-//
-//    //TODO from time to time it manages to connect before the timeout
-//    //REQUIRE(!err.empty());
-//
-//    err.clear();
-//    request = client::Request::Builder()
-//        .method(protocol::http::Request::Method::GET)
-//        .uri(uri)
-//        .timeout(100)
-//        .response_callback([&](client::RequestSP, ResponseSP r) {
-//            response = r;
-//        })
-//        .error_callback([&](client::RequestSP, const string& details) {
-//            err = details;
-//        })
-//        .build();
-//
-//    http_request(request);
-//
-//    wait(100, Loop::default_loop());
-//
-//    REQUIRE(err.empty());
-//}
-//
-//TEST_CASE("multiple pool requests", "[pool]") {
-//    server::ServerSP echo;
-//    uint16_t echo_port;
-//    std::tie(echo, echo_port) = echo_server("timeouted_pool");
-//
-//    string uri_str = "http://127.0.0.1:" + to_string(echo_port);
-//    iptr<uri::URI> uri = make_iptr<uri::URI>(uri_str);
-//
-//    // there is no guarantee that requests will be processed in order
-//    // because they will produce multiple different connections
-//    std::map<string, ResponseSP> responses;
-//    const int REQUEST_COUNT = 10;
-//    for(int i = 0; i < REQUEST_COUNT; ++i) {
-//        string host = "host" + to_string(i);
-//        auto request = client::Request::Builder()
-//            .method(protocol::http::Request::Method::GET)
-//            .uri(uri)
-//            .header(protocol::http::Header().host(host))
-//            .response_callback([host, &responses](client::RequestSP, ResponseSP r) {
-//                    responses.insert(std::make_pair(host, r));
-//                    })
-//            .build();
-//
-//        http_request(request);
-//    }
-//
-//    wait(100, Loop::default_loop());
-//
-//    for(int i = 0; i < REQUEST_COUNT; ++i) {
-//        string host = "host" + to_string(i);
-//        auto response_pos = responses.find(host);
-//        REQUIRE(response_pos != std::end(responses));
-//        auto response = response_pos->second;
-//        auto echo_request = parse_request(response->body->as_buffer());
-//
-//        REQUIRE(response);
-//        REQUIRE(response->is_valid());
-//        REQUIRE(response->http_version() == "1.1");
-//
-//        responses.erase(response_pos);
-//    }
-//}
+#define TEST(name) TEST_CASE("client-pool: " name, "[client-pool]" VSSL)
+
+TEST("reusing connection") {
+    AsyncTest test(1000, 1);
+    TPool p(test.loop);
+    auto srv = make_server(test.loop);
+    srv->autorespond(new ServerResponse(200));
+    srv->autorespond(new ServerResponse(200));
+
+    CHECK_FALSE(p.size());
+    CHECK_FALSE(p.nbusy());
+
+    auto c = p.get(srv->netloc());
+    c->sa = srv->sockaddr();
+
+    CHECK(p.size() == 1);
+    CHECK(p.nbusy() == 1);
+
+    c->connect_event.add([&](auto...){ test.happens(); }); // should connect only once
+
+    auto res = c->get_response("/");
+    CHECK(res->code == 200);
+
+    CHECK(p.size() == 1);
+    CHECK(p.nbusy() == 0);
+
+    auto c2 = p.get(srv->netloc()); // should be the same client
+    CHECK(c == c2);
+
+    CHECK(p.size() == 1);
+    CHECK(p.nbusy() == 1);
+
+    res = c->get_response("/");
+    CHECK(res->code == 200);
+}
+
+TEST("reusing connection after c=close") {
+    AsyncTest test(1000, 2);
+    TPool p(test.loop);
+    auto srv = make_server(test.loop);
+    srv->autorespond(new ServerResponse(200, Header().connection("close")));
+    srv->autorespond(new ServerResponse(200));
+
+    auto c = p.get(srv->netloc());
+    c->sa = srv->sockaddr();
+
+    c->connect_event.add([&](auto...){ test.happens(); }); // should connect twice
+
+    auto res = c->get_response("/");
+    CHECK(res->code == 200);
+    CHECK_FALSE(res->keep_alive());
+
+    CHECK(p.size() == 1);
+    CHECK(p.nbusy() == 0);
+
+    auto c2 = p.get(srv->netloc());
+    CHECK(c == c2);
+
+    CHECK(p.size() == 1);
+    CHECK(p.nbusy() == 1);
+
+    res = c->get_response("/");
+    CHECK(res->code == 200);
+}
+
+TEST("different servers") {
+    AsyncTest test(1000, 2);
+    TPool p(test.loop);
+    auto srv1 = make_server(test.loop);
+    auto srv2 = make_server(test.loop);
+    srv1->autorespond(new ServerResponse(200));
+    srv2->autorespond(new ServerResponse(200));
+
+    auto c = p.get(srv1->netloc());
+    c->sa = srv1->sockaddr();
+    c->connect_event.add([&](auto...){ test.happens(); });
+
+    auto res = c->get_response("/");
+    CHECK(res->code == 200);
+
+    CHECK(p.size() == 1);
+    CHECK(p.nbusy() == 0);
+
+    c = p.get(srv2->netloc());
+    c->sa = srv2->sockaddr();
+    c->connect_event.add([&](auto...){ test.happens(); });
+
+    CHECK(p.size() == 2);
+    CHECK(p.nbusy() == 1);
+
+    res = c->get_response("/");
+    CHECK(res->code == 200);
+
+    CHECK(p.size() == 2);
+    CHECK(p.nbusy() == 0);
+}
+
+TEST("several requests to the same server at once") {
+    AsyncTest test(1000, 2);
+    TPool p(test.loop);
+    auto srv = make_server(test.loop);
+    srv->autorespond(new ServerResponse(200, Header(), Body("1")));
+    srv->autorespond(new ServerResponse(200, Header(), Body("1")));
+    srv->autorespond(new ServerResponse(200, Header(), Body("2")));
+    srv->autorespond(new ServerResponse(200, Header(), Body("2")));
+
+    auto c1 = p.get(srv->netloc());
+    c1->sa = srv->sockaddr();
+    c1->connect_event.add([&](auto...){ test.happens(); });
+
+    auto c2 = p.get(srv->netloc());
+    c2->sa = srv->sockaddr();
+    c2->connect_event.add([&](auto...){ test.happens(); });
+
+    CHECK(c1 != c2);
+    CHECK(p.size() == 2);
+    CHECK(p.nbusy() == 2);
+
+    auto res = c2->get_response("/");
+    CHECK(res->code == 200);
+    CHECK(res->body.to_string() == "1");
+    CHECK(p.size() == 2);
+    CHECK(p.nbusy() == 1);
+
+    res = c1->get_response("/");
+    CHECK(res->code == 200);
+    CHECK(res->body.to_string() == "1");
+    CHECK(p.size() == 2);
+    CHECK(p.nbusy() == 0);
+
+    auto c3 = p.get(srv->netloc());
+    CHECK((c3 == c1 || c3 == c2));
+    CHECK(p.size() == 2);
+    CHECK(p.nbusy() == 1);
+
+    auto c4 = p.get(srv->netloc());
+    CHECK((c4 == c1 || c4 == c2));
+    CHECK(c4 != c3);
+    CHECK(p.size() == 2);
+    CHECK(p.nbusy() == 2);
+
+    res = c1->get_response("/");
+    CHECK(res->body.to_string() == "2");
+    res = c2->get_response("/");
+    CHECK(res->body.to_string() == "2");
+}
+
+TEST("idle timeout") {
+    AsyncTest test(1000, 2);
+    Pool::Config cfg;
+    cfg.idle_timeout = 5;
+    TPool p(test.loop, cfg);
+    auto srv = make_server(test.loop);
+    srv->autorespond(new ServerResponse(200));
+    srv->autorespond(new ServerResponse(200));
+
+    auto c = p.get(srv->netloc());
+    c->sa = srv->sockaddr();
+    c->connect_event.add([&](auto...){ test.happens(); });
+    test.wait(15); // more than idle_timeout
+    // client is busy and not affected by idle timeout
+    CHECK(p.size() == 1);
+    CHECK(p.nbusy() == 1);
+
+    auto res = c->get_response("/");
+    CHECK(res->code == 200);
+
+    test.wait(15);
+    CHECK(p.size() == 0);
+    CHECK(p.nbusy() == 0);
+
+    c = p.get(srv->netloc());
+    c->sa = srv->sockaddr();
+    c->connect_event.add([&](auto...){ test.happens(); });
+    CHECK(p.size() == 1);
+    CHECK(p.nbusy() == 1);
+    res = c->get_response("/");
+    CHECK(res->code == 200);
+}

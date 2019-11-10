@@ -31,30 +31,22 @@ struct Request : protocol::http::Request {
     static constexpr const uint64_t DEFAULT_TIMEOUT           = 20000; // [ms]
     static constexpr const uint16_t DEFAULT_REDIRECTION_LIMIT = 20;    // [hops]
 
-    uint64_t                          timeout;
-    uint16_t                          redirection_limit;
+    uint64_t                          timeout           = DEFAULT_TIMEOUT;
+    bool                              follow_redirect   = true;
+    uint16_t                          redirection_limit = DEFAULT_REDIRECTION_LIMIT;
     CallbackDispatcher<response_fptr> response_event;
     CallbackDispatcher<partial_fptr>  partial_event;
     CallbackDispatcher<redirect_fptr> redirect_event;
 
-    Request () : timeout(DEFAULT_TIMEOUT), redirection_limit(DEFAULT_REDIRECTION_LIMIT), _client() {}
-
-    Request (Method method, const URISP& uri, Header&& header, Body&& body, bool chunked,
-             const response_fn& response_cb, const partial_fn& partial_cb = {}, const redirect_fn& redirect_cb = {},
-             uint64_t timeout = DEFAULT_TIMEOUT, uint16_t redirection_limit = DEFAULT_REDIRECTION_LIMIT, int http_version = 0) :
-        protocol::http::Request(method, uri, std::move(header), std::move(body), chunked, http_version),
-        timeout(timeout), redirection_limit(redirection_limit), _original_uri(uri), _redirection_counter(), _client()
-    {
-        if (response_cb) response_event.add(response_cb);
-        if (partial_cb)  partial_event.add(partial_cb);
-        if (redirect_cb) redirect_event.add(redirect_cb);
-    }
+    Request () {}
 
     NetLoc       netloc       () const { return { uri->host(), uri->port() }; }
     const URISP& original_uri () const { return _original_uri; }
 
-    void send_chunk (const string& chunk);
-    void end_chunk  ();
+    bool transfer_completed () const { return _transfer_completed; }
+
+    void send_chunk        (const string& chunk);
+    void send_final_chunk  ();
 
     void cancel (const std::error_code& = make_error_code(std::errc::operation_canceled));
 
@@ -65,8 +57,9 @@ private:
     friend Client;
 
     URISP    _original_uri;
-    uint16_t _redirection_counter;
-    Client*  _client;
+    uint16_t _redirection_counter = 0;
+    bool     _transfer_completed  = false;
+    Client*  _client              = nullptr;
     TimerSP  _timer;
 };
 
@@ -91,23 +84,41 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder> {
         return *this;
     }
 
+    Builder& follow_redirect (bool val) {
+        _follow_redirect = val;
+        return *this;
+    }
+
     Builder& redirection_limit (uint16_t redirection_limit) {
         _redirection_limit = redirection_limit;
         return *this;
     }
 
     RequestSP build () {
-        return new Request(
-            _method, _uri, std::move(_headers), std::move(_body), _chunked,
-            _response_callback, _partial_callback, _redirect_callback, _timeout, _redirection_limit, _http_version
-        );
+        RequestSP r = new Request();
+        r->method            = _method;
+        r->uri               = _uri;
+        r->headers           = std::move(_headers);
+        r->body              = std::move(_body);
+        r->chunked           = _chunked;
+        r->http_version      = _http_version;
+        r->timeout           = _timeout;
+        r->follow_redirect   = _follow_redirect;
+        r->redirection_limit = _redirection_limit;
+
+        if (_response_callback) r->response_event.add(_response_callback);
+        if (_partial_callback)  r->partial_event.add(_partial_callback);
+        if (_redirect_callback) r->redirect_event.add(_redirect_callback);
+
+        return r;
     }
 
 protected:
     Request::response_fn _response_callback;
     Request::partial_fn  _partial_callback;
     Request::redirect_fn _redirect_callback;
-    uint64_t             _timeout = Request::DEFAULT_TIMEOUT;
+    uint64_t             _timeout           = Request::DEFAULT_TIMEOUT;
+    bool                 _follow_redirect   = true;
     uint16_t             _redirection_limit = Request::DEFAULT_REDIRECTION_LIMIT;
 };
 
