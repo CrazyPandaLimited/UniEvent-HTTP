@@ -49,6 +49,11 @@ struct Typemap<panda::unievent::http::ResponseSP, panda::iptr<TYPE>> : Typemap<T
 };
 
 template <class TYPE>
+struct Typemap<panda::unievent::http::Client*, TYPE> : TypemapObject<panda::unievent::http::Client*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMG> {
+    static panda::string_view package () { return "UniEvent::HTTP::Client"; }
+};
+
+template <class TYPE>
 struct Typemap<panda::unievent::http::Pool*, TYPE> : TypemapObject<panda::unievent::http::Pool*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMG> {
     static panda::string_view package () { return "UniEvent::HTTP::Pool"; }
 };
