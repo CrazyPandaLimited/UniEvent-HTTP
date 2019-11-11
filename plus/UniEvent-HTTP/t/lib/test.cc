@@ -132,7 +132,10 @@ RawResponseSP ServerPair::get_response () {
         conn->read_event.add([&, this](auto, auto& str, auto& err) {
             if (err) throw err;
             while (str) {
-                if (!parser.request()) parser.set_request(new RawRequest(Request::Method::GET, new URI("/")));
+                if (!parser.request()) {
+                    if (source_request) parser.set_request(source_request);
+                    else                parser.set_request(new RawRequest(Request::Method::GET, new URI("/")));
+                }
                 auto result = parser.parse_shift(str);
                 if (result.error) {
                     WARN(result.error);

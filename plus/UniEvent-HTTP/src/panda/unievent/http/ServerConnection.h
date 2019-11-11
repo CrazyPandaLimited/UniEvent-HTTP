@@ -47,6 +47,7 @@ private:
 
     void respond             (const ServerRequestSP&, const ServerResponseSP&);
     void write_next_response ();
+    void send_continue       (const ServerRequestSP&);
     void send_chunk          (const ServerResponseSP&, const string& chunk);
     void send_final_chunk    (const ServerResponseSP&);
     void finish_request      ();

@@ -24,6 +24,7 @@ struct ServerRequest : protocol::http::Request {
     void enable_partial () { _partial = true; }
 
     void respond (const ServerResponseSP&);
+    void send_continue ();
 
     void redirect (const string&);
     void redirect (const URISP& uri) { redirect(uri->to_string()); }

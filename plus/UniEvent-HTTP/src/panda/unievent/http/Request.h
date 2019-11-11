@@ -24,9 +24,11 @@ struct Request : protocol::http::Request {
     using response_fptr = void(const RequestSP&, const ResponseSP&, const std::error_code&);
     using partial_fptr  = void(const RequestSP&, const ResponseSP&, const std::error_code&);
     using redirect_fptr = void(const RequestSP&, const ResponseSP&, const URISP&);
+    using continue_fptr = void(const RequestSP&);
     using response_fn   = function<response_fptr>;
     using partial_fn    = function<partial_fptr>;
     using redirect_fn   = function<redirect_fptr>;
+    using continue_fn   = function<continue_fptr>;
 
     static constexpr const uint64_t DEFAULT_TIMEOUT           = 20000; // [ms]
     static constexpr const uint16_t DEFAULT_REDIRECTION_LIMIT = 20;    // [hops]
@@ -37,6 +39,7 @@ struct Request : protocol::http::Request {
     CallbackDispatcher<response_fptr> response_event;
     CallbackDispatcher<partial_fptr>  partial_event;
     CallbackDispatcher<redirect_fptr> redirect_event;
+    CallbackDispatcher<continue_fptr> continue_event;
 
     Request () {}
 

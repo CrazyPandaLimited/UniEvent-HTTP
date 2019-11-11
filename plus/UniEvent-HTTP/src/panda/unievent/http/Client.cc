@@ -113,34 +113,44 @@ void Client::on_read (string& buf, const CodeError& err) {
     if (err) return cancel(errc::parse_error);
     panda_log_verbose_debug("read:\n" << buf);
 
-    auto result = _parser.parse(buf);
-    _response = static_pointer_cast<Response>(result.response);
-    _response->_state = result.state;
+    while (buf) {
+        if (!_parser.request()) {
+            panda_log_info("unexpected buffer: " << buf);
+            drop_connection();
+            break;
+        }
 
-    if (result.error) return cancel(errc::parse_error);
-    if (result.state < State::got_header) {
-        panda_log_verbose_debug("got part, headers not finished");
-        return;
+        auto result = _parser.parse_shift(buf);
+        _response = static_pointer_cast<Response>(result.response);
+        _response->_state = result.state;
+
+        if (result.error) return cancel(errc::parse_error);
+        if (result.state < State::got_header) {
+            panda_log_verbose_debug("got part, headers not finished");
+            return;
+        }
+
+        if (result.state != State::done) {
+            panda_log_verbose_debug("got part, body not finished");
+            if (_response->code == 100) continue;
+            if (_request->follow_redirect && is_redirect(_response->code)) continue;
+            _request->partial_event(_request, _response, {});
+            continue;
+        }
+
+        analyze_request();
     }
-
-    if (result.state != State::done) {
-        if (!_request->follow_redirect || !is_redirect(_response->code)) _request->partial_event(_request, _response, {});
-        panda_log_verbose_debug("got part, body not finished");
-        return;
-    }
-
-    if (result.position < buf.length()) {
-        panda_log_warn("got garbage after http response");
-        drop_connection();
-    }
-
-    analyze_request();
 }
 
 void Client::analyze_request () {
     panda_log_debug("analyze, code = " << _response->code);
 
-    if (_request->follow_redirect && is_redirect(_response->code)) {
+    if (_response->code == 100) {
+        _request->continue_event(_request);
+        _response.reset();
+        return;
+    }
+    else if (_request->follow_redirect && is_redirect(_response->code)) {
         if (!_request->redirection_limit) return cancel(errc::unexpected_redirect);
         if (++_request->_redirection_counter > _request->redirection_limit) return cancel(errc::redirection_limit);
 

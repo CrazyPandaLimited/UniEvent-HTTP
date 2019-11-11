@@ -252,5 +252,105 @@ TEST("response is complete before request fully received") {
 
     if (closed) CHECK(p.wait_eof(50));
     else        CHECK(!p.wait_eof(10));
-
 }
+
+TEST("100-continue") {
+    AsyncTest test(1000);
+    ServerPair p(test.loop);
+
+    p.server->route_event.add([&](auto req) {
+        req->send_continue();
+    });
+    p.server->autorespond(new ServerResponse(200));
+
+    p.source_request = new RawRequest(Request::Method::PUT, new URI("/"), Header().add("Expect", "100-continue"));
+    auto res = p.get_response(
+        "PUT / HTTP/1.1\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "Expect: 100-continue\r\n"
+        "\r\n"
+        "0\r\n\r\n"
+    );
+    CHECK(res->code == 100);
+
+    res = p.get_response();
+    CHECK(res->code == 200);
+}
+
+TEST("100-continue is not sent") {
+    AsyncTest test(1000);
+    ServerPair p(test.loop);
+
+    ServerRequestSP pipelined_req;
+
+    SECTION("when 1.0") {
+        p.conn->write(
+            "PUT / HTTP/1.0\r\n"
+            "Transfer-Encoding: chunked\r\n"
+            "Expect: 100-continue\r\n"
+            "\r\n"
+            "0\r\n\r\n"
+        );
+    }
+    SECTION("when not requested") {
+        p.conn->write(
+            "PUT / HTTP/1.1\r\n"
+            "Transfer-Encoding: chunked\r\n"
+            "\r\n"
+            "0\r\n\r\n"
+        );
+    }
+    SECTION("when pipelined") {
+        p.conn->write("GET / HTTP/1.1\r\n\r\n");
+        p.server->route_event.add([&](auto req) {
+            pipelined_req = req;
+            test.loop->stop();
+            p.server->route_event.remove_all();
+        });
+        test.run();
+
+        p.conn->write(
+            "PUT / HTTP/1.1\r\n"
+            "Transfer-Encoding: chunked\r\n"
+            "Expect: 100-continue\r\n"
+            "\r\n"
+            "0\r\n\r\n"
+        );
+    }
+
+    p.server->route_event.add([&](auto req) {
+        req->send_continue();
+        if (pipelined_req) pipelined_req->respond(new ServerResponse(200));
+    });
+    p.server->autorespond(new ServerResponse(200));
+
+    p.source_request = new RawRequest(Request::Method::PUT, new URI("/"), Header().add("Expect", "100-continue"));
+
+    auto res = p.get_response();
+    CHECK(res->code == 200);
+    if (pipelined_req) {
+        res = p.get_response();
+        CHECK(res->code == 200);
+    }
+}
+
+TEST("100-continue after response given") {
+    AsyncTest test(1000);
+    ServerPair p(test.loop);
+
+    p.server->request_event.add([&](auto req) {
+        req->respond(new ServerResponse(200, Header(), Body(), true));
+        CHECK_THROWS(req->send_continue());
+        req->response()->send_final_chunk();
+    });
+
+    auto res = p.get_response(
+        "PUT / HTTP/1.1\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "Expect: 100-continue\r\n"
+        "\r\n"
+        "0\r\n\r\n"
+    );
+    CHECK(res->code == 200);
+}
+

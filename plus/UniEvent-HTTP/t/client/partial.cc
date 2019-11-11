@@ -113,3 +113,38 @@ TEST("receiving full response before transfer completed") {
     p.client->request(req);
     test.loop->run();
 }
+
+TEST("100-continue") {
+    AsyncTest test(1000, 3);
+    ClientPair p(test.loop);
+
+    p.server->route_event.add([&](auto req) {
+        req->send_continue();
+        req->send_continue();
+        req->send_continue();
+    });
+    p.server->autorespond(new ServerResponse(200));
+
+    auto req = Request::Builder().uri("/").headers(Header().expect_continue()).build();
+    req->continue_event.add([&](auto) { test.happens(); });
+
+    auto res = p.client->get_response(req);
+    CHECK(res->code == 200);
+}
+
+TEST("100-continue unexpected") {
+    AsyncTest test(1000, 0);
+    ClientPair p(test.loop);
+
+    p.server->route_event.add([&](auto req) {
+        req->headers.expect_continue(); // we need to hack server otherwise it won't send 100-continue
+        req->send_continue();
+    });
+    p.server->autorespond(new ServerResponse(200));
+
+    auto req = Request::Builder().uri("/").build();
+    req->continue_event.add([&](auto) { test.happens(); });
+
+    auto err = p.client->get_error(req);
+    CHECK(err == errc::parse_error);
+}

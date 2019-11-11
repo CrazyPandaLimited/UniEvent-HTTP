@@ -128,6 +128,15 @@ void ServerConnection::write_next_response () {
     finish_request();
 }
 
+void ServerConnection::send_continue (const ServerRequestSP& req) {
+    assert(requests.size());
+    if (requests.front() != req) return; // do not send 100 in pipeline
+    if (!req->expects_continue() || req->http_version == 10) return; // client doesn't expect 100
+    if (req->_response) throw HttpError("100-continue can only be sent before response");
+
+    write("HTTP/1.1 100 Continue\r\n\r\n");
+}
+
 void ServerConnection::send_chunk (const ServerResponseSP& res, const string& chunk) {
     assert(requests.size());
     if (!chunk) return;

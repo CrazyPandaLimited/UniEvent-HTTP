@@ -81,8 +81,9 @@ struct ServerPair {
     using Parser       = panda::protocol::http::ResponseParser;
     using RawResponses = std::deque<RawResponseSP>;
 
-    TServerSP server;
-    TcpSP     conn;
+    TServerSP    server;
+    TcpSP        conn;
+    RawRequestSP source_request;
 
     ServerPair (const LoopSP&, Server::Config = {});
 

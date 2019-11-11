@@ -179,3 +179,37 @@ TEST("idle timeout") {
     res = c->get_response("/");
     CHECK(res->code == 200);
 }
+
+TEST("instance") {
+    auto dpool = Pool::instance(Loop::default_loop());
+    CHECK(dpool == Pool::instance(Loop::default_loop()));
+    CHECK(dpool == Pool::instance(Loop::default_loop()));
+
+    LoopSP l2 = new Loop();
+    auto p2 = Pool::instance(l2);
+    CHECK(p2 != dpool);
+    CHECK(p2 == Pool::instance(l2));
+}
+
+TEST("http_request") {
+    AsyncTest test(1000, 1);
+    auto srv = make_server(test.loop);
+    srv->autorespond(new ServerResponse(200, Header(), Body("hi")));
+
+    auto uristr = (secure ? string("https://") : string("http://")) + srv->location() + '/';
+    auto req = Request::Builder().uri(uristr).build();
+    req->response_event.add([&](auto, auto res, auto err) {
+        CHECK_FALSE(err);
+        CHECK(res->body.to_string() == "hi");
+        test.happens();
+        test.loop->stop();
+    });
+
+    http_request(req, test.loop);
+
+    auto pool = Pool::instance(test.loop);
+    CHECK(pool->size() == 1);
+    CHECK(pool->nbusy() == 1);
+
+    test.run();
+}

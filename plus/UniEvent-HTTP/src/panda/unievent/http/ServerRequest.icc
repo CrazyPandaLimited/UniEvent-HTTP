@@ -8,6 +8,11 @@ void ServerRequest::respond (const ServerResponseSP& res) {
     _connection->respond(this, res);
 }
 
+void ServerRequest::send_continue () {
+    if (!_connection) return;
+    _connection->send_continue(this);
+}
+
 void ServerRequest::redirect (const string& uri) {
     respond(new ServerResponse(302, Header().location(uri)));
 }
