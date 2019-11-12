@@ -5,7 +5,7 @@ use Test::More;
 use Protocol::HTTP::Message;
 use Protocol::HTTP::Request;
 
-#variate_catch('[server-basic]', 'ssl');
+variate_catch('[server-basic]', 'ssl');
 
 subtest 'simple request' => sub {
     my $test = new UE::Test::Async(1);
