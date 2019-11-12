@@ -25,11 +25,15 @@ ServerPair* make_server_pair (LoopSP loop = Loop::default_loop()) {
     RETVAL = new ServerPair(loop);
 }
 
+
+
 MODULE = MyTest    PACKAGE = MyTest::ServerPair
     
-#Server* ServerPair::server () {
-#    RETVAL = THIS->server;
-#}
+ServerPair* ServerPair::new (LoopSP loop)
+    
+Server* ServerPair::server () {
+    RETVAL = THIS->server;
+}
 
 Tcp* ServerPair::conn () {
     RETVAL = THIS->conn;
@@ -39,7 +43,5 @@ panda::protocol::http::Response* ServerPair::get_response (string s = {}) {
     if (s) RETVAL = THIS->get_response(s);
     else   RETVAL = THIS->get_response();
 }
-
-#void ServerPair::autorespond (ServerResponseSP res)
 
 bool ServerPair::wait_eof (int tmt = 0)
