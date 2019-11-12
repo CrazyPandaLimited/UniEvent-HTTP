@@ -13,6 +13,9 @@ struct ServerRequest : protocol::http::Request {
     using receive_fptr = void(const ServerRequestSP&);
     using partial_fptr = void(const ServerRequestSP&, const std::error_code&);
     using drop_fptr    = void(const ServerRequestSP&, const std::error_code&);
+    using receive_fn   = function<receive_fptr>;
+    using partial_fn   = function<partial_fptr>;
+    using drop_fn      = function<drop_fptr>;
 
     CallbackDispatcher<receive_fptr> receive_event;
     CallbackDispatcher<partial_fptr> partial_event;

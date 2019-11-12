@@ -36,11 +36,14 @@ struct Server : Refcnt, private IStreamSelfListener {
 
     using Listeners    = std::vector<TcpSP>;
     using route_fptr   = void(const ServerRequestSP&);
-    using receive_fptr = ServerRequest::receive_fptr;
+    using request_fptr = ServerRequest::receive_fptr;
     using error_fptr   = void(const ServerRequestSP&, const std::error_code&);
+    using route_fn     = function<route_fptr>;
+    using request_fn   = ServerRequest::receive_fn;
+    using error_fn     = function<error_fptr>;
 
     CallbackDispatcher<route_fptr>   route_event;
-    CallbackDispatcher<receive_fptr> request_event;
+    CallbackDispatcher<request_fptr> request_event;
     CallbackDispatcher<error_fptr>   error_event;
 
     Server (const LoopSP& loop = Loop::default_loop());

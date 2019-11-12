@@ -9,8 +9,11 @@ namespace xs { namespace unievent { namespace http {
 
 using namespace panda::unievent::http;
 
-void fill_request  (const Hash&, Request*);
-void fill_response (const Hash&, Response*);
+void fill (Request*,          const Hash&);
+void fill (ServerResponse*,   const Hash&);
+void fill (Server::Location&, const Hash&);
+void fill (Server::Config&,   const Hash&);
+void fill (Pool::Config&,     const Hash&);
 
 }}}
 
@@ -27,7 +30,7 @@ struct Typemap<panda::unievent::http::RequestSP, panda::iptr<TYPE>> : Typemap<TY
     static panda::iptr<TYPE> in (Sv arg) {
         if (!arg.is_hash_ref()) return Super::in(arg);
         panda::iptr<TYPE> ret = make_backref<TYPE>();
-        xs::unievent::http::fill_request(arg, ret.get());
+        xs::unievent::http::fill(ret.get(), arg);
         return ret;
     }
 };
@@ -38,19 +41,13 @@ struct Typemap<panda::unievent::http::Response*, TYPE> : Typemap<panda::protocol
 };
 
 template <class TYPE>
-struct Typemap<panda::unievent::http::ResponseSP, panda::iptr<TYPE>> : Typemap<TYPE*> {
-    using Super = Typemap<TYPE*>;
-    static panda::iptr<TYPE> in (Sv arg) {
-        if (!arg.is_hash_ref()) return Super::in(arg);
-        panda::iptr<TYPE> ret = make_backref<TYPE>();
-        xs::unievent::http::fill_response(arg, ret.get());
-        return ret;
-    }
+struct Typemap<panda::unievent::http::Client*, TYPE> : TypemapObject<panda::unievent::http::Client*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMG> {
+    static panda::string_view package () { return "UniEvent::HTTP::Client"; }
 };
 
 template <class TYPE>
-struct Typemap<panda::unievent::http::Client*, TYPE> : TypemapObject<panda::unievent::http::Client*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMG> {
-    static panda::string_view package () { return "UniEvent::HTTP::Client"; }
+struct Typemap<panda::unievent::http::Pool::Config, TYPE> : TypemapBase<panda::unievent::http::Pool::Config, TYPE> {
+    static TYPE in (SV* arg) { TYPE cfg; xs::unievent::http::fill(cfg, arg); return cfg; }
 };
 
 template <class TYPE>
@@ -60,36 +57,33 @@ struct Typemap<panda::unievent::http::Pool*, TYPE> : TypemapObject<panda::unieve
 
 
 
-template <class TYPE> struct Typemap<panda::unievent::http::Server::Location, TYPE> : TypemapBase<panda::unievent::http::Server::Location, TYPE> {
-    static TYPE in (SV* arg) {
-        TYPE loc;
-        const Hash h = arg;
-        Sv sv; Simple v;
+template <class TYPE>
+struct Typemap<panda::unievent::http::ServerRequest*, TYPE> : Typemap<panda::protocol::http::Request*, TYPE> {
+    static panda::string_view package () { return "UniEvent::HTTP::ServerRequest"; }
+};
 
-        if ((v  = h.fetch("host")))       loc.host       = v.as_string();
-        if ((v  = h.fetch("port")))       loc.port       = v;
-        if ((v  = h.fetch("reuse_port"))) loc.reuse_port = v;
-        if ((v  = h.fetch("backlog")))    loc.backlog    = v;
-        if ((v  = h.fetch("domain")))     loc.domain     = v;
-        if ((sv = h.fetch("ssl_ctx")))    loc.ssl_ctx = xs::in<SSL_CTX*>(sv);
+template <class TYPE>
+struct Typemap<panda::unievent::http::ServerResponse*, TYPE> : Typemap<panda::protocol::http::Response*, TYPE> {
+    static panda::string_view package () { return "UniEvent::HTTP::ServerResponse"; }
+};
 
-        return loc;
+template <class TYPE>
+struct Typemap<panda::unievent::http::ServerResponseSP, panda::iptr<TYPE>> : Typemap<TYPE*> {
+    using Super = Typemap<TYPE*>;
+    static panda::iptr<TYPE> in (Sv arg) {
+        if (!arg.is_hash_ref()) return Super::in(arg);
+        panda::iptr<TYPE> ret = make_backref<TYPE>();
+        xs::unievent::http::fill(ret.get(), arg);
+        return ret;
     }
 };
 
+template <class TYPE> struct Typemap<panda::unievent::http::Server::Location, TYPE> : TypemapBase<panda::unievent::http::Server::Location, TYPE> {
+    static TYPE in (SV* arg) { TYPE loc; xs::unievent::http::fill(loc, arg); return loc; }
+};
+
 template <class TYPE> struct Typemap<panda::unievent::http::Server::Config, TYPE> : TypemapBase<panda::unievent::http::Server::Config, TYPE> {
-    static TYPE in (SV* arg) {
-        TYPE cfg;
-        const Hash h = arg;
-        Sv sv; Simple v;
-
-        if ((sv = h.fetch("locations")))        cfg.locations        = xs::in<decltype(cfg.locations)>(sv);
-        if ((v  = h.fetch("idle_timeout")))     cfg.idle_timeout     = (double)v * 1000;
-        if ((v  = h.fetch("max_headers_size"))) cfg.max_headers_size = v;
-        if ((v  = h.fetch("max_body_size")))    cfg.max_body_size    = v;
-
-        return cfg;
-    }
+    static TYPE in (SV* arg) { TYPE cfg; xs::unievent::http::fill(cfg, arg); return cfg; }
 };
 
 template <class TYPE>
