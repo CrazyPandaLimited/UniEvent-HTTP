@@ -1,7 +1,5 @@
 #pragma once
-#include <xs/function.h>
 #include <xs/protocol/http.h>
-#include <xs/unievent/Stream.h> // typemap for SSL_CTX*
 #include <panda/unievent/http.h>
 #include <panda/unievent/http/Server.h>
 

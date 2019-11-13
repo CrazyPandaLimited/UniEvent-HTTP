@@ -1,4 +1,6 @@
 #include "http.h"
+#include <xs/function.h>
+#include <xs/unievent/Stream.h> // typemap for SSL_CTX*
 
 namespace xs { namespace unievent { namespace http {
 
