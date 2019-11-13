@@ -33,7 +33,7 @@ struct ServerRequest : protocol::http::Request {
     void redirect (const URISP& uri) { redirect(uri->to_string()); }
 
 protected:
-    ServerRequest (ServerConnection* conn) : _connection(conn), _state(State::not_yet), _routed(), _partial(), _finish_on_receive() {}
+    ServerRequest () {}
 
     ~ServerRequest () {
         // remove garbage from response in case if user holds response without request after response is finished
@@ -43,12 +43,12 @@ protected:
 private:
     friend ServerConnection; friend ServerResponse;
 
-    ServerConnection* _connection;
+    ServerConnection* _connection        = nullptr;
     ServerResponseSP  _response;
-    State             _state;
-    bool              _routed;
-    bool              _partial;
-    bool              _finish_on_receive;
+    State             _state             = State::not_yet;
+    bool              _routed            = false;
+    bool              _partial           = false;
+    bool              _finish_on_receive = false;
 };
 
 }}}

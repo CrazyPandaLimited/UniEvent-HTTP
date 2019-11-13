@@ -8,7 +8,7 @@ string rfc822_date (time::ptime_t);
 
 std::atomic<uint64_t> Server::lastid(0);
 
-Server::Server (const LoopSP& loop) : _loop(loop), _running(), _hdate_time() {}
+Server::Server (const LoopSP& loop, IRequestFactory* fac) : _loop(loop), _factory(fac) {}
 
 Server::~Server() {
     stop();
@@ -70,7 +70,7 @@ void Server::stop_listening () {
 }
 
 StreamSP Server::create_connection (const StreamSP&) {
-    ServerConnection::Config cfg {_conf.idle_timeout, _conf.max_headers_size, _conf.max_body_size};
+    ServerConnection::Config cfg {_conf.idle_timeout, _conf.max_headers_size, _conf.max_body_size, _factory};
     return new_connection(++lastid, cfg);
 }
 

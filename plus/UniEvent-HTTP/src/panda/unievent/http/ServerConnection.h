@@ -9,10 +9,15 @@ namespace panda { namespace unievent { namespace http {
 struct Server;
 
 struct ServerConnection : Tcp, private ITcpSelfListener, private protocol::http::IRequestFactory {
+    struct IRequestFactory {
+        virtual ServerRequestSP create_request () = 0;
+    };
+
     struct Config {
-        uint32_t idle_timeout;
-        size_t   max_headers_size;
-        size_t   max_body_size;
+        uint32_t         idle_timeout;
+        size_t           max_headers_size;
+        size_t           max_body_size;
+        IRequestFactory* factory;
     };
 
     ServerConnection (Server*, uint64_t id, const Config&);
@@ -27,17 +32,18 @@ private:
     friend ServerRequest; friend ServerResponse;
 
     using RequestParser = protocol::http::RequestParser;
-    using RequestList   = std::deque<ServerRequestSP>;
+    using Requests      = std::deque<ServerRequestSP>;
 
-    Server*       server;
-    uint64_t      _id;
-    RequestParser parser;
-    RequestList   requests;
-    uint32_t      idle_timeout;
-    TimerSP       idle_timer;
-    bool          closing;
+    Server*          server;
+    uint64_t         _id;
+    IRequestFactory* factory;
+    RequestParser    parser;
+    Requests         requests;
+    uint32_t         idle_timeout;
+    TimerSP          idle_timer;
+    bool             closing = false;
 
-    protocol::http::RequestSP create_request () { return new ServerRequest(this); }
+    protocol::http::RequestSP create_request () override;
 
     void on_read  (string&, const CodeError&) override;
     void on_write (const CodeError&, const WriteRequestSP&) override;

@@ -4,7 +4,7 @@
 namespace panda { namespace unievent { namespace http {
 
 ServerConnection::ServerConnection (Server* server, uint64_t id, const Config& conf)
-    : Tcp(server->loop()), server(server), _id(id), parser(this), idle_timeout(conf.idle_timeout), closing()
+    : Tcp(server->loop()), server(server), _id(id), factory(conf.factory), parser(this), idle_timeout(conf.idle_timeout)
 {
     event_listener(this);
 
@@ -21,11 +21,17 @@ ServerConnection::ServerConnection (Server* server, uint64_t id, const Config& c
     }
 }
 
+protocol::http::RequestSP ServerConnection::create_request () {
+    auto ret = factory ? factory->create_request() : ServerRequestSP(new ServerRequest());
+    ret->_connection = this;
+    return ret;
+}
+
 void ServerConnection::on_read (string& buf, const CodeError& err) {
     if (err) {
         if (idle_timer) idle_timer->stop();
         panda_log_info("read error: " << err.whats());
-        if (!requests.size() || requests.back()->_state == State::done) requests.emplace_back(new ServerRequest(this));
+        if (!requests.size() || requests.back()->_state == State::done) requests.emplace_back(static_pointer_cast<ServerRequest>(create_request()));
         requests.back()->_state = State::error;
         return request_error(requests.back(), errc::parse_error);
     }
