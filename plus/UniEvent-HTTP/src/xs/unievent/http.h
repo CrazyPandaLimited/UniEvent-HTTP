@@ -1,4 +1,5 @@
 #pragma once
+#include <xs/unievent/Tcp.h>
 #include <xs/protocol/http.h>
 #include <panda/unievent/http.h>
 #include <panda/unievent/http/Server.h>
@@ -39,7 +40,7 @@ struct Typemap<panda::unievent::http::Response*, TYPE> : Typemap<panda::protocol
 };
 
 template <class TYPE>
-struct Typemap<panda::unievent::http::Client*, TYPE> : TypemapObject<panda::unievent::http::Client*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMG> {
+struct Typemap<panda::unievent::http::Client*, TYPE> : Typemap<panda::unievent::Tcp*, TYPE> {
     static panda::string_view package () { return "UniEvent::HTTP::Client"; }
 };
 

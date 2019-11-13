@@ -10,6 +10,7 @@ void fill (Request* req, const Hash& h) {
     if ((sv = h.fetch("response_callback"))) req->response_event.add(xs::in<Request::response_fn>(sv));
     if ((sv = h.fetch("redirect_callback"))) req->redirect_event.add(xs::in<Request::redirect_fn>(sv));
     if ((sv = h.fetch("partial_callback")))  req->partial_event.add(xs::in<Request::partial_fn>(sv));
+    if ((sv = h.fetch("continue_callback"))) req->continue_event.add(xs::in<Request::continue_fn>(sv));
     if ((v  = h.fetch("timeout")))           req->timeout = (double)v * 1000;
     if ((v  = h.fetch("follow_redirect")))   req->follow_redirect = v;
     if ((v  = h.fetch("redirection_limit"))) req->redirection_limit = v;

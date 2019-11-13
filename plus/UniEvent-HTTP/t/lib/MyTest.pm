@@ -87,7 +87,7 @@ sub make_server {
     sub autorespond {
         my ($self, $res) = @_;
         my $queue = $self->{autores_queue} ||= [];
-        unless (!$self->{autores}++) {
+        unless ($self->{autores}++) {
             $self->request_event->add(sub {
                 my $req = shift;
                 return unless @$queue;
@@ -95,6 +95,16 @@ sub make_server {
             });
         }
         push @$queue, $res;
+    }
+    
+    sub enable_echo {
+        my $self = shift;
+        $self->request_callback(sub {
+            my $req = shift;
+            my $h = $req->headers;
+            delete $h->{host};
+            $req->respond(new UE::HTTP::ServerResponse({code => 200, headers => $h, body => $req->body || ''}));
+        });
     }
 }
 
@@ -185,6 +195,81 @@ sub make_server {
         $conn->eof_event->remove_all;
         return $self->{eof};
     }
+}
+
+{
+    package MyTest::TClient;
+    use parent 'UniEvent::HTTP::Client';
+    use 5.012;
+    
+    sub new {
+        my $self = shift->SUPER::new(@_);
+        XS::Framework::obj2hv($self);
+        return $self;
+    }
+    
+    sub request {
+        my ($self, $req) = @_;
+        if (my $sa = $self->{sa}) {
+            $req->uri->host($sa->ip);
+            $req->uri->port($sa->port);
+        }
+        #if (secure) req->uri->scheme("https");
+        return $self->SUPER::request($req);
+    }
+    
+    sub get_response {
+        my ($self, $req) = @_;
+        $req = new UE::HTTP::Request($req) if ref($req) eq 'HASH';
+        my $loop = $self->loop;
+        my $response;
+        $req->response_event->add(sub {
+            my (undef, $res, $err) = @_;
+            die $err if $err;
+            $response = $res;
+            $loop->stop;
+        });
+    
+        $self->request($req);
+        $loop->run;
+    
+        return $response;
+    }
+    
+    sub get_error {
+        my ($self, $req) = @_;
+        $req = new UE::HTTP::Request($req) if ref($req) eq 'HASH';
+        my $loop = $self->loop;
+        my $error;
+    
+        $req->response_event->add(sub {
+            my (undef, undef, $err) = @_;
+            $error = $err;
+            $loop->stop;
+        });
+    
+        $self->request($req);
+        $loop->run;
+    
+        return $error;
+    }
+}
+
+{
+    package MyTest::ClientPair;
+    use 5.012;
+    
+    sub new {
+        my ($class, $loop) = @_;
+        my $self = bless {}, $class;
+        $self->{server} = MyTest::make_server($loop);
+        $self->{client} = new MyTest::TClient($loop);
+        $self->{client}{sa} = $self->{server}->sockaddr;
+        return $self;
+    }
+
+    sub server {shift->{server}}
+    sub client {shift->{client}}
 }
 
 1;
