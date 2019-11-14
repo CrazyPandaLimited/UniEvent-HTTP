@@ -19,6 +19,13 @@ struct Pool : Refcnt {
         Config () {}
     };
 
+    static const PoolSP& instance (const LoopSP& loop) {
+        auto v = _instances;
+        for (const auto& r : *v) if (r->loop() == loop) return r;
+        v->push_back(new Pool(loop));
+        return v->back();
+    }
+
     Pool (const LoopSP& loop = Loop::default_loop(), Config = {});
 
     ~Pool ();
@@ -28,14 +35,13 @@ struct Pool : Refcnt {
     ClientSP get (const NetLoc&);
     ClientSP get (const string& host, uint16_t port) { return get(NetLoc{host, port}); }
 
-    void request (const RequestSP& req) { get(req->netloc())->request(req); }
-
-    static const PoolSP& instance (const LoopSP& loop) {
-        auto v = _instances;
-        for (const auto& r : *v) if (r->loop() == loop) return r;
-        v->push_back(new Pool(loop));
-        return v->back();
+    void request (const RequestSP& req) {
+        req->check();
+        get(req->netloc())->request(req);
     }
+
+    uint32_t idle_timeout () const { return _idle_timeout; }
+    void     idle_timeout (uint32_t);
 
     size_t size  () const;
     size_t nbusy () const;

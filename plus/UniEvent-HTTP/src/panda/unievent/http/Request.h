@@ -12,7 +12,7 @@ struct Request; using RequestSP = iptr<Request>;
 
 struct NetLoc {
     string   host;
-    uint16_t port;
+    uint16_t port = 0;
 
     bool operator== (const NetLoc& other) const { return host == other.host && port == other.port; }
 };
@@ -42,7 +42,6 @@ struct Request : protocol::http::Request {
 
     Request () {}
 
-    NetLoc       netloc       () const { return { uri->host(), uri->port() }; }
     const URISP& original_uri () const { return _original_uri; }
 
     bool transfer_completed () const { return _transfer_completed; }
@@ -56,13 +55,20 @@ protected:
     protocol::http::ResponseSP new_response () const override { return new Response(); }
 
 private:
-    friend Client;
+    friend Client; friend struct Pool;
 
     URISP    _original_uri;
     uint16_t _redirection_counter = 0;
     bool     _transfer_completed  = false;
     ClientSP _client; // holds client when active
     TimerSP  _timer;
+
+    NetLoc netloc () const { return { uri->host(), uri->port() }; }
+
+    void check () const {
+        if (!uri) throw HttpError("request must have uri");
+        if (!uri->host()) throw HttpError("uri must have host");
+    }
 };
 
 struct Request::Builder : protocol::http::Request::BuilderImpl<Builder> {

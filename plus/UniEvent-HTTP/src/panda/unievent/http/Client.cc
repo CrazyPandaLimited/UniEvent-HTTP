@@ -30,7 +30,9 @@ Client::Client (Pool* pool) : Client(pool->loop()) {
 void Client::request (const RequestSP& request) {
     if (_request) throw HttpError("client supports only one request at a time");
     if (request->_client) throw HttpError("request is already in progress");
-    panda_log_debug("request to " << request->uri); panda_log_verbose_debug("\n" << request->to_string());
+    request->check();
+    panda_log_debug("request " << request->uri->to_string());
+    panda_log_verbose_debug("\n" << request->to_string());
 
     request->_client = this;
     if (!request->uri->scheme()) request->uri->scheme("http");
@@ -44,7 +46,6 @@ void Client::request (const RequestSP& request) {
     }
 
     auto netloc = request->netloc();
-    if (!netloc.host) throw HttpError("uri must have host");
 
     if (!connected() || _netloc.host != netloc.host || _netloc.port != netloc.port) {
         panda_log_debug("connecting to " << netloc);

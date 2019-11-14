@@ -5,13 +5,8 @@ namespace panda { namespace unievent { namespace http {
 static thread_local std::vector<PoolSP> s_instances;
 thread_local std::vector<PoolSP>* Pool::_instances = &s_instances;
 
-Pool::Pool (const LoopSP& loop, Config cfg) : _loop(loop), _idle_timeout(cfg.idle_timeout), _factory(cfg.factory) {
-    if (_idle_timeout) {
-        _idle_timer = new Timer(loop);
-        _idle_timer->weak(true);
-        _idle_timer->event.add([this](auto&){ check_inactivity(); });
-        _idle_timer->start(_idle_timeout >= 1000 ? 1000 : _idle_timeout);
-    }
+Pool::Pool (const LoopSP& loop, Config cfg) : _loop(loop), _factory(cfg.factory) {
+    idle_timeout(cfg.idle_timeout);
 }
 
 Pool::~Pool () {
@@ -19,6 +14,23 @@ Pool::~Pool () {
     for (auto& list : _clients) {
         for (auto& client : list.second.busy) client->event_listener(nullptr);
     }
+}
+
+void Pool::idle_timeout (uint32_t val) {
+    _idle_timeout = val;
+    if (!val) {
+        _idle_timer = nullptr;
+        return;
+    }
+
+    if (_idle_timer) _idle_timer->stop();
+    else {
+        _idle_timer = new Timer(_loop);
+        _idle_timer->weak(true);
+        _idle_timer->event.add([this](auto&){ check_inactivity(); });
+    }
+
+    _idle_timer->start(val >= 1000 ? 1000 : val);
 }
 
 ClientSP Pool::get (const NetLoc& netloc) {

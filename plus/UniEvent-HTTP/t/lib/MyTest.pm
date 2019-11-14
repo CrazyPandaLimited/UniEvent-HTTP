@@ -9,13 +9,17 @@ use Scalar::Util 'weaken';
 
 XS::Loader::load();
 
-if (my $l = $ENV{LOG}) {
+my %log_levels = (
+    VD => LOG_VERBOSE_DEBUG,
+    D  => LOG_DEBUG,
+    I  => LOG_INFO,
+);
+
+if (my $l = $log_levels{$ENV{LOG}||''}) {
     set_native_logger(sub {
         my ($level, $cp, $msg) = @_;
         say "$cp $msg";
     });
-    if ($l eq 'VD') { $l = LOG_VERBOSE_DEBUG }
-    else            { $l = LOG_DEBUG }
     set_log_level($l);
 }
 

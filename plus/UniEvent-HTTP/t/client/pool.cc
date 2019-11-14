@@ -149,33 +149,42 @@ TEST("several requests to the same server at once") {
 
 TEST("idle timeout") {
     AsyncTest test(1000, 2);
-    Pool::Config cfg;
-    cfg.idle_timeout = 5;
-    TPool p(test.loop, cfg);
+    TPoolSP p;
+
+    SECTION("set at creation time") {
+        Pool::Config cfg;
+        cfg.idle_timeout = 5;
+        p = new TPool(test.loop, cfg);
+    }
+    SECTION("set at runtime") {
+        p = new TPool(test.loop);
+        p->idle_timeout(5);
+    }
+
     auto srv = make_server(test.loop);
     srv->autorespond(new ServerResponse(200));
     srv->autorespond(new ServerResponse(200));
 
-    auto c = p.get(srv->netloc());
+    auto c = p->get(srv->netloc());
     c->sa = srv->sockaddr();
     c->connect_event.add([&](auto...){ test.happens(); });
     test.wait(15); // more than idle_timeout
     // client is busy and not affected by idle timeout
-    CHECK(p.size() == 1);
-    CHECK(p.nbusy() == 1);
+    CHECK(p->size() == 1);
+    CHECK(p->nbusy() == 1);
 
     auto res = c->get_response("/");
     CHECK(res->code == 200);
 
     test.wait(15);
-    CHECK(p.size() == 0);
-    CHECK(p.nbusy() == 0);
+    CHECK(p->size() == 0);
+    CHECK(p->nbusy() == 0);
 
-    c = p.get(srv->netloc());
+    c = p->get(srv->netloc());
     c->sa = srv->sockaddr();
     c->connect_event.add([&](auto...){ test.happens(); });
-    CHECK(p.size() == 1);
-    CHECK(p.nbusy() == 1);
+    CHECK(p->size() == 1);
+    CHECK(p->nbusy() == 1);
     res = c->get_response("/");
     CHECK(res->code == 200);
 }

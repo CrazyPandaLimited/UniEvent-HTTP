@@ -2,6 +2,7 @@ use 5.012;
 use lib 't/lib';
 use MyTest;
 use Test::More;
+use Test::Exception;
 use Protocol::HTTP::Message;
 use Protocol::HTTP::Request;
 
@@ -119,6 +120,20 @@ subtest "max body size" => sub {
         "0123456789"
     );
     is $res->code, 400;
+};
+
+subtest "bad response argument" => sub {
+    my $test = new UE::Test::Async();
+    my $p    = new MyTest::ServerPair($test->loop);
+    
+    $p->server->request_callback(sub {
+        my $req = shift;
+        dies_ok { $req->respond(undef) } "undef dies";
+        $req->respond(new UE::HTTP::ServerResponse({code => 200}));
+    });
+
+    my $res = $p->get_response("GET / HTTP/1.1\r\n\r\n");
+    is $res->code, 200;
 };
 
 done_testing();

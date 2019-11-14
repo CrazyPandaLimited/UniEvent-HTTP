@@ -2,6 +2,7 @@ use 5.012;
 use lib 't/lib';
 use MyTest;
 use Test::More;
+use Test::Exception;
 
 variate_catch('[client-basic]', 'ssl');
 
@@ -29,6 +30,13 @@ subtest "timeout" => sub {
 
     my $err = $p->client->get_error({uri => "/", timeout => 0.005});
     is $err, XS::STL::errc::timed_out;
+};
+
+subtest 'bad request' => sub {
+    my $client = new UE::HTTP::Client();
+    dies_ok { $client->request(undef) } "undef dies";
+    dies_ok { $client->request({}) } "request without uri dies";
+    dies_ok { $client->request({uri => "/"}) } "request with uri without host dies";
 };
 
 done_testing();

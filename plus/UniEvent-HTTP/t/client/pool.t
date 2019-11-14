@@ -2,6 +2,7 @@ use 5.012;
 use lib 't/lib';
 use MyTest;
 use Test::More;
+use Test::Exception;
 use UniEvent::HTTP 'http_request';
 
 variate_catch('[client-pool]', 'ssl');
@@ -53,6 +54,19 @@ subtest 'http_request' => sub {
     is $pool->nbusy, 1;
 
     $test->run;
+};
+
+subtest 'http_request with bad request' => sub {
+    dies_ok { http_request(undef) } "undef dies";
+    dies_ok { http_request({}) } "request without uri dies";
+    dies_ok { http_request({uri => "/"}) } "request with uri without host dies";
+};
+
+subtest 'pool with bad request' => sub {
+    my $pool = new UE::HTTP::Pool();
+    dies_ok { $pool->request(undef) } "undef dies";
+    dies_ok { $pool->request({}) } "request without uri dies";
+    dies_ok { $pool->request({uri => "/"}) } "request with uri without host dies";
 };
 
 done_testing();
