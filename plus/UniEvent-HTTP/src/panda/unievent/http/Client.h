@@ -28,12 +28,14 @@ private:
     friend Pool; friend Request;
     using ResponseParser = protocol::http::ResponseParser;
 
-    Pool*          _pool;
+    Pool*          _pool = nullptr;
     NetLoc         _netloc;
     RequestSP      _request;
     ResponseSP     _response;
     ResponseParser _parser;
-    uint64_t       _last_activity_time;
+    uint64_t       _last_activity_time = 0;
+    bool           _in_redirect = false;
+    bool           _redirect_canceled = false;
 
     void on_connect (const CodeError&, const ConnectRequestSP&) override;
     void on_write   (const CodeError&, const WriteRequestSP&) override;

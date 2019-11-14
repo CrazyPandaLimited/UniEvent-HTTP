@@ -19,7 +19,7 @@ static inline bool is_redirect (int code) {
     return false;
 }
 
-Client::Client (const LoopSP& loop) : Tcp(loop), _pool(), _netloc({"", 0}), _last_activity_time(0) {
+Client::Client (const LoopSP& loop) : Tcp(loop), _netloc({"", 0}) {
     Tcp::event_listener(this);
 }
 
@@ -88,6 +88,9 @@ void Client::cancel (const std::error_code& err) {
     if (!_request) return;
     panda_log_debug("cancel with err = " << err);
     _parser.reset();
+
+    if (_in_redirect) _redirect_canceled = true;
+
     finish_request(err);
 }
 
@@ -106,6 +109,7 @@ void Client::on_timer (const TimerSP& t) {
 }
 
 void Client::on_read (string& buf, const CodeError& err) {
+    ClientSP hold = this;
     if (err) return cancel(errc::parse_error);
     panda_log_verbose_debug("read:\n" << buf);
 
@@ -161,7 +165,22 @@ void Client::analyze_request () {
             if (prev_uri->explicit_port()) uri->port(prev_uri->port());
         }
 
-        _request->redirect_event(_request, _response, uri);
+        try {
+            _in_redirect = true;
+            _request->redirect_event(_request, _response, uri);
+            _in_redirect = false;
+        }
+        catch (...) {
+            _in_redirect = false;
+            _redirect_canceled = false;
+            cancel();
+            throw;
+        }
+
+        if (_redirect_canceled) {
+            _redirect_canceled = false;
+            return;
+        }
 
         _request->uri = uri;
         _request->headers.remove("Host"); // will be filled from new uri
@@ -226,7 +245,7 @@ void Client::on_eof () {
         return;
     }
 
-    panda_log_debug("sending eof to parser");
+    ClientSP hold = this;
     auto result = _parser.eof();
     if (result.error) return cancel(make_error_code(std::errc::connection_reset));
     analyze_request();

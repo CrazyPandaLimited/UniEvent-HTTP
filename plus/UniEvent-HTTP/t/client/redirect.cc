@@ -137,3 +137,27 @@ TEST("timeout") { // timeout is for whole request including all redirections
     auto err = p.client->get_error(req);
     CHECK(err == std::errc::timed_out);
 }
+
+TEST("cancel from redirect event") {
+    AsyncTest test(1000, {"srv", "redir", "response"});
+    ClientPair p(test.loop);
+
+    p.server->request_event.add([&](auto req) {
+        test.happens("srv");
+        req->redirect("/index");
+    });
+
+    auto req = Request::Builder().uri("/").build();
+    req->redirect_event.add([&](auto req, auto, auto) {
+        test.happens("redir");
+        req->cancel();
+    });
+    req->response_event.add([&](auto, auto, auto err) {
+        test.happens("response");
+        CHECK(err == std::errc::operation_canceled);
+        test.loop->stop();
+    });
+    p.client->request(req);
+
+    test.run();
+}
