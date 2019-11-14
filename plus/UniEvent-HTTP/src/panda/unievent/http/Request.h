@@ -7,9 +7,8 @@
 
 namespace panda { namespace unievent { namespace http {
 
-struct Client;
-struct Request;
-using RequestSP = iptr<Request>;
+struct Client;  using ClientSP  = iptr<Client>;
+struct Request; using RequestSP = iptr<Request>;
 
 struct NetLoc {
     string   host;
@@ -62,7 +61,7 @@ private:
     URISP    _original_uri;
     uint16_t _redirection_counter = 0;
     bool     _transfer_completed  = false;
-    Client*  _client              = nullptr;
+    ClientSP _client; // holds client when active
     TimerSP  _timer;
 };
 

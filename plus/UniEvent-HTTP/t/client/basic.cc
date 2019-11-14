@@ -54,3 +54,36 @@ TEST("timeout") {
     auto err = p.client->get_error(Request::Builder().uri("/").timeout(5).build());
     CHECK(err == std::errc::timed_out);
 }
+
+TEST("client retains until request is complete") {
+    AsyncTest test(1000);
+    auto srv = make_server(test.loop);
+    srv->enable_echo();
+
+    static int dcnt;
+    dcnt = 0;
+
+    struct MyClient : TClient {
+        using TClient::TClient;
+
+        ~MyClient () { dcnt++; }
+    };
+
+    TClientSP client = new MyClient(test.loop);
+    client->sa = srv->sockaddr();
+
+    auto req = Request::Builder().uri("/").body("hi").build();
+    req->response_event.add([&](auto, auto res, auto err) {
+        CHECK_FALSE(err);
+        REQUIRE(res);
+        CHECK(res->body.to_string() == "hi");
+        test.loop->stop();
+    });
+
+    client->request(req);
+
+    client.reset();
+    CHECK(dcnt == 0);
+    test.run();
+    CHECK(dcnt == 1);
+}

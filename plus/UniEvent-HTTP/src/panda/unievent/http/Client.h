@@ -13,7 +13,7 @@ using ClientSP = iptr<Client>;
 struct Client : Tcp, private ITcpSelfListener, private ITimerListener {
     Client (const LoopSP&);
 
-    ~Client ();
+    ~Client () {}
 
     void request (const RequestSP&);
     void cancel  (const std::error_code& = make_error_code(std::errc::operation_canceled));

@@ -27,10 +27,6 @@ Client::Client (Pool* pool) : Client(pool->loop()) {
     _pool = pool;
 }
 
-Client::~Client () {
-    cancel();
-}
-
 void Client::request (const RequestSP& request) {
     if (_request) throw HttpError("client supports only one request at a time");
     if (request->_client) throw HttpError("request is already in progress");
