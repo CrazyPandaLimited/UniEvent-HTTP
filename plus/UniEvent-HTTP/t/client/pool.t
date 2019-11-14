@@ -2,6 +2,7 @@ use 5.012;
 use lib 't/lib';
 use MyTest;
 use Test::More;
+use UniEvent::HTTP 'http_request';
 
 variate_catch('[client-pool]', 'ssl');
 
@@ -36,7 +37,7 @@ subtest 'http_request' => sub {
     my $srv = MyTest::make_server($test->loop);
     $srv->autorespond(new UE::HTTP::ServerResponse({code => 200, body => "hi"}));
 
-    UE::HTTP::http_request({
+    http_request({
         uri => "http://".$srv->location.'/',
         response_callback => sub {
             my (undef, $res, $err) = @_;
