@@ -33,14 +33,14 @@ struct ServerRequest : protocol::http::Request {
     void redirect (const URISP& uri) { redirect(uri->to_string()); }
 
 protected:
-    ServerRequest () {}
+    ServerRequest (ServerConnection* conn) : _connection(conn) {}
 
     ~ServerRequest ();
 
 private:
     friend ServerConnection; friend ServerResponse;
 
-    ServerConnection* _connection        = nullptr;
+    ServerConnection* _connection;
     ServerSP          _server;           // holds server while active
     ServerResponseSP  _response;
     State             _state             = State::not_yet;

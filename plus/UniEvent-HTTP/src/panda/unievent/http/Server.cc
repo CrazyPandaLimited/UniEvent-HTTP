@@ -8,7 +8,7 @@ string rfc822_date (time::ptime_t);
 
 std::atomic<uint64_t> Server::lastid(0);
 
-Server::Server (const LoopSP& loop, IRequestFactory* fac) : _loop(loop), _factory(fac) {}
+Server::Server (const LoopSP& loop, IFactory* fac) : _loop(loop), _factory(fac) {}
 
 Server::~Server() {}
 

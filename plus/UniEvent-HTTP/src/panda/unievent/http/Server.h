@@ -34,20 +34,20 @@ struct Server : Refcnt, private IStreamSelfListener {
         size_t                max_body_size    = DEFAULT_MAX_BODY_SIZE;    // 0 = unlimited
     };
 
-    using Listeners       = std::vector<TcpSP>;
-    using route_fptr      = void(const ServerRequestSP&);
-    using request_fptr    = ServerRequest::receive_fptr;
-    using error_fptr      = void(const ServerRequestSP&, const std::error_code&);
-    using route_fn        = function<route_fptr>;
-    using request_fn      = ServerRequest::receive_fn;
-    using error_fn        = function<error_fptr>;
-    using IRequestFactory = ServerConnection::IRequestFactory;
+    using Listeners    = std::vector<TcpSP>;
+    using route_fptr   = void(const ServerRequestSP&);
+    using request_fptr = ServerRequest::receive_fptr;
+    using error_fptr   = void(const ServerRequestSP&, const std::error_code&);
+    using route_fn     = function<route_fptr>;
+    using request_fn   = ServerRequest::receive_fn;
+    using error_fn     = function<error_fptr>;
+    using IFactory     = ServerConnection::IFactory;
 
     CallbackDispatcher<route_fptr>   route_event;
     CallbackDispatcher<request_fptr> request_event;
     CallbackDispatcher<error_fptr>   error_event;
 
-    Server (const LoopSP& loop = Loop::default_loop(), IRequestFactory* = nullptr);
+    Server (const LoopSP& loop = Loop::default_loop(), IFactory* = nullptr);
 
     virtual void configure (const Config& config);
 
@@ -78,14 +78,14 @@ private:
 
     static std::atomic<uint64_t> lastid;
 
-    LoopSP           _loop;
-    IRequestFactory* _factory = nullptr;
-    Config           _conf;
-    Listeners        _listeners;
-    bool             _running = false;
-    Connections      _connections;
-    uint64_t         _hdate_time = 0;
-    string           _hdate_str;
+    LoopSP      _loop;
+    IFactory*   _factory = nullptr;
+    Config      _conf;
+    Listeners   _listeners;
+    bool        _running = false;
+    Connections _connections;
+    uint64_t    _hdate_time = 0;
+    string      _hdate_str;
 
     StreamSP create_connection (const StreamSP&) override;
 

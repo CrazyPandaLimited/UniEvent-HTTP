@@ -11,8 +11,11 @@ using PoolSP = iptr<Pool>;
 struct Pool : Refcnt {
     static constexpr const uint64_t DEFAULT_IDLE_TIMEOUT = 60000; // [ms]
 
+    struct IFactory { virtual ClientSP new_client (Pool*) = 0; };
+
     struct Config {
-        uint32_t idle_timeout = DEFAULT_IDLE_TIMEOUT;
+        uint32_t  idle_timeout = DEFAULT_IDLE_TIMEOUT;
+        IFactory* factory      = nullptr;
         Config () {}
     };
 
@@ -38,7 +41,7 @@ struct Pool : Refcnt {
     size_t nbusy () const;
 
 protected:
-    virtual ClientSP new_client () { return new Client(this); }
+    virtual ClientSP new_client () { return _factory ? _factory->new_client(this) : ClientSP(new Client(this)); }
 
 private:
     friend Client;
@@ -66,10 +69,11 @@ private:
 
     static thread_local std::vector<PoolSP>* _instances;
 
-    LoopSP   _loop;
-    TimerSP  _idle_timer;
-    uint32_t _idle_timeout;
-    Clients  _clients;
+    LoopSP    _loop;
+    TimerSP   _idle_timer;
+    uint32_t  _idle_timeout;
+    Clients   _clients;
+    IFactory* _factory;
 
     void check_inactivity ();
 

@@ -5,7 +5,7 @@ namespace panda { namespace unievent { namespace http {
 static thread_local std::vector<PoolSP> s_instances;
 thread_local std::vector<PoolSP>* Pool::_instances = &s_instances;
 
-Pool::Pool (const LoopSP& loop, Config cfg) : _loop(loop), _idle_timeout(cfg.idle_timeout) {
+Pool::Pool (const LoopSP& loop, Config cfg) : _loop(loop), _idle_timeout(cfg.idle_timeout), _factory(cfg.factory) {
     if (_idle_timeout) {
         _idle_timer = new Timer(loop);
         _idle_timer->weak(true);

@@ -21,10 +21,8 @@ ServerConnection::ServerConnection (Server* server, uint64_t id, const Config& c
     }
 }
 
-protocol::http::RequestSP ServerConnection::create_request () {
-    auto ret = factory ? factory->create_request() : ServerRequestSP(new ServerRequest());
-    ret->_connection = this;
-    return ret;
+protocol::http::RequestSP ServerConnection::new_request () {
+    return factory ? factory->new_request(this) : ServerRequestSP(new ServerRequest(this));
 }
 
 void ServerConnection::on_read (string& buf, const CodeError& err) {
@@ -33,7 +31,7 @@ void ServerConnection::on_read (string& buf, const CodeError& err) {
     if (err) {
         if (idle_timer) idle_timer->stop();
         panda_log_info("read error: " << err.whats());
-        if (!requests.size() || requests.back()->_state == State::done) requests.emplace_back(static_pointer_cast<ServerRequest>(create_request()));
+        if (!requests.size() || requests.back()->_state == State::done) requests.emplace_back(static_pointer_cast<ServerRequest>(new_request()));
         requests.back()->_state = State::error;
         return request_error(requests.back(), errc::parse_error);
     }

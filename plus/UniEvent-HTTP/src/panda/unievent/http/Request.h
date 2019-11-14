@@ -53,7 +53,7 @@ struct Request : protocol::http::Request {
     void cancel (const std::error_code& = make_error_code(std::errc::operation_canceled));
 
 protected:
-    protocol::http::ResponseSP create_response () const override { return new Response(); }
+    protocol::http::ResponseSP new_response () const override { return new Response(); }
 
 private:
     friend Client;

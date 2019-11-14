@@ -106,6 +106,11 @@ sub make_server {
             $req->respond(new UE::HTTP::ServerResponse({code => 200, headers => $h, body => $req->body || ''}));
         });
     }
+    
+    sub location {
+        my $sa = shift->sockaddr;
+        return $sa->ip. ':' . $sa->port;
+    }
 }
 
 {
@@ -270,6 +275,19 @@ sub make_server {
 
     sub server {shift->{server}}
     sub client {shift->{client}}
+}
+
+{
+    package MyTest::TPool;
+    use parent 'UniEvent::HTTP::Pool';
+    use 5.012;
+    
+    sub get {
+        my $client = shift->SUPER::get(@_);
+        XS::Framework::obj2hv($client);
+        bless $client, 'MyTest::TClient';
+        return $client;
+    }
 }
 
 1;
