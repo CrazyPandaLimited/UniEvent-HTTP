@@ -57,20 +57,10 @@ TEST("timeout") {
 
 TEST("client retains until request is complete") {
     AsyncTest test(1000);
-    auto srv = make_server(test.loop);
-    srv->enable_echo();
+    ClientPair p(test.loop);
+    p.server->enable_echo();
 
-    static int dcnt;
-    dcnt = 0;
-
-    struct MyClient : TClient {
-        using TClient::TClient;
-
-        ~MyClient () { dcnt++; }
-    };
-
-    TClientSP client = new MyClient(test.loop);
-    client->sa = srv->sockaddr();
+    TClient::dcnt = 0;
 
     auto req = Request::Builder().uri("/").body("hi").build();
     req->response_event.add([&](auto, auto res, auto err) {
@@ -80,10 +70,20 @@ TEST("client retains until request is complete") {
         test.loop->stop();
     });
 
+    auto client = p.client;
+    p.client.reset();
+
     client->request(req);
 
     client.reset();
-    CHECK(dcnt == 0);
+    CHECK(TClient::dcnt == 0);
     test.run();
-    CHECK(dcnt == 1);
+    CHECK(TClient::dcnt == 1);
+}
+
+TEST("client doesn't retain when no active requests") {
+    TClient::dcnt = 0;
+    TClientSP client = new TClient();
+    client.reset();
+    CHECK(TClient::dcnt == 1);
 }

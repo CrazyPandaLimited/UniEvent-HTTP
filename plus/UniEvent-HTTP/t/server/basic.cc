@@ -302,3 +302,35 @@ TEST("max body size") {
         CHECK(res->code == 400);
     }
 }
+
+TEST("server doesnt retain when no active requests") {
+    auto srv = make_server(Loop::default_loop());
+    TServer::dcnt = 0;
+    srv.reset();
+    CHECK(TServer::dcnt == 1);
+}
+
+TEST("server retains when active requests") {
+    AsyncTest test(1000);
+    ServerPair p(test.loop);
+    TServer::dcnt = 0;
+
+    auto srv = p.server;
+    p.server = nullptr;
+    ServerRequestSP sreq;
+
+    srv->request_event.add([&](auto req) {
+        sreq = req;
+        test.loop->stop();
+    });
+
+    p.conn->write("GET / HTTP/1.1\r\n\r\n");
+    test.run();
+
+    CHECK(sreq);
+    srv = nullptr;
+    CHECK(TServer::dcnt == 0); // server survives
+
+    sreq->respond(new ServerResponse(200));
+    CHECK(TServer::dcnt == 1); // server died when last request finishes
+}

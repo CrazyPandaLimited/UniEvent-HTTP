@@ -11,9 +11,9 @@ struct Client;
 using ClientSP = iptr<Client>;
 
 struct Client : Tcp, private ITcpSelfListener, private ITimerListener {
-    Client (const LoopSP&);
+    Client (const LoopSP& = Loop::default_loop());
 
-    ~Client () {}
+    ~Client () { assert(!_request); }
 
     void request (const RequestSP&);
     void cancel  (const std::error_code& = make_error_code(std::errc::operation_canceled));

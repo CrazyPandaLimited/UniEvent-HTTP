@@ -24,12 +24,16 @@ extern bool secure;
 static auto fail_cb = [](auto...){ FAIL(); };
 
 struct TServer : Server {
+    static int dcnt;
+
     using Server::Server;
 
     void   enable_echo ();
     void   autorespond (const ServerResponseSP&);
     string location    () const;
     NetLoc netloc      () const;
+
+    ~TServer () { ++dcnt; }
 
 private:
     using Responses = std::deque<ServerResponseSP>;
@@ -40,9 +44,10 @@ private:
 using TServerSP = iptr<TServer>;
 
 struct TClient : Client {
-    using Client::Client;
-
+    static int dcnt;
     net::SockAddr sa;
+
+    using Client::Client;
 
     void request (const RequestSP&);
 
@@ -51,7 +56,7 @@ struct TClient : Client {
 
     std::error_code get_error (const RequestSP& req);
 
-    ~TClient () { panda_log_debug("~"); }
+    ~TClient () { ++dcnt; }
 
     friend struct TPool;
 };

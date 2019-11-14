@@ -28,6 +28,8 @@ protocol::http::RequestSP ServerConnection::create_request () {
 }
 
 void ServerConnection::on_read (string& buf, const CodeError& err) {
+    ServerSP holdsrv = server; // protect against user loosing all server refs in one of the callbacks
+
     if (err) {
         if (idle_timer) idle_timer->stop();
         panda_log_info("read error: " << err.whats());
@@ -60,6 +62,7 @@ void ServerConnection::on_read (string& buf, const CodeError& err) {
 
         if (!req->_routed) {
             req->_routed = true;
+            req->_server = server; // hold server until request completed
             server->route_event(req);
         }
 
@@ -166,6 +169,8 @@ void ServerConnection::send_final_chunk (const ServerResponseSP& res) {
 }
 
 void ServerConnection::finish_request () {
+    ServerSP holdsrv = server; // cleanup_request() may release last server ref
+
     auto req = requests.front();
     assert(req->_response && req->_response->_completed);
     if (req->state() != State::done && req->state() != State::error) {
@@ -194,6 +199,7 @@ void ServerConnection::finish_request () {
 void ServerConnection::cleanup_request () {
     auto req = requests.front();
     req->_connection = nullptr;
+    req->_server = nullptr; // release server
     requests.pop_front();
 }
 

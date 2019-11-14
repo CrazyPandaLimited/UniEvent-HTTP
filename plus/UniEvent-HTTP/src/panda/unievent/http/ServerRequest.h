@@ -5,8 +5,8 @@
 
 namespace panda { namespace unievent { namespace http {
 
-struct ServerRequest;
-using ServerRequestSP = iptr<ServerRequest>;
+struct Server;        using ServerSP        = iptr<Server>;
+struct ServerRequest; using ServerRequestSP = iptr<ServerRequest>;
 struct ServerConnection;
 
 struct ServerRequest : protocol::http::Request {
@@ -35,15 +35,13 @@ struct ServerRequest : protocol::http::Request {
 protected:
     ServerRequest () {}
 
-    ~ServerRequest () {
-        // remove garbage from response in case if user holds response without request after response is finished
-        if (_response) _response->_request = nullptr;
-    }
+    ~ServerRequest ();
 
 private:
     friend ServerConnection; friend ServerResponse;
 
     ServerConnection* _connection        = nullptr;
+    ServerSP          _server;           // holds server while active
     ServerResponseSP  _response;
     State             _state             = State::not_yet;
     bool              _routed            = false;

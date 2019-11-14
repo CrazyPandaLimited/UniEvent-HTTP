@@ -10,6 +10,9 @@ using panda::unievent::TimerSP;
 
 bool secure = false;
 
+int TServer::dcnt;
+int TClient::dcnt;
+
 SSL_CTX* get_ssl_ctx () {
     static SSL_CTX* ctx = nullptr;
     if (ctx) return ctx;

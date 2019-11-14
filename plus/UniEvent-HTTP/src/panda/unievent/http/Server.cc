@@ -10,9 +10,7 @@ std::atomic<uint64_t> Server::lastid(0);
 
 Server::Server (const LoopSP& loop, IRequestFactory* fac) : _loop(loop), _factory(fac) {}
 
-Server::~Server() {
-    stop();
-}
+Server::~Server() {}
 
 void Server::configure (const Config& conf) {
     if (!conf.locations.size()) throw HttpError("no locations to listen supplied");
