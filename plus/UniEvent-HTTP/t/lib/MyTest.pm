@@ -15,7 +15,7 @@ my %log_levels = (
     I  => LOG_INFO,
 );
 
-if (my $l = $log_levels{$ENV{LOG}||''}) {
+if (defined(my $l = $log_levels{$ENV{LOG}||''})) {
     set_native_logger(sub {
         my ($level, $cp, $msg) = @_;
         say "$cp $msg";

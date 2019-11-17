@@ -105,6 +105,8 @@ void ServerConnection::write_next_response () {
         res->body.parts.clear();
     }
 
+    panda_log_verbose_debug("sending <<\n" << res->to_string(req));
+
     auto v = res->to_vector(req);
     write(v.begin(), v.end());
 

@@ -17,7 +17,7 @@ TEST("same server") {
     p.client->connect_event.add([&](auto...){ test.happens("connect"); });
 
     auto req = Request::Builder().uri("/").header("h", "v").body("b").build();
-    req->redirect_event.add([&](auto req, auto res, auto uri){
+    req->redirect_event.add([&](auto req, auto res, auto uri) {
         test.happens("redirect");
         CHECK(res->code == 302);
         CHECK(res->headers.location() == "/index");
@@ -40,7 +40,7 @@ TEST("different server") {
     auto backend = make_server(test.loop);
     backend->enable_echo();
 
-    p.server->request_event.add([&](auto req){
+    p.server->request_event.add([&](auto req) {
         auto uri = req->uri;
         uri->host(backend->sockaddr().ip());
         uri->port(backend->sockaddr().port());
@@ -50,7 +50,7 @@ TEST("different server") {
     p.client->connect_event.add([&](auto...){ test.happens("connect"); });
 
     auto req = Request::Builder().uri("/").header("h", "v").body("b").build();
-    req->redirect_event.add([&](auto, auto res, auto uri){
+    req->redirect_event.add([&](auto, auto res, auto uri) {
         test.happens("redirect");
         CHECK(res->code == 302);
         auto check_uri = string("//") + backend->location() + '/';
@@ -79,7 +79,7 @@ TEST("redirection limit") {
 
     for (int i = 1; i <= count; ++i) {
         auto srv = make_server(test.loop);
-        srv->request_event.add([&, i](auto req){
+        srv->request_event.add([&, i](auto req) {
             auto uri = req->uri;
             uri->host(backends[i-1]->sockaddr().ip());
             uri->port(backends[i-1]->sockaddr().port());
@@ -160,4 +160,31 @@ TEST("cancel from redirect event") {
     p.client->request(req);
 
     test.run();
+}
+
+TEST("redirect with connection close") {
+    AsyncTest test(1000, {"connect", "redirect", "connect"});
+    ClientPair p(test.loop);
+
+    ServerResponseSP sres = new ServerResponse(302, Header().location("/index"));
+    SECTION("c=close") { sres->headers.connection("close"); }
+    SECTION("v=1.0")   { sres->http_version = 10; }
+
+    p.server->request_event.add([&](auto req) {
+        if (req->uri->to_string() == "/") {
+            req->respond(sres);
+        } else if (req->uri->to_string() == "/index") {
+            req->respond(new ServerResponse(200));
+        }
+    });
+
+    p.client->connect_event.add([&](auto...){ test.happens("connect"); });
+
+    auto req = Request::Builder().uri("/").build();
+    req->redirect_event.add([&](auto...) {
+        test.happens("redirect");
+    });
+
+    auto res = p.client->get_response(req);
+    CHECK(res->code == 200);
 }
