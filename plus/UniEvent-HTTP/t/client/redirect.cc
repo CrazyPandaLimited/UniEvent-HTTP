@@ -8,15 +8,17 @@ TEST("same server") {
 
     p.server->request_event.add([&](auto req){
         if (req->uri->to_string() == "/") {
+            CHECK(req->method == Request::Method::POST);
             req->redirect("/index");
         } else if (req->uri->to_string() == "/index") {
+            CHECK(req->method == Request::Method::POST); // preserves original method
             req->respond(new ServerResponse(200, Header().add("h", req->headers.get("h")), Body(req->body)));
         }
     });
 
     p.client->connect_event.add([&](auto...){ test.happens("connect"); });
 
-    auto req = Request::Builder().uri("/").header("h", "v").body("b").build();
+    auto req = Request::Builder().method(Request::Method::POST).uri("/").header("h", "v").body("b").build();
     req->redirect_event.add([&](auto req, auto res, auto uri) {
         test.happens("redirect");
         CHECK(res->code == 302);
@@ -180,6 +182,29 @@ TEST("redirect with connection close") {
     req->redirect_event.add([&](auto...) {
         test.happens("redirect");
     });
+
+    auto res = p.client->get_response(req);
+    CHECK(res->code == 200);
+}
+
+TEST("redirect with 303 (method changing to GET)") {
+    AsyncTest test(1000, 1);
+    ClientPair p(test.loop);
+
+    p.server->request_event.add([&](auto req){
+        if (req->uri->to_string() == "/") {
+            CHECK(req->method == Request::Method::POST);
+            req->respond(new ServerResponse(303, Header().location("/index")));
+        } else if (req->uri->to_string() == "/index") {
+            CHECK(req->method == Request::Method::GET); // method changed to GET
+            req->respond(new ServerResponse(200));
+        }
+    });
+
+    auto req = Request::Builder().method(Request::Method::POST).uri("/").redirect_callback([&](auto, auto res, auto) {
+        test.happens();
+        CHECK(res->code == 303);
+    }).build();
 
     auto res = p.client->get_response(req);
     CHECK(res->code == 200);

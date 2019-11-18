@@ -185,6 +185,7 @@ void Client::analyze_request () {
 
         _request->uri = uri;
         _request->headers.remove("Host"); // will be filled from new uri
+        if (_response->code == 303) _request->method = Request::Method::GET;
         panda_log_debug("following redirect: " << prev_uri->to_string() << " -> " << uri->to_string() << " (" << _request->_redirection_counter << " of " << _request->redirection_limit << ")");
         auto netloc = _request->netloc();
 
