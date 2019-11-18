@@ -123,7 +123,7 @@ void Client::on_read (string& buf, const CodeError& err) {
 
         auto result = _parser.parse_shift(buf);
         _response = static_pointer_cast<Response>(result.response);
-        _response->_state = result.state;
+        if (_response) _response->_state = result.state; // in case of error response may absent
 
         if (result.error) return cancel(errc::parse_error);
         if (result.state < State::got_header) {

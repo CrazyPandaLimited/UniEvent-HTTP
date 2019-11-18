@@ -111,6 +111,12 @@ std::error_code TClient::get_error (const RequestSP& req) {
     return error;
 }
 
+std::error_code TClient::get_error (const string& uri, Header&& headers, Body&& body, bool chunked) {
+    auto b = Request::Builder().uri(uri).headers(std::move(headers)).body(std::move(body));
+    if (chunked) b.chunked();
+    return get_error(b.build());
+}
+
 ClientPair::ClientPair (const LoopSP& loop) {
     server = make_server(loop, {});
     client = new TClient(loop);

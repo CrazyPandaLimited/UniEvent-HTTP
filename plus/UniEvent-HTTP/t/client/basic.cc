@@ -87,3 +87,18 @@ TEST("client doesn't retain when no active requests") {
     client.reset();
     CHECK(TClient::dcnt == 1);
 }
+
+TEST("close instead of response") {
+    AsyncTest test(1000);
+    TcpSP srv = new Tcp(test.loop);
+    srv->bind("127.0.0.1", 0);
+    srv->listen();
+    srv->connection_event.add([&](auto, auto cli, auto) {
+        cli->shutdown();
+    });
+
+    TClientSP client = new TClient(test.loop);
+    client->sa = srv->sockaddr();
+    auto err = client->get_error("/");
+    CHECK(err); // various depending on if ssl in use or not
+}
