@@ -166,13 +166,9 @@ TEST("redirect with connection close") {
     AsyncTest test(1000, {"connect", "redirect", "connect"});
     ClientPair p(test.loop);
 
-    ServerResponseSP sres = new ServerResponse(302, Header().location("/index"));
-    SECTION("c=close") { sres->headers.connection("close"); }
-    SECTION("v=1.0")   { sres->http_version = 10; }
-
     p.server->request_event.add([&](auto req) {
         if (req->uri->to_string() == "/") {
-            req->respond(sres);
+            req->respond(new ServerResponse(302, Header().location("/index").connection("close")));
         } else if (req->uri->to_string() == "/index") {
             req->respond(new ServerResponse(200));
         }
