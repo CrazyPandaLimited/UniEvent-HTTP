@@ -12,7 +12,7 @@ Pool::Pool (const LoopSP& loop, Config cfg) : _loop(loop), _factory(cfg.factory)
 Pool::~Pool () {
     // there might be some clients still active, remove event listener as we no longer care about of those clients
     for (auto& list : _clients) {
-        for (auto& client : list.second.busy) client->event_listener(nullptr);
+        for (auto& client : list.second.busy) client->_pool = nullptr;
     }
 }
 

@@ -222,3 +222,26 @@ TEST("http_request") {
 
     test.run();
 }
+
+TEST("request/client continue to work fine after pool is unreferenced") {
+    AsyncTest test(1000, 1);
+    auto srv = make_server(test.loop);
+    srv->autorespond(new ServerResponse(200));
+
+    auto req = Request::Builder().uri("/").response_callback([&](auto, auto res, auto err) {
+        CHECK_FALSE(err);
+        CHECK(res->code == 200);
+        test.happens();
+        test.loop->stop();
+    }).build();
+    req->uri->host(srv->sockaddr().ip());
+    req->uri->port(srv->sockaddr().port());
+    if (secure) req->uri->scheme("https");
+
+    {
+        Pool p(test.loop);
+        p.request(req);
+    }
+
+    test.run();
+}
