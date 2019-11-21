@@ -31,7 +31,9 @@ void ServerConnection::on_read (string& buf, const CodeError& err) {
     if (err) {
         if (idle_timer) idle_timer->stop();
         panda_log_info("read error: " << err.whats());
-        if (!requests.size() || requests.back()->_state == State::done) requests.emplace_back(static_pointer_cast<ServerRequest>(new_request()));
+        if (!requests.size() || requests.back()->_state == State::done || requests.back()->_state == State::error) {
+            requests.emplace_back(static_pointer_cast<ServerRequest>(new_request()));
+        }
         requests.back()->_state = State::error;
         return request_error(requests.back(), errc::parse_error);
     }
@@ -85,6 +87,7 @@ void ServerConnection::on_read (string& buf, const CodeError& err) {
 
 void ServerConnection::respond (const ServerRequestSP& req, const ServerResponseSP& res) {
     assert(req->_connection == this);
+    panda_log_debug("respond " << req << "," << res << "," << requests.front());
     if (req->_response) throw HttpError("double response for request given");
     req->_response = res;
     res->_request = req;
@@ -272,6 +275,7 @@ ServerResponseSP ServerConnection::default_error_response (int code) {
 }
 
 void ServerConnection::request_error (const ServerRequestSP& req, const std::error_code& err) {
+    auto hold = req; // in case of respond in _event that remove req from requests
     read_stop();
     if (req->_partial) req->partial_event(req, err);
     else               server->error_event(req, err);
