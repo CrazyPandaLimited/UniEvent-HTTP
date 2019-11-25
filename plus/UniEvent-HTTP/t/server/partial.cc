@@ -15,17 +15,17 @@ TEST("request receive") {
             CHECK(!err);
             auto body = req->body.to_string();
             if (!body) {
-                CHECK(req->state() == State::in_body);
+                CHECK(!req->is_done());
                 p.conn->write("1");
             }
             else if (body == "1") {
-                CHECK(req->state() == State::in_body);
+                CHECK(!req->is_done());
                 p.conn->write("2");
             } else if (body == "12") {
-                CHECK(req->state() == State::in_body);
+                CHECK(!req->is_done());
                 p.conn->write("3");
             } else if (body == "123") {
-                CHECK(req->state() == State::done);
+                CHECK(req->is_done());
                 req->respond(new ServerResponse(200, Header(), Body("epta")));
             }
         });
@@ -53,7 +53,7 @@ TEST("full response on route event") {
         req->partial_event.add([&](auto& req, auto& err) {
             test.happens();
             CHECK(!err);
-            if (req->state() == State::done) test.loop->stop();
+            if (req->is_done()) test.loop->stop();
         });
         req->respond(new ServerResponse(302, Header(), Body("route-res")));
     });
@@ -83,7 +83,7 @@ TEST("full response on partial event when request is not yet fully parsed") {
         req->partial_event.add([&](auto& req, auto& err) {
             test.happens();
             CHECK(!err);
-            if (req->state() == State::done) test.loop->stop();
+            if (req->is_done()) test.loop->stop();
             else req->respond(new ServerResponse(200, Header(), Body("partial-res")));
         });
     });
@@ -121,12 +121,12 @@ TEST("client disconnects or request error while in partial mode") {
         req->partial_event.add([&](auto& req, auto& err) {
             test.happens();
             CHECK(!err);
-            CHECK(req->state() != State::done);
+            CHECK(!req->is_done());
             req->partial_event.remove_all();
             req->partial_event.add([&](auto& req, auto& err) {
                 test.happens();
                 if (send_junk) {
-                    CHECK(req->state() == State::error);
+                    CHECK(req->is_done());
                     CHECK(err == errc::parse_error);
                 }
                 else {
@@ -165,13 +165,13 @@ TEST("client disconnects when partial mode is finished") {
         req->partial_event.add([&](auto& req, auto& err) {
             test.happens();
             CHECK(!err);
-            CHECK(req->state() != State::done);
+            CHECK(!req->is_done());
             p.conn->write("1234");
             req->partial_event.remove_all();
             req->partial_event.add([&](auto& req, auto& err) {
                 test.happens();
                 CHECK(!err);
-                CHECK(req->state() == State::done);
+                CHECK(req->is_done());
                 req->partial_event.remove_all();
                 req->partial_event.add(fail_cb);
                 p.conn->disconnect();
@@ -204,7 +204,7 @@ TEST("response is complete before request fully received") {
         req->partial_event.add([&](auto& req, auto& err) {
             test.happens();
             CHECK(!err);
-            CHECK(req->state() != State::done);
+            CHECK(!req->is_done());
             ServerResponseSP res = new ServerResponse(200);
             if (closed == 2) res->keep_alive(false);
 
@@ -223,7 +223,7 @@ TEST("response is complete before request fully received") {
             req->partial_event.add([&](auto& req, auto& err) {
                 test.happens();
                 CHECK(!err);
-                CHECK(req->state() == State::done);
+                CHECK(req->is_done());
                 CHECK(req->body.to_string() == "1234");
                 test.loop->stop();
             });

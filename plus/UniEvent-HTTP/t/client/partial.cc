@@ -16,9 +16,8 @@ TEST("chunked response receive") {
     auto req = Request::Builder().uri("/").build();
 
     size_t count = 10;
-    req->partial_event.add([&](auto, auto res, auto err) {
+    req->partial_event.add([&](auto, auto, auto err) {
         if (err) throw err;
-        CHECK(res->state() >= State::got_header);
 
         if (count--) {
             sres->send_chunk("a");
@@ -30,7 +29,7 @@ TEST("chunked response receive") {
         req->partial_event.remove_all();
         req->partial_event.add([&](auto, auto res, auto err) {
             if (err) throw err;
-            if (res->state() != State::done) return;
+            if (!res->is_done()) return;
             test.happens();
             CHECK(res->body.to_string() == "aaaaaaaaaa");
         });
@@ -39,7 +38,7 @@ TEST("chunked response receive") {
     auto res = p.client->get_response(req);
     CHECK(res->code == 200);
     CHECK(res->chunked);
-    CHECK(res->state() == State::done);
+    CHECK(res->is_done());
     CHECK(res->body.to_string() == "aaaaaaaaaa");
 }
 
@@ -68,7 +67,7 @@ TEST("chunked request send") {
             sreq->partial_event.remove_all();
             sreq->partial_event.add([&](auto sreq, auto err) {
                 if (err) throw err;
-                if (sreq->state() != State::done) return;
+                if (!sreq->is_done()) return;
                 CHECK(sreq->chunked);
                 test.happens();
                 CHECK(sreq->body.to_string() == "aaaaaaaaaa");
@@ -95,7 +94,7 @@ TEST("receiving full response before transfer completed") {
         sreq->enable_partial();
         sreq->partial_event.add([&](auto sreq, auto err) {
             if (err) throw err;
-            CHECK(sreq->state() != State::done);
+            CHECK(!sreq->is_done());
             sreq->respond(new ServerResponse(200, Header(), Body("hi")));
             sreq->partial_event.remove_all();
         });

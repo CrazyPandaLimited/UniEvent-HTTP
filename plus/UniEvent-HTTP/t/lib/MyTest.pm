@@ -159,9 +159,8 @@ sub make_server {
                 my ($conn, $str, $err) = @_;
                 die $err if $err;
                 while ($str) {
-                    unless ($parser->request) {
-                        $source_request ? $parser->set_request($source_request) : $parser->set_request(new Protocol::HTTP::Request({method => METHOD_GET}));
-                    }
+                    $parser->set_context_request($source_request ? $source_request : new Protocol::HTTP::Request({method => METHOD_GET}))
+                        unless $parser->context_request;
                     my ($res, $state, $err) = $parser->parse_shift($str);
                     die $err if $err;
                     return unless $state == STATE_DONE;

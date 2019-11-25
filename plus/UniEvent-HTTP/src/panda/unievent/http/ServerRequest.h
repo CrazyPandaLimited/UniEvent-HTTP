@@ -21,7 +21,8 @@ struct ServerRequest : protocol::http::Request {
     CallbackDispatcher<partial_fptr> partial_event;
     CallbackDispatcher<drop_fptr>    drop_event;
 
-    State                   state    () const { return _state; }
+    bool is_done () { return _is_done; }
+
     const ServerResponseSP& response () const { return _response; }
 
     void enable_partial () { _partial = true; }
@@ -43,10 +44,10 @@ private:
     ServerConnection* _connection;
     ServerSP          _server;           // holds server while active
     ServerResponseSP  _response;
-    State             _state             = State::not_yet;
     bool              _routed            = false;
     bool              _partial           = false;
     bool              _finish_on_receive = false;
+    bool              _is_done           = false;
 };
 
 }}}

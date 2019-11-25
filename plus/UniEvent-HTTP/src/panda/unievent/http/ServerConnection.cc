@@ -1,5 +1,6 @@
 #include "ServerConnection.h"
 #include "Server.h"
+#include <panda/log.h>
 
 namespace panda { namespace unievent { namespace http {
 
@@ -31,10 +32,8 @@ void ServerConnection::on_read (string& buf, const CodeError& err) {
     if (err) {
         if (idle_timer) idle_timer->stop();
         panda_log_info("read error: " << err.whats());
-        if (!requests.size() || requests.back()->_state == State::done || requests.back()->_state == State::error) {
-            requests.emplace_back(static_pointer_cast<ServerRequest>(new_request()));
-        }
-        requests.back()->_state = State::error;
+        if (!requests.size() || requests.back()->is_done()) requests.emplace_back(static_pointer_cast<ServerRequest>(new_request()));
+        requests.back()->_is_done = true;
         return request_error(requests.back(), errc::parse_error);
     }
 
@@ -44,21 +43,19 @@ void ServerConnection::on_read (string& buf, const CodeError& err) {
 
         auto req = static_pointer_cast<ServerRequest>(result.request);
         if (!requests.size() || requests.back() != req) requests.emplace_back(req);
-
-        req->_state = result.state;
+        req->_is_done = result.state >= State::done;
 
         if (result.error) {
             panda_log_info("parser error: " << result.error);
-            req->_state = State::error; // TODO: remove when bug in procotol-http is fixed
             return request_error(req, errc::parse_error);
         }
 
-        if (result.state < State::got_header) {
+        if (result.state <= State::headers) {
             panda_log_verbose_debug("got part, headers not finished");
             return;
         }
 
-        panda_log_verbose_debug("got part, body finished = " << (result.state == State::done));
+        panda_log_verbose_debug("got part, body finished = " << req->is_done());
 
         if (!req->_routed) {
             req->_routed = true;
@@ -67,7 +64,7 @@ void ServerConnection::on_read (string& buf, const CodeError& err) {
         }
 
         if (req->_partial) {
-            req->partial_event(req, std::error_code());
+            req->partial_event(req, {});
         }
         else if (result.state == State::done) {
             req->receive_event(req);
@@ -118,7 +115,7 @@ void ServerConnection::write_next_response () {
 
         // stop accepting further requests if this request is fully received.
         // if not, we'll continue receiving current request until it's done (read_stop() will be called later by on_read() because closing==true)
-        if (req->state() == State::done) read_stop();
+        if (req->is_done()) read_stop();
 
         if (requests.size() > 1) { // drop all pipelined requests
             requests.pop_front();
@@ -176,7 +173,7 @@ void ServerConnection::finish_request () {
 
     auto req = requests.front();
     assert(req->_response && req->_response->_completed);
-    if (req->state() != State::done && req->state() != State::error) {
+    if (!req->is_done()) {
         // response is complete but request is not yet fully received -> wait until end of request (on_read() will call finish_request() again)
         req->_finish_on_receive = true;
         return;
@@ -223,7 +220,7 @@ void ServerConnection::drop_requests (const std::error_code& err) {
         // remove request from pool first, because no one listen for responses,
         // we need request/response objects to completely ignore any calls to respond(), send_chunk(), end_chunk()
         cleanup_request();
-        if (req->_state != State::done) {
+        if (!req->is_done()) {
             if (req->_partial) req->partial_event(req, err);
             else               server->error_event(req, err);
         } else {

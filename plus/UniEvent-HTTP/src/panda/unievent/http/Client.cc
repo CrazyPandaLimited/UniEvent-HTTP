@@ -1,6 +1,7 @@
 #include "Pool.h"
 #include "Client.h"
 #include <ostream>
+#include <panda/log.h>
 
 namespace panda { namespace unievent { namespace http {
 
@@ -67,7 +68,7 @@ void Client::request (const RequestSP& request) {
     );
 
     auto data = request->to_vector();
-    _parser.set_request(request);
+    _parser.set_context_request(request);
     read_start();
     write(data.begin(), data.end());
 }
@@ -115,7 +116,7 @@ void Client::on_read (string& buf, const CodeError& err) {
     panda_log_verbose_debug("read:\n" << buf);
 
     while (buf) {
-        if (!_parser.request()) {
+        if (!_parser.context_request()) {
             panda_log_info("unexpected buffer: " << buf);
             drop_connection();
             break;
@@ -123,10 +124,11 @@ void Client::on_read (string& buf, const CodeError& err) {
 
         auto result = _parser.parse_shift(buf);
         _response = static_pointer_cast<Response>(result.response);
-        if (_response) _response->_state = result.state; // in case of error response may absent
+        _response->_is_done = result.state >= State::done;
 
         if (result.error) return cancel(errc::parse_error);
-        if (result.state < State::got_header) {
+
+        if (result.state <= State::headers) {
             panda_log_verbose_debug("got part, headers not finished");
             return;
         }
@@ -249,8 +251,14 @@ void Client::on_eof () {
 
     ClientSP hold = this;
     auto result = _parser.eof();
-    if (result.error) return cancel(make_error_code(std::errc::connection_reset));
-    analyze_request();
+    _response = static_pointer_cast<Response>(result.response);
+    _response->_is_done = true;
+
+    if (result.error) {
+        cancel(make_error_code(std::errc::connection_reset));
+    } else {
+        analyze_request();
+    }
 }
 
 }}}

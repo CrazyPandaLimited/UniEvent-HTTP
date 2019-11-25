@@ -242,7 +242,7 @@ TEST("response connection=close cancels all further requests") {
         req->enable_partial();
         req->partial_event.add([&](auto& req, auto& err){
             CHECK_FALSE(err);
-            CHECK(req->state() != State::done);
+            CHECK(!req->is_done());
             req->partial_event.remove_all();
             req->partial_event.add([&](auto&, auto& err){
                 CHECK(err == std::errc::connection_reset);

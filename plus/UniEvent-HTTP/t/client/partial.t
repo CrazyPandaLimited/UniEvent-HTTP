@@ -2,7 +2,6 @@ use 5.012;
 use lib 't/lib';
 use MyTest;
 use Test::More;
-use Protocol::HTTP::Message;
 use Protocol::HTTP::Request;
 
 variate_catch('[client-partial]', 'ssl');
@@ -24,7 +23,6 @@ subtest "chunked response receive" => sub {
         partial_callback => sub {
             my ($req, $res, $err) = @_;
             die $err if $err;
-            cmp_ok $res->state, '>=', STATE_GOT_HEADER;
     
             if ($count--) {
                 $sres->send_chunk("a");
@@ -36,7 +34,7 @@ subtest "chunked response receive" => sub {
             $req->partial_callback(sub {
                 my (undef, $res, $err) = @_;
                 die $err if $err;
-                return unless $res->state == STATE_DONE;
+                return unless $res->is_done;
                 $test->happens;
                 is $res->body, "aaaaaaaaaa";
             });
@@ -45,7 +43,7 @@ subtest "chunked response receive" => sub {
     
     is $res->code, 200;
     ok $res->chunked;
-    is $res->state, STATE_DONE;
+    ok $res->is_done;
     is $res->body, "aaaaaaaaaa";
 };
 
@@ -79,7 +77,7 @@ subtest "chunked request send" => sub {
             $sreq->partial_callback(sub {
                 my ($sreq, $err) = @_;
                 die $err if $err;
-                return unless $sreq->state == STATE_DONE;
+                return unless $sreq->is_done;
                 ok $sreq->chunked;
                 $test->happens;
                 is $sreq->body, "aaaaaaaaaa";

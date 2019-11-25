@@ -3,7 +3,6 @@ use lib 't/lib';
 use MyTest;
 use Test::More;
 use Test::Exception;
-use Protocol::HTTP::Message;
 use Protocol::HTTP::Request;
 
 variate_catch('[server-basic]', 'ssl');
@@ -18,7 +17,7 @@ subtest 'simple request/response' => sub {
         
         isa_ok($req, 'UniEvent::HTTP::ServerRequest');
         is $req->method, METHOD_POST;
-        is $req->state, STATE_DONE;
+        ok $req->is_done;
         is $req->body, "epta nah";
         ok !$req->chunked;
         is $req->headers->{"content-length"}, 8;

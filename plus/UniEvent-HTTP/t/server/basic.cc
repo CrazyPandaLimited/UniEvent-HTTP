@@ -9,7 +9,7 @@ TEST("request without body") {
     p.server->request_event.add([&](auto req) {
         test.happens();
         CHECK(req->method == Request::Method::GET);
-        CHECK(req->state() == State::done);
+        CHECK(req->is_done());
         CHECK(req->headers.host() == "epta.ru");
         CHECK(!req->body.length());
         test.loop->stop();
@@ -31,7 +31,7 @@ TEST("request with body") {
     p.server->request_event.add([&](auto req) {
         test.happens();
         CHECK(req->method == Request::Method::POST);
-        CHECK(req->state() == State::done);
+        CHECK(req->is_done());
         CHECK(req->body.to_string() == "epta nah");
         test.loop->stop();
     });
@@ -53,7 +53,7 @@ TEST("request with chunks") {
     p.server->request_event.add([&](auto req) {
         test.happens();
         CHECK(req->method == Request::Method::POST);
-        CHECK(req->state() == State::done);
+        CHECK(req->is_done());
         CHECK(req->body.to_string() == "1234567891234567");
         test.loop->stop();
     });
@@ -263,18 +263,18 @@ TEST("date header") {
 TEST("max headers size") {
     AsyncTest test(1000);
     Server::Config cfg;
-    SECTION("allowed") { cfg.max_headers_size = 15; }
-    SECTION("denied")  { cfg.max_headers_size = 14; }
+    SECTION("allowed") { cfg.max_headers_size = 33; }
+    SECTION("denied")  { cfg.max_headers_size = 32; }
     ServerPair p(test.loop, cfg);
     p.server->autorespond(new ServerResponse(200));
 
     auto res = p.get_response(
         "GET / HTTP/1.1\r\n"
-        "Header: value\r\n" // len=15
+        "Header: value\r\n"
         "\r\n"
     );
 
-    if (cfg.max_headers_size == 15) {
+    if (cfg.max_headers_size == 33) {
         CHECK(res->code == 200);
     } else {
         CHECK(res->code == 400);

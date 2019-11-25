@@ -1,5 +1,6 @@
 #pragma once
 #include <catch.hpp>
+#include <panda/log.h>
 #include <panda/unievent/http.h>
 #include <panda/unievent/http/Server.h>
 #include <panda/unievent/test/AsyncTest.h>

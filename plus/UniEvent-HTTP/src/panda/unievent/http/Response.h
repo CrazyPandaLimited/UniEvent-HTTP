@@ -6,12 +6,12 @@ namespace panda { namespace unievent { namespace http {
 struct Response : protocol::http::Response {
     Response () {}
 
-    State state () const { return _state; }
+    bool is_done () { return _is_done; }
 
 private:
     friend struct Client;
 
-    State _state;
+    bool _is_done = false;
 };
 using ResponseSP = iptr<Response>;
 

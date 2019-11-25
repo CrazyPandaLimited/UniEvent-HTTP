@@ -1,5 +1,6 @@
 #include "Server.h"
 #include <ostream>
+#include <panda/log.h>
 #include <panda/time.h>
 
 namespace panda { namespace unievent { namespace http {

@@ -2,7 +2,6 @@ use 5.012;
 use lib 't/lib';
 use MyTest;
 use Test::More;
-use Protocol::HTTP::Message;
 
 variate_catch('[server-partial]', 'ssl');
 
@@ -21,19 +20,19 @@ subtest "request receive" => sub {
             ok !$err;
             my $body = $req->body;
             if (!$body) {
-                is $req->state, STATE_IN_BODY;
+                ok !$req->is_done;
                 $p->conn->write("1");
             }
             elsif ($body == "1") {
-                is $req->state, STATE_IN_BODY;
+                ok !$req->is_done;
                 $p->conn->write("2");
             }
             elsif ($body == "12") {
-                is $req->state, STATE_IN_BODY;
+                ok !$req->is_done;
                 $p->conn->write("3");
             }
             elsif ($body == "123") {
-                is $req->state, STATE_DONE;
+                ok $req->is_done;
                 $req->respond(new UE::HTTP::ServerResponse({code => 200, body => "epta"}));
             }
         });
@@ -70,7 +69,7 @@ subtest 'xs request has backref' => sub {
                 is $sreq, $req, "backref ok";
             }
 
-            if ($req->state == STATE_DONE) {
+            if ($req->is_done) {
                 $test->loop->stop;
             } else {
                 $p->conn->write("a");
