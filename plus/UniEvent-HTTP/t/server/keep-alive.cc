@@ -45,7 +45,7 @@ TEST("server persists") {
 TEST("if req is <close>, then response also <close> regardless of user's choice in headers") {
     AsyncTest test(1000);
     ServerPair p(test.loop);
-    p.server->autorespond(new ServerResponse(200, Header().connection("keep-alive")));
+    p.server->autorespond(new ServerResponse(200, Headers().connection("keep-alive")));
     RawResponseSP res;
 
     SECTION("1.0 no C") {
@@ -63,7 +63,7 @@ TEST("if req is <close>, then response also <close> regardless of user's choice 
 TEST("if user's response says <close> then don't give a fuck what request says") {
     AsyncTest test(1000);
     ServerPair p(test.loop);
-    p.server->autorespond(new ServerResponse(200, Header().connection("close")));
+    p.server->autorespond(new ServerResponse(200, Headers().connection("close")));
     RawResponseSP res;
 
     SECTION("1.0 and C=KA") {
@@ -100,7 +100,7 @@ TEST("idle timeout during and after request") {
 
     p.server->request_event.add([&](auto& req){
         t->event.add([&, req](auto){
-            req->respond(new ServerResponse(200, Header(), Body("hello world")));
+            req->respond(new ServerResponse(200, Headers(), Body("hello world")));
         });
         t->once(15); // longer that idle timeout, it should not break connection during active request
     });

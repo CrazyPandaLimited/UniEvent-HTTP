@@ -53,10 +53,10 @@ struct TClient : Client {
     void request (const RequestSP&);
 
     ResponseSP get_response (const RequestSP& req);
-    ResponseSP get_response (const string& uri, Header&& = {}, Body&& = {}, bool chunked = false);
+    ResponseSP get_response (const string& uri, Headers&& = {}, Body&& = {}, bool chunked = false);
 
     std::error_code get_error (const RequestSP& req);
-    std::error_code get_error (const string& uri, Header&& = {}, Body&& = {}, bool chunked = false);
+    std::error_code get_error (const string& uri, Headers&& = {}, Body&& = {}, bool chunked = false);
 
     ~TClient () { ++dcnt; }
 

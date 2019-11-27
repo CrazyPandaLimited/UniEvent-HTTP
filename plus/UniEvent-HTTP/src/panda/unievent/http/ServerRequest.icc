@@ -14,7 +14,7 @@ void ServerRequest::send_continue () {
 }
 
 void ServerRequest::redirect (const string& uri) {
-    respond(new ServerResponse(302, Header().location(uri)));
+    respond(new ServerResponse(302, Headers().location(uri)));
 }
 
 ServerRequest::~ServerRequest () {

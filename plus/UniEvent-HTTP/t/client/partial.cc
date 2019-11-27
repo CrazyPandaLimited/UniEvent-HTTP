@@ -9,7 +9,7 @@ TEST("chunked response receive") {
     ServerResponseSP sres;
 
     p.server->request_event.add([&](auto req) {
-        sres = new ServerResponse(200, Header(), Body(), true);
+        sres = new ServerResponse(200, Headers(), Body(), true);
         req->respond(sres);
     });
 
@@ -71,7 +71,7 @@ TEST("chunked request send") {
                 CHECK(sreq->chunked);
                 test.happens();
                 CHECK(sreq->body.to_string() == "aaaaaaaaaa");
-                sreq->respond(new ServerResponse(200, Header(), Body(sreq->body)));
+                sreq->respond(new ServerResponse(200, Headers(), Body(sreq->body)));
             });
         });
 
@@ -95,7 +95,7 @@ TEST("receiving full response before transfer completed") {
         sreq->partial_event.add([&](auto sreq, auto err) {
             if (err) throw err;
             CHECK(!sreq->is_done());
-            sreq->respond(new ServerResponse(200, Header(), Body("hi")));
+            sreq->respond(new ServerResponse(200, Headers(), Body("hi")));
             sreq->partial_event.remove_all();
         });
     });
@@ -124,7 +124,7 @@ TEST("100-continue") {
     });
     p.server->autorespond(new ServerResponse(200));
 
-    auto req = Request::Builder().uri("/").headers(Header().expect_continue()).build();
+    auto req = Request::Builder().uri("/").headers(Headers().expect_continue()).build();
     req->continue_event.add([&](auto) { test.happens(); });
 
     auto res = p.client->get_response(req);

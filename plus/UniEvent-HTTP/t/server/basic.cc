@@ -98,7 +98,7 @@ TEST("response with body") {
 
     p.server->request_event.add([&](auto req) {
         test.happens();
-        req->respond(new ServerResponse(200, Header(), Body("epta-epta")));
+        req->respond(new ServerResponse(200, Headers(), Body("epta-epta")));
     });
 
     p.conn->write(
@@ -166,7 +166,7 @@ TEST("response with delayed chunks") {
 
     p.server->request_event.add([&](auto req) {
         test.happens();
-        req->respond(new ServerResponse(200, Header(), Body(), true));
+        req->respond(new ServerResponse(200, Headers(), Body(), true));
         test.loop->delay([&, req]{
             req->response()->send_chunk("1 ");
             test.loop->delay([&, req]{
@@ -225,7 +225,7 @@ TEST("request drop event when client disconnects and response not yet completed"
 
     SECTION("no response at all") {}
     SECTION("partial response") {
-        p.server->autorespond(new ServerResponse(200, Header(), Body(), true));
+        p.server->autorespond(new ServerResponse(200, Headers(), Body(), true));
     }
 
     p.server->request_event.add([&](auto& req){

@@ -15,7 +15,7 @@ TEST("basic") {
 
     p.server->request_event.add([&](auto& req) {
         if (!async) {
-            req->respond(new ServerResponse(200, Header(), Body(req->uri->path())));
+            req->respond(new ServerResponse(200, Headers(), Body(req->uri->path())));
             return;
         }
 
@@ -25,12 +25,12 @@ TEST("basic") {
         test.loop->delay([&]{
             if (!reverse) {
                 for (auto req : reqs) {
-                    req->respond(new ServerResponse(200, Header(), Body(req->uri->path())));
+                    req->respond(new ServerResponse(200, Headers(), Body(req->uri->path())));
                 }
             } else {
                 for (auto it = reqs.rbegin(); it != reqs.rend(); ++it) {
                     auto req = *it;
-                    req->respond(new ServerResponse(200, Header(), Body(req->uri->path())));
+                    req->respond(new ServerResponse(200, Headers(), Body(req->uri->path())));
                 }
             }
         });
@@ -71,14 +71,14 @@ TEST("chunked response captured and sent later") {
             return;
         }
 
-        auto res = new ServerResponse(200, Header(), Body(), true);
+        auto res = new ServerResponse(200, Headers(), Body(), true);
         req->respond(res);
         res->send_chunk("12");
         res->send_chunk("34");
         if (full) res->send_final_chunk();
 
         test.loop->delay([&, res]{
-            req1->respond(new ServerResponse(302, Header(), Body("000")));
+            req1->respond(new ServerResponse(302, Headers(), Body("000")));
             if (!full) {
                 res->send_chunk("56");
                 res->send_final_chunk();
@@ -110,16 +110,16 @@ TEST("request connection close") {
     bool second = false;
     p.server->request_event.add([&](auto& req) {
         if (!second) {
-            req->respond(new ServerResponse(200, Header(), Body("ans1")));
+            req->respond(new ServerResponse(200, Headers(), Body("ans1")));
             second = true;
             return;
         }
 
         if (!chunked) {
-            req->respond(new ServerResponse(200, Header(), Body("ans2")));
+            req->respond(new ServerResponse(200, Headers(), Body("ans2")));
             return;
         } else {
-            req->respond(new ServerResponse(200, Header(), Body(), true));
+            req->respond(new ServerResponse(200, Headers(), Body(), true));
             test.loop->delay([&, req]{
                 req->response()->send_chunk("ans2");
                 test.loop->delay([&, req]{
@@ -157,7 +157,7 @@ TEST("request connection close waits until all previous requests are done") {
 
     auto req1_ans = [&]{
         if (chunked1) {
-            req1->respond(new ServerResponse(200, Header(), Body(), true));
+            req1->respond(new ServerResponse(200, Headers(), Body(), true));
             test.loop->delay([&]{
                 req1->response()->send_chunk("ans1");
                 test.loop->delay([&]{
@@ -165,14 +165,14 @@ TEST("request connection close waits until all previous requests are done") {
                 });
             });
         }
-        else req1->respond(new ServerResponse(200, Header(), Body("ans1")));
+        else req1->respond(new ServerResponse(200, Headers(), Body("ans1")));
     };
 
     p.server->request_event.add([&](auto& req) {
         if (!req1) { req1 = req; return; }
         test.loop->delay([&, req]{
             if (chunked2) {
-                req->respond(new ServerResponse(200, Header(), Body(), true));
+                req->respond(new ServerResponse(200, Headers(), Body(), true));
                 test.loop->delay([&, req]{
                     req->response()->send_chunk("ans2");
                     test.loop->delay([&, req]{
@@ -181,7 +181,7 @@ TEST("request connection close waits until all previous requests are done") {
                     });
                 });
             } else {
-                req->respond(new ServerResponse(200, Header(), Body("ans2")));
+                req->respond(new ServerResponse(200, Headers(), Body("ans2")));
                 test.loop->delay(req1_ans);
             }
         });
@@ -248,7 +248,7 @@ TEST("response connection=close cancels all further requests") {
                 CHECK(err == std::errc::connection_reset);
                 test.happens("partial-err");
             });
-            reqs[0]->respond(new ServerResponse(200, Header().connection("close"), Body("hello")));
+            reqs[0]->respond(new ServerResponse(200, Headers().connection("close"), Body("hello")));
         });
     });
     p.server->error_event.add(fail_cb);

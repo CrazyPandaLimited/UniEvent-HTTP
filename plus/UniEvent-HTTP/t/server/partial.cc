@@ -26,7 +26,7 @@ TEST("request receive") {
                 p.conn->write("3");
             } else if (body == "123") {
                 CHECK(req->is_done());
-                req->respond(new ServerResponse(200, Header(), Body("epta")));
+                req->respond(new ServerResponse(200, Headers(), Body("epta")));
             }
         });
     });
@@ -55,7 +55,7 @@ TEST("full response on route event") {
             CHECK(!err);
             if (req->is_done()) test.loop->stop();
         });
-        req->respond(new ServerResponse(302, Header(), Body("route-res")));
+        req->respond(new ServerResponse(302, Headers(), Body("route-res")));
     });
 
     p.conn->write(
@@ -84,7 +84,7 @@ TEST("full response on partial event when request is not yet fully parsed") {
             test.happens();
             CHECK(!err);
             if (req->is_done()) test.loop->stop();
-            else req->respond(new ServerResponse(200, Header(), Body("partial-res")));
+            else req->respond(new ServerResponse(200, Headers(), Body("partial-res")));
         });
     });
 
@@ -134,7 +134,7 @@ TEST("client disconnects or request error while in partial mode") {
                 }
                 test.loop->stop();
             });
-            if (partial_response) req->respond(new ServerResponse(200, Header(), Body(), true));
+            if (partial_response) req->respond(new ServerResponse(200, Headers(), Body(), true));
             if (send_junk) p.conn->write("something not looking like chunk");
             else           p.conn->disconnect();
         });
@@ -263,7 +263,7 @@ TEST("100-continue") {
     });
     p.server->autorespond(new ServerResponse(200));
 
-    p.source_request = new RawRequest(Request::Method::PUT, new URI("/"), Header().add("Expect", "100-continue"));
+    p.source_request = new RawRequest(Request::Method::PUT, new URI("/"), Headers().add("Expect", "100-continue"));
     auto res = p.get_response(
         "PUT / HTTP/1.1\r\n"
         "Transfer-Encoding: chunked\r\n"
@@ -324,7 +324,7 @@ TEST("100-continue is not sent") {
     });
     p.server->autorespond(new ServerResponse(200));
 
-    p.source_request = new RawRequest(Request::Method::PUT, new URI("/"), Header().add("Expect", "100-continue"));
+    p.source_request = new RawRequest(Request::Method::PUT, new URI("/"), Headers().add("Expect", "100-continue"));
 
     auto res = p.get_response();
     CHECK(res->code == 200);
@@ -339,7 +339,7 @@ TEST("100-continue after response given") {
     ServerPair p(test.loop);
 
     p.server->request_event.add([&](auto req) {
-        req->respond(new ServerResponse(200, Header(), Body(), true));
+        req->respond(new ServerResponse(200, Headers(), Body(), true));
         CHECK_THROWS(req->send_continue());
         req->response()->send_final_chunk();
     });

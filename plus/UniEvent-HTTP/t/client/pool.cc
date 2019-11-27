@@ -40,7 +40,7 @@ TEST("reusing connection after c=close") {
     AsyncTest test(1000, 2);
     TPool p(test.loop);
     auto srv = make_server(test.loop);
-    srv->autorespond(new ServerResponse(200, Header().connection("close")));
+    srv->autorespond(new ServerResponse(200, Headers().connection("close")));
     srv->autorespond(new ServerResponse(200));
 
     auto c = p.get(srv->netloc());
@@ -101,10 +101,10 @@ TEST("several requests to the same server at once") {
     AsyncTest test(1000, 2);
     TPool p(test.loop);
     auto srv = make_server(test.loop);
-    srv->autorespond(new ServerResponse(200, Header(), Body("1")));
-    srv->autorespond(new ServerResponse(200, Header(), Body("1")));
-    srv->autorespond(new ServerResponse(200, Header(), Body("2")));
-    srv->autorespond(new ServerResponse(200, Header(), Body("2")));
+    srv->autorespond(new ServerResponse(200, Headers(), Body("1")));
+    srv->autorespond(new ServerResponse(200, Headers(), Body("1")));
+    srv->autorespond(new ServerResponse(200, Headers(), Body("2")));
+    srv->autorespond(new ServerResponse(200, Headers(), Body("2")));
 
     auto c1 = p.get(srv->netloc());
     c1->sa = srv->sockaddr();
@@ -203,7 +203,7 @@ TEST("instance") {
 TEST("http_request") {
     AsyncTest test(1000, 1);
     auto srv = make_server(test.loop);
-    srv->autorespond(new ServerResponse(200, Header(), Body("hi")));
+    srv->autorespond(new ServerResponse(200, Headers(), Body("hi")));
 
     auto uristr = (secure ? string("https://") : string("http://")) + srv->location() + '/';
     auto req = Request::Builder().uri(uristr).build();

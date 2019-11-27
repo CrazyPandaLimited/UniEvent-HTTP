@@ -6,7 +6,7 @@ namespace panda { namespace unievent { namespace http {
 
 using protocol::http::Body;
 using protocol::http::State;
-using protocol::http::Header;
+using protocol::http::Headers;
 
 using panda::uri::URI;
 using panda::uri::URISP;

@@ -13,7 +13,7 @@ TEST("trivial get") {
         CHECK(req->headers.get("Host") == sa.ip() + ':' + panda::to_string(sa.port()));
     });
 
-    auto res = p.client->get_response("/", Header().add("Hello", "world"));
+    auto res = p.client->get_response("/", Headers().add("Hello", "world"));
 
     CHECK(res->code == 200);
     CHECK(res->http_version == 11);

@@ -10,7 +10,7 @@ struct ServerResponse : protocol::http::Response {
 
     ServerResponse () : _request(), _completed() {}
 
-    ServerResponse (int code, Header&& header = Header(), Body&& body = Body(), bool chunked = false, int http_version = 0, const string& message = {})
+    ServerResponse (int code, Headers&& header = Headers(), Body&& body = Body(), bool chunked = false, int http_version = 0, const string& message = {})
         : protocol::http::Response(code, std::move(header), std::move(body), chunked, http_version, message), _request(), _completed()
     {}
 

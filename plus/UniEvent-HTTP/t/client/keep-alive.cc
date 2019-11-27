@@ -13,7 +13,7 @@ TEST("closes") {
         p.server->autorespond(new ServerResponse(200));
     }
     SECTION("response close") {
-        p.server->autorespond(new ServerResponse(200, Header().connection("close")));
+        p.server->autorespond(new ServerResponse(200, Headers().connection("close")));
     }
 
     p.client->connect_event.add([&](auto...){ test.happens(); }); // main test is here - check for two connections
