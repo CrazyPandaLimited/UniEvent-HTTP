@@ -57,7 +57,7 @@ TEST("if req is <close>, then response also <close> regardless of user's choice 
 
     p.wait_eof();
     CHECK(res->code == 200);
-    CHECK(res->headers.connection() == "close");
+    CHECK_FALSE(res->keep_alive());
 }
 
 TEST("if user's response says <close> then don't give a fuck what request says") {

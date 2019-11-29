@@ -71,63 +71,38 @@ private:
     }
 };
 
-struct Request::Builder : protocol::http::Request::BuilderImpl<Builder> {
+struct Request::Builder : protocol::http::Request::BuilderImpl<Builder, RequestSP> {
+    Builder () : BuilderImpl(new Request()) {}
+
     Builder& response_callback (const Request::response_fn& cb) {
-        _response_callback = cb;
+        _message->response_event.add(cb);
         return *this;
     }
 
     Builder& partial_callback (const Request::partial_fn& cb) {
-        _partial_callback = cb;
+        _message->partial_event.add(cb);
         return *this;
     }
 
     Builder& redirect_callback (const Request::redirect_fn& cb) {
-        _redirect_callback = cb;
+        _message->redirect_event.add(cb);
         return *this;
     }
 
     Builder& timeout (uint64_t timeout) {
-        _timeout = timeout;
+        _message->timeout = timeout;
         return *this;
     }
 
     Builder& follow_redirect (bool val) {
-        _follow_redirect = val;
+        _message->follow_redirect = val;
         return *this;
     }
 
     Builder& redirection_limit (uint16_t redirection_limit) {
-        _redirection_limit = redirection_limit;
+        _message->redirection_limit = redirection_limit;
         return *this;
     }
-
-    RequestSP build () {
-        RequestSP r = new Request();
-        r->method            = _method;
-        r->uri               = _uri;
-        r->headers           = std::move(_headers);
-        r->body              = std::move(_body);
-        r->chunked           = _chunked;
-        r->http_version      = _http_version;
-        r->timeout           = _timeout;
-        r->follow_redirect   = _follow_redirect;
-        r->redirection_limit = _redirection_limit;
-
-        if (_response_callback) r->response_event.add(_response_callback);
-        if (_partial_callback)  r->partial_event.add(_partial_callback);
-        if (_redirect_callback) r->redirect_event.add(_redirect_callback);
-
-        return r;
-    }
-
-protected:
-    Request::response_fn _response_callback;
-    Request::partial_fn  _partial_callback;
-    Request::redirect_fn _redirect_callback;
-    uint64_t             _timeout           = Request::DEFAULT_TIMEOUT;
-    bool                 _follow_redirect   = true;
-    uint16_t             _redirection_limit = Request::DEFAULT_REDIRECTION_LIMIT;
 };
 
 }}}

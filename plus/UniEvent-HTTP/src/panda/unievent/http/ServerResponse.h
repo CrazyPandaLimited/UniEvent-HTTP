@@ -29,10 +29,8 @@ private:
 };
 using ServerResponseSP = iptr<ServerResponse>;
 
-struct ServerResponse::Builder : protocol::http::Response::BuilderImpl<Builder> {
-    ServerResponseSP build () {
-        return new ServerResponse(_code, std::move(_headers), std::move(_body), _chunked, _http_version, _message);
-    }
+struct ServerResponse::Builder : protocol::http::Response::BuilderImpl<Builder, ServerResponseSP> {
+    Builder () : BuilderImpl(new ServerResponse()) {}
 };
 
 }}}
