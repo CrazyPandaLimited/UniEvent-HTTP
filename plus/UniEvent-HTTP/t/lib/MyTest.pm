@@ -106,8 +106,14 @@ sub make_server {
         $self->request_callback(sub {
             my $req = shift;
             my $h = $req->headers;
-            delete $h->{host};
-            $req->respond(new UE::HTTP::ServerResponse({code => 200, headers => $h, body => $req->body || ''}));
+            delete $h->%{qw/host accept-encoding user-agent content-encoding/};
+            my $response = UE::HTTP::ServerResponse->new({
+                code       => 200, 
+                headers    => $h, 
+                body       => $req->body || '',
+                compressed => Protocol::HTTP::Compression::gzip,
+            });
+            $req->respond($response);
         });
     }
     

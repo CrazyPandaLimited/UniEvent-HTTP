@@ -39,4 +39,23 @@ subtest 'bad request' => sub {
     dies_ok { $client->request({uri => "/"}) } "request with uri without host dies";
 };
 
+
+subtest "compression" => sub {
+    my $test = new UE::Test::Async(1);
+    my $p    = new MyTest::ClientPair($test->loop);
+    $p->server->enable_echo;
+
+    my $sa = $p->server->sockaddr;
+    $p->server->request_event->add(sub {
+        my $req = shift;
+        $test->happens;
+        is $req->header("host"), $sa->ip . ':' . $sa->port;
+    });
+
+    my $res = $p->client->get_response({uri => "/", body => "hello-world", compressed => Protocol::HTTP::Compression::gzip});
+    is $res->code, 200;
+    is $res->http_version, 11;
+};
+
+
 done_testing();
