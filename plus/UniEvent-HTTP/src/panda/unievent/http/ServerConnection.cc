@@ -164,7 +164,8 @@ void ServerConnection::send_final_chunk (const ServerResponseSP& res) {
     res->_completed = true;
     if (requests.front()->_response != res) return;
 
-    write(res->final_chunk());
+    auto v = res->final_chunk();
+    write(v.begin(), v.end());
     finish_request();
 }
 

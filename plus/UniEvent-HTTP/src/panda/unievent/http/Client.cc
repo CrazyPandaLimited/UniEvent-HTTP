@@ -83,7 +83,8 @@ void Client::send_chunk (const RequestSP& req, const string& chunk) {
 void Client::send_final_chunk (const RequestSP& req) {
     assert(_request == req);
     req->_transfer_completed = true;
-    write(req->final_chunk());
+    auto v = req->final_chunk();
+    write(v.begin(), v.end());
 }
 
 void Client::cancel (const std::error_code& err) {
