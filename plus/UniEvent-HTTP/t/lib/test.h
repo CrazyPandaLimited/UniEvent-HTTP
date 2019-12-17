@@ -18,6 +18,8 @@ using RawRequest    = panda::protocol::http::Request;
 using RawRequestSP  = panda::protocol::http::RequestSP;
 using RawResponseSP = panda::protocol::http::ResponseSP;
 
+namespace compression = panda::protocol::http::compression;
+
 #define VSSL "[v-ssl]"
 
 extern bool secure;

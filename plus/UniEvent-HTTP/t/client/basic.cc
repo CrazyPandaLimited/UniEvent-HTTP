@@ -102,3 +102,24 @@ TEST("close instead of response") {
     auto err = client->get_error("/");
     CHECK(err); // various depending on if ssl in use or not
 }
+
+TEST("compression") {
+    AsyncTest test(1000);
+    ClientPair p(test.loop);
+    p.server->enable_echo();
+
+    auto req = Request::Builder()
+        .method(Request::Method::POST)
+        .uri("/")
+        .body("hello world")
+        .compress(compression::GZIP)
+        .build();
+    CHECK(req->compressed == compression::GZIP);
+    
+    auto res = p.client->get_response(req);
+    CHECK(res->compressed == compression::GZIP);
+
+    CHECK(res->code == 200);
+    CHECK(res->http_version == 11);
+    CHECK(res->body.to_string() == "hello world");
+}

@@ -41,7 +41,12 @@ void TServer::enable_echo () {
     request_event.add([](auto& req){
         auto h = std::move(req->headers);
         h.remove("Host");
-        req->respond(new ServerResponse(200, std::move(h), Body(req->body.to_string())));
+        h.remove("User-Agent");
+        h.remove("Accept-Encoding");
+        h.remove("Content-Length"); /* causes problems if req is not compressed, and res is */
+        auto res = new ServerResponse(200, std::move(h), Body(req->body.to_string()));
+        res->compressed = compression::GZIP;
+        req->respond(res);
     });
 }
 
