@@ -124,7 +124,7 @@ TEST("do not follow redirections") {
 }
 
 TEST("timeout") { // timeout is for whole request including all redirections
-    AsyncTest test(1000, 1);
+    AsyncTest test(1000);
     ClientPair p(test.loop);
 
     p.server->request_event.add([&](auto req){
@@ -134,7 +134,6 @@ TEST("timeout") { // timeout is for whole request including all redirections
     });
 
     auto req = Request::Builder().uri("/").timeout(5).build();
-    req->redirect_event.add([&](auto...){ test.happens(); });
 
     auto err = p.client->get_error(req);
     CHECK(err == std::errc::timed_out);
