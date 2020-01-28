@@ -67,7 +67,10 @@ void Client::request (const RequestSP& request) {
         "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36 UniEvent-HTTP/1.0"
     );
 
-    if (!request->headers.has("Accept-Encoding")) request->headers.add("Accept-Encoding", "gzip");
+    using namespace panda::protocol::http;
+    if (request->compression_mask() == static_cast<std::uint8_t>(compression::IDENTITY) && !request->headers.has("Accept-Encoding")) {
+        request->allow_compression(compression::GZIP);
+    }
 
     auto data = request->to_vector();
     _parser.set_context_request(request);
