@@ -244,6 +244,8 @@ void Client::finish_request (const std::error_code& _err) {
 
     if (_pool) _pool->putback(this);
 
+    if (!res) res = static_pointer_cast<Response>(req->new_response()); // ensure we pass non-null response even for earliest errors
+
     req->partial_event(req, res, err);
     req->response_event(req, res, err);
 }
