@@ -137,7 +137,6 @@ TEST("accept-encoding") {
 
         p.server->request_event.add([&](auto& req){
             test.happens();
-            auto sa = p.server->listeners().front()->sockaddr();
             CHECK(req->headers.get("Accept-Encoding") == "gzip");
         });
         p.client->get_response("/");
@@ -154,7 +153,6 @@ TEST("accept-encoding") {
 
         p.server->request_event.add([&](auto& req){
             test.happens();
-            auto sa = p.server->listeners().front()->sockaddr();
             CHECK(!req->headers.has("Accept-Encoding"));
         });
         p.client->get_response(req);
