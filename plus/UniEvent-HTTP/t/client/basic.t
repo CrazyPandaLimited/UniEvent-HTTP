@@ -57,5 +57,4 @@ subtest "compression" => sub {
     is $res->http_version, 11;
 };
 
-
 done_testing();

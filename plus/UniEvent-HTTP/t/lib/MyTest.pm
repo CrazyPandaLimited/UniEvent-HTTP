@@ -231,7 +231,7 @@ sub make_server {
         #if (secure) req->uri->scheme("https");
         return $self->SUPER::request($req);
     }
-    
+
     sub get_response {
         my ($self, $req) = @_;
         $req = new UE::HTTP::Request($req) if ref($req) eq 'HASH';
@@ -243,10 +243,27 @@ sub make_server {
             $response = $res;
             $loop->stop;
         });
-    
+
         $self->request($req);
         $loop->run;
-    
+
+        return $response;
+    }
+
+    sub await_response {
+        my ($self, $req) = @_;
+        $req = new UE::HTTP::Request($req) if ref($req) eq 'HASH';
+        my $loop = $self->loop;
+        my $response;
+        $req->response_event->add(sub {
+            my (undef, $res, $err) = @_;
+            die $err if $err;
+            $response = $res;
+            $loop->stop;
+        });
+
+        $loop->run;
+
         return $response;
     }
     
@@ -291,10 +308,12 @@ sub make_server {
     use parent 'UniEvent::HTTP::Pool';
     use 5.012;
     
-    sub get {
-        my $client = shift->SUPER::get(@_);
-        XS::Framework::obj2hv($client);
-        bless $client, 'MyTest::TClient';
+    sub request {
+        my $client = shift->SUPER::request(@_);
+        if ($client) {
+            XS::Framework::obj2hv($client);
+            bless $client, 'MyTest::TClient';
+        }
         return $client;
     }
 }

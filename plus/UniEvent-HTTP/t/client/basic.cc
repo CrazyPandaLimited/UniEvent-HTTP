@@ -123,3 +123,40 @@ TEST("compression") {
     CHECK(res->http_version == 11);
     CHECK(res->body.to_string() == "hello world");
 }
+
+TEST("accept-encoding") {
+    AsyncTest test(1000, 1);
+    ClientPair p(test.loop);
+    p.server->enable_echo();
+
+    SECTION("gzip by default") {
+        auto req = Request::Builder()
+            .method(Request::Method::POST)
+            .uri("/")
+            .build();
+
+        p.server->request_event.add([&](auto& req){
+            test.happens();
+            auto sa = p.server->listeners().front()->sockaddr();
+            CHECK(req->headers.get("Accept-Encoding") == "gzip");
+        });
+        p.client->get_response("/");
+    }
+
+    SECTION("gzip can be turned off") {
+        auto req = Request::Builder()
+            .method(Request::Method::POST)
+            .uri("/")
+            .allow_compression(compression::IDENTITY)
+            .build();
+
+        CHECK(req->compression_prefs != static_cast<std::uint8_t>(compression::IDENTITY));
+
+        p.server->request_event.add([&](auto& req){
+            test.happens();
+            auto sa = p.server->listeners().front()->sockaddr();
+            CHECK(!req->headers.has("Accept-Encoding"));
+        });
+        p.client->get_response(req);
+    }
+}

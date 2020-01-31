@@ -2,6 +2,7 @@
 #include "Client.h"
 #include <set>
 #include <unordered_map>
+#include <deque>
 
 namespace panda { namespace unievent { namespace http {
 
@@ -9,13 +10,15 @@ struct Pool;
 using PoolSP = iptr<Pool>;
 
 struct Pool : Refcnt {
-    static constexpr const uint64_t DEFAULT_IDLE_TIMEOUT = 60000; // [ms]
+    static constexpr const uint32_t DEFAULT_IDLE_TIMEOUT = 60000; // [ms]
+    static constexpr const uint32_t DEFAULT_MAX_CONNECTIONS = 10; // max active connections per host:port
 
     struct IFactory { virtual ClientSP new_client (Pool*) = 0; };
 
     struct Config {
-        uint32_t  idle_timeout = DEFAULT_IDLE_TIMEOUT;
-        IFactory* factory      = nullptr;
+        uint32_t  max_connections = DEFAULT_MAX_CONNECTIONS;
+        uint32_t  idle_timeout    = DEFAULT_IDLE_TIMEOUT;
+        IFactory* factory         = nullptr;
         Config () {}
     };
 
@@ -31,14 +34,7 @@ struct Pool : Refcnt {
     ~Pool ();
 
     const LoopSP& loop () const { return _loop; }
-
-    ClientSP get (const NetLoc&);
-    ClientSP get (const string& host, uint16_t port) { return get(NetLoc{host, port}); }
-
-    void request (const RequestSP& req) {
-        req->check();
-        get(req->netloc())->request(req);
-    }
+    ClientSP request (const RequestSP& req);
 
     uint32_t idle_timeout () const { return _idle_timeout; }
     void     idle_timeout (uint32_t);
@@ -55,6 +51,7 @@ private:
     struct NetLocList {
         std::set<ClientSP> free;
         std::set<ClientSP> busy;
+        std::deque<RequestSP> queue;
     };
 
     struct Hash {
@@ -78,6 +75,7 @@ private:
     LoopSP    _loop;
     TimerSP   _idle_timer;
     uint32_t  _idle_timeout;
+    uint32_t  _max_connections;
     Clients   _clients;
     IFactory* _factory;
 

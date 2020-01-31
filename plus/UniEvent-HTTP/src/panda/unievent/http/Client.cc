@@ -66,7 +66,10 @@ void Client::request (const RequestSP& request) {
         "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36 UniEvent-HTTP/1.0"
     );
 
-    if (!request->headers.has("Accept-Encoding")) request->headers.add("Accept-Encoding", "gzip");
+    using namespace panda::protocol::http;
+    if (request->compression_prefs == static_cast<std::uint8_t>(compression::IDENTITY) && !request->headers.has("Accept-Encoding")) {
+        request->allow_compression(compression::GZIP);
+    }
 
     auto data = request->to_vector();
     _parser.set_context_request(request);
@@ -220,7 +223,6 @@ void Client::drop_connection () {
 }
 
 void Client::finish_request (const std::error_code& _err) {
-    if (_pool) _pool->putback(this);
     auto req = std::move(_request);
     auto res = std::move(_response);
 
@@ -239,6 +241,8 @@ void Client::finish_request (const std::error_code& _err) {
         req->_timer->event_listener(nullptr);
         req->_timer->stop();
     }
+
+    if (_pool) _pool->putback(this);
 
     req->partial_event(req, res, err);
     req->response_event(req, res, err);
