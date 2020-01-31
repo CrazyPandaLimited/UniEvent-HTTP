@@ -103,6 +103,22 @@ TEST("close instead of response") {
     CHECK(err); // various depending on if ssl in use or not
 }
 
+TEST("non-null response even for earliest errors") {
+    AsyncTest test(1000, 1);
+    TClientSP client = new TClient(test.loop);
+
+    auto req = Request::Builder().uri("https://ya.ru").build();
+    client->request(req);
+
+    req->response_event.add([&](auto, auto& res, auto& err) {
+        test.happens();
+        CHECK(err);
+        CHECK(res);
+    });
+
+    req->cancel();
+}
+
 TEST("compression") {
     AsyncTest test(1000);
     ClientPair p(test.loop);
