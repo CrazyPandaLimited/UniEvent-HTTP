@@ -43,7 +43,7 @@ ClientSP Pool::request (const RequestSP& req) {
     // no clients to host, create a busy one
     if (it == _clients.end()) {
         client = new_client();
-        _clients.emplace(netloc, NetLocList{{}, {client}});
+        _clients.emplace(netloc, NetLocList{{}, {client}, {}});
     }
     // reuse client from free to busy
     else if (!it->second.free.empty()) {
