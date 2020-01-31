@@ -32,8 +32,7 @@ void Client::request (const RequestSP& request) {
     if (_request) throw HttpError("client supports only one request at a time");
     if (request->_client) throw HttpError("request is already in progress");
     request->check();
-    panda_log_debug("request " << request->uri->to_string());
-    panda_log_verbose_debug("\n" << request->to_string());
+    panda_log_verbose_debug("request " << request->to_string());
 
     request->_client = this;
     if (!request->uri->scheme()) request->uri->scheme("http");
@@ -49,7 +48,7 @@ void Client::request (const RequestSP& request) {
     auto netloc = request->netloc();
 
     if (!connected() || _netloc.host != netloc.host || _netloc.port != netloc.port) {
-        panda_log_debug("connecting to " << netloc);
+        panda_log_verbose_debug("connecting to " << netloc);
         if (connected()) drop_connection();
         auto need_secure = request->uri->secure();
         if (need_secure != Tcp::is_secure()) {
@@ -91,7 +90,7 @@ void Client::send_final_chunk (const RequestSP& req) {
 
 void Client::cancel (const std::error_code& err) {
     if (!_request) return;
-    panda_log_debug("cancel with err = " << err);
+    panda_log_verbose_debug("cancel with err = " << err);
     _parser.reset();
 
     if (_in_redirect) _redirect_canceled = true;
@@ -149,7 +148,7 @@ void Client::on_read (string& buf, const CodeError& err) {
 }
 
 void Client::analyze_request () {
-    panda_log_debug("analyze, code = " << _response->code);
+    panda_log_verbose_debug("analyze, code = " << _response->code);
 
     if (_response->code == 100) {
         _request->continue_event(_request);
@@ -246,7 +245,7 @@ void Client::finish_request (const std::error_code& _err) {
 }
 
 void Client::on_eof () {
-    panda_log_debug("got eof");
+    panda_log_verbose_debug("got eof");
     if (!_request) {
         Tcp::reset();
         return;
