@@ -16,6 +16,11 @@ for (my $i = 0; $i < 30000; $i++) {
     for (1..10) { my $pool = UE::HTTP::Pool->new; }
     UE::Loop->default_loop->run_nowait;
     
+    {
+        my $loop = UE::Loop->new;
+        for (1..3) { my $pool = UE::HTTP::Pool->new($loop); }
+    }
+    
     $measure = BSD::Resource::getrusage()->{"maxrss"} if $i == 10000;
 }
 
