@@ -10,6 +10,9 @@ using panda::unievent::TimerSP;
 
 bool secure = false;
 
+string active_scheme() { return string(secure ? "https" : "http"); }
+
+
 int TServer::dcnt;
 int TClient::dcnt;
 
@@ -120,6 +123,26 @@ std::error_code TClient::get_error (const string& uri, Headers&& headers, Body&&
     auto b = Request::Builder().uri(uri).headers(std::move(headers)).body(std::move(body));
     if (chunked) b.chunked();
     return get_error(b.build());
+}
+
+TClientSP TPool::request (const RequestSP& req) {
+    TClientSP client = dynamic_pointer_cast<TClient>(Pool::request(req));
+    return client;
+}
+
+std::vector<ResponseSP> TPool::await_responses(std::vector<RequestSP>& reqs) {
+    std::vector<ResponseSP> r;
+    for(auto& req: reqs) {
+        req->response_event.add([&r,&reqs, this](auto, auto& res, auto& err){
+            if (err) throw err;
+            r.emplace_back(res);
+            if (r.size() == reqs.size()) {
+                loop()->stop();
+            }
+        });
+    }
+    loop()->run();
+    return r;
 }
 
 ClientPair::ClientPair (const LoopSP& loop) {

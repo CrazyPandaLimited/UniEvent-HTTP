@@ -24,6 +24,8 @@ namespace compression = panda::protocol::http::compression;
 
 extern bool secure;
 
+string active_scheme();
+
 static auto fail_cb = [](auto...){ FAIL(); };
 
 struct TServer : Server {
@@ -69,8 +71,8 @@ using TClientSP = iptr<TClient>;
 struct TPool : Pool {
     using Pool::Pool;
 
-    TClientSP get (const NetLoc& nl)                  { return dynamic_pointer_cast<TClient>(Pool::get(nl)); }
-    TClientSP get (const string& host, uint16_t port) { return dynamic_pointer_cast<TClient>(Pool::get(host, port)); }
+    TClientSP request (const RequestSP& req);
+    std::vector<ResponseSP> await_responses(std::vector<RequestSP>& reqs);
 
 protected:
     ClientSP new_client () override { return new TClient(this); }

@@ -14,22 +14,25 @@ subtest "reusing connection" => sub {
     $srv->autorespond(new UE::HTTP::ServerResponse({code => 200}));
     $srv->autorespond(new UE::HTTP::ServerResponse({code => 200}));
 
-    my $c = $pool->get($srv->sockaddr->ip, $srv->sockaddr->port);
-    $c->{sa} = $srv->sockaddr;
+    my $uri = "http://".$srv->location.'/';
+    my $req = UniEvent::HTTP::Request->new({uri => $uri});
+    my $c = $pool->request($req);
 
+    ok $c;
     is $pool->size, 1;
     is $pool->nbusy, 1;
 
-    my $res = $c->get_response({uri => "/"});
+    my $res = $c->await_response($req);
     is $res->code, 200;
 
-    my $c2 = $pool->get($srv->sockaddr->ip, $srv->sockaddr->port);
+    my $req2 = UniEvent::HTTP::Request->new({uri => $uri});
+    my $c2 = $pool->request($req);
     is $c, $c2;
 
     is $pool->size, 1;
     is $pool->nbusy, 1;
 
-    $res = $c->get_response({uri => "/"});
+    my $res = $c->await_response($req);
     is $res->code, 200;
 };
 

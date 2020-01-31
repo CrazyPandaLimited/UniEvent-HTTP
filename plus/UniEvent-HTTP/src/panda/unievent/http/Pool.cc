@@ -5,7 +5,7 @@ namespace panda { namespace unievent { namespace http {
 static thread_local std::vector<PoolSP> s_instances;
 thread_local std::vector<PoolSP>* Pool::_instances = &s_instances;
 
-Pool::Pool (const LoopSP& loop, Config cfg) : _loop(loop), _factory(cfg.factory) {
+Pool::Pool (const LoopSP& loop, Config cfg) : _loop(loop), _max_connections(cfg.max_connections), _factory(cfg.factory)  {
     idle_timeout(cfg.idle_timeout);
 }
 
@@ -33,39 +33,59 @@ void Pool::idle_timeout (uint32_t val) {
     _idle_timer->start(val >= 1000 ? 1000 : val);
 }
 
-ClientSP Pool::get (const NetLoc& netloc) {
-    auto pos = _clients.find(netloc);
+ClientSP Pool::request (const RequestSP& req) {
+    req->check();
+    ClientSP client;
 
-    if (pos == _clients.end()) { // no clients to host, create a busy one
-        ClientSP client = new_client();
+    auto netloc = req->netloc();
+    auto it = _clients.find(netloc);
+
+    // no clients to host, create a busy one
+    if (it == _clients.end()) {
+        client = new_client();
         _clients.emplace(netloc, NetLocList{{}, {client}});
-        return client;
+    }
+    // reuse client from free to busy
+    else if (!it->second.free.empty()) {
+        auto free_pos = it->second.free.begin();
+        client = *free_pos;
+        it->second.free.erase(free_pos);
+        it->second.busy.insert(client);
+    }
+    // all clients are busy -> create new client, if limit is not hit
+    else if (it->second.busy.size() < _max_connections) {
+        client = new_client();
+        it->second.busy.insert(client);
+    }
+    // just enqueue the request
+    else {
+        it->second.queue.emplace_back(req);
     }
 
-    if (pos->second.free.empty()) { // all clients are busy -> create new client
-        //TODO: limit connections?
-        ClientSP client = new_client();
-        pos->second.busy.insert(client);
-        return client;
-    }
+    if (client) { client->request(req); }
 
-    // move client from free to busy
-    auto free_pos = pos->second.free.begin();
-    auto client = *free_pos;
-    pos->second.free.erase(free_pos);
-    pos->second.busy.insert(client);
     return client;
 }
 
+
 void Pool::putback (const ClientSP& client) {
-    auto pos = _clients.find(client->last_netloc());
-    assert(pos != _clients.end());
+    auto it = _clients.find(client->last_netloc());
+    assert(it != _clients.end());
+    auto& queue = it->second.queue;
+    // process the next requests (if any) on the same client
+    if (queue.size()) {
+        auto req = queue.front();
+        queue.pop_front();
+        client->request(req);
+    }
+    // mark connection as free
+    else {
+        auto busy_pos = it->second.busy.find(client);
+        assert(busy_pos != it->second.busy.end());
 
-    auto busy_pos = pos->second.busy.find(client);
-    assert(busy_pos != pos->second.busy.end());
-
-    pos->second.busy.erase(busy_pos);
-    pos->second.free.insert(client);
+        it->second.busy.erase(busy_pos);
+        it->second.free.insert(client);
+    }
 }
 
 void Pool::check_inactivity () {

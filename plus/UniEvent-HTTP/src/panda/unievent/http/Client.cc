@@ -224,7 +224,6 @@ void Client::drop_connection () {
 }
 
 void Client::finish_request (const std::error_code& _err) {
-    if (_pool) _pool->putback(this);
     auto req = std::move(_request);
     auto res = std::move(_response);
 
@@ -243,6 +242,8 @@ void Client::finish_request (const std::error_code& _err) {
         req->_timer->event_listener(nullptr);
         req->_timer->stop();
     }
+
+    if (_pool) _pool->putback(this);
 
     req->partial_event(req, res, err);
     req->response_event(req, res, err);
