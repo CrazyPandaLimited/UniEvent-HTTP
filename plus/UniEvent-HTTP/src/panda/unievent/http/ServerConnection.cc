@@ -28,6 +28,7 @@ protocol::http::RequestSP ServerConnection::new_request () {
 
 void ServerConnection::on_read (string& buf, const CodeError& err) {
     ServerSP holdsrv = server; // protect against user loosing all server refs in one of the callbacks
+    panda_log_verbose_debug("recv: \n" << buf);
 
     if (err) {
         if (idle_timer) idle_timer->stop();
@@ -75,7 +76,7 @@ void ServerConnection::on_read (string& buf, const CodeError& err) {
             // if request is non-KA or non-KA response is already started, stop receiving any further requests
             if (req->_finish_on_receive) finish_request();
             else if (closing || !req->keep_alive()) {
-                read_stop();
+                read_ignore();
                 break; // skip parsing possible rest of the buffer
             }
         }
@@ -114,8 +115,8 @@ void ServerConnection::write_next_response () {
         closing = true;
 
         // stop accepting further requests if this request is fully received.
-        // if not, we'll continue receiving current request until it's done (read_stop() will be called later by on_read() because closing==true)
-        if (req->is_done()) read_stop();
+        // if not, we'll continue receiving current request until it's done (read_ignore() will be called later by on_read() because closing==true)
+        if (req->is_done()) read_ignore();
 
         if (requests.size() > 1) { // drop all pipelined requests
             requests.pop_front();
@@ -274,7 +275,7 @@ ServerResponseSP ServerConnection::default_error_response (int code) {
 
 void ServerConnection::request_error (const ServerRequestSP& req, const std::error_code& err) {
     auto hold = req; // in case of respond in _event that remove req from requests
-    read_stop();
+    read_ignore();
     if (req->_partial) req->partial_event(req, err);
     else               server->error_event(req, err);
 
