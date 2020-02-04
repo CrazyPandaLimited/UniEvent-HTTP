@@ -2,8 +2,11 @@
 #include "Client.h"
 #include <ostream>
 #include <panda/log.h>
+#include <panda/unievent/socks.h>
 
 namespace panda { namespace unievent { namespace http {
+
+using namespace panda::unievent::socks;
 
 static inline bool is_redirect (int code) {
     switch (code) {
@@ -51,11 +54,22 @@ void Client::request (const RequestSP& request) {
     if (!connected() || _netloc.host != netloc.host || _netloc.port != netloc.port) {
         panda_log_debug("connecting to " << netloc);
         if (connected()) drop_connection();
-        if (Tcp::is_secure()) Tcp::no_ssl();
+        filters().clear();
+
         if (request->uri->secure()) {
             if (request->ssl_ctx) Tcp::use_ssl(request->ssl_ctx);
             else                  Tcp::use_ssl();
         }
+
+        if (request->proxy) {
+            auto uri = request->proxy;
+            if (uri->scheme() == "socks5") {
+                SocksSP socks = new Socks(uri->host(), uri->port(), uri->user(), uri->password());
+                use_socks(this, socks);
+            }
+            else throw HttpError("client supports only socks5 protocol for proxy");
+        }
+
         _netloc = std::move(netloc);
         connect(_netloc.host, _netloc.port);
     }

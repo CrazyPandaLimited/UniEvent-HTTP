@@ -41,6 +41,7 @@ struct Request : protocol::http::Request {
     CallbackDispatcher<redirect_fptr> redirect_event;
     CallbackDispatcher<continue_fptr> continue_event;
     SSL_CTX*                          ssl_ctx           = nullptr;
+    URISP                             proxy;
 
     Request () {}
 
@@ -108,6 +109,11 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder, RequestS
 
     Builder& ssl_ctx (SSL_CTX* ctx) {
         _message->ssl_ctx = ctx;
+        return *this;
+    }
+
+    Builder& proxy (const URISP& proxy) {
+        _message->proxy = proxy;
         return *this;
     }
 };
