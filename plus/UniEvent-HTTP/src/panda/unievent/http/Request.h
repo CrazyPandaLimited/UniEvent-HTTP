@@ -3,6 +3,7 @@
 #include "Error.h"
 #include "Response.h"
 #include <panda/unievent/Timer.h>
+#include <panda/unievent/Stream.h> // SSL_CTX
 #include <panda/CallbackDispatcher.h>
 
 namespace panda { namespace unievent { namespace http {
@@ -39,6 +40,7 @@ struct Request : protocol::http::Request {
     CallbackDispatcher<partial_fptr>  partial_event;
     CallbackDispatcher<redirect_fptr> redirect_event;
     CallbackDispatcher<continue_fptr> continue_event;
+    SSL_CTX*                          ssl_ctx           = nullptr;
 
     Request () {}
 
@@ -101,6 +103,11 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder, RequestS
 
     Builder& redirection_limit (uint16_t redirection_limit) {
         _message->redirection_limit = redirection_limit;
+        return *this;
+    }
+
+    Builder& ssl_ctx (SSL_CTX* ctx) {
+        _message->ssl_ctx = ctx;
         return *this;
     }
 };

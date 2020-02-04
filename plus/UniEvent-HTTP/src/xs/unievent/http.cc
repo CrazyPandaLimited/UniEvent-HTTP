@@ -14,6 +14,7 @@ void fill (Request* req, const Hash& h) {
     if ((v  = h.fetch("timeout")))           req->timeout = (double)v * 1000;
     if ((v  = h.fetch("follow_redirect")))   req->follow_redirect = v;
     if ((v  = h.fetch("redirection_limit"))) req->redirection_limit = v;
+    if ((sv = h.fetch("ssl_ctx")))           req->ssl_ctx = xs::in<SSL_CTX*>(sv);
 }
 
 void fill (ServerResponse* res, const Hash& h) {

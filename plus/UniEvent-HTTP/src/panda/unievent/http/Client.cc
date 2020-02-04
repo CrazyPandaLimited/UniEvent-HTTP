@@ -51,10 +51,10 @@ void Client::request (const RequestSP& request) {
     if (!connected() || _netloc.host != netloc.host || _netloc.port != netloc.port) {
         panda_log_debug("connecting to " << netloc);
         if (connected()) drop_connection();
-        auto need_secure = request->uri->secure();
-        if (need_secure != Tcp::is_secure()) {
-            if (need_secure) Tcp::use_ssl();
-            else             Tcp::no_ssl();
+        if (Tcp::is_secure()) Tcp::no_ssl();
+        if (request->uri->secure()) {
+            if (request->ssl_ctx) Tcp::use_ssl(request->ssl_ctx);
+            else                  Tcp::use_ssl();
         }
         _netloc = std::move(netloc);
         connect(_netloc.host, _netloc.port);
