@@ -23,7 +23,7 @@ static inline bool is_redirect (int code) {
     return false;
 }
 
-Client::Client (const LoopSP& loop) : Tcp(loop), _netloc({"", 0}) {
+Client::Client (const LoopSP& loop) : Tcp(loop), _netloc({"", 0, nullptr, {}}) {
     Tcp::event_listener(this);
 }
 
@@ -51,7 +51,7 @@ void Client::request (const RequestSP& request) {
 
     auto netloc = request->netloc();
 
-    if (!connected() || _netloc.host != netloc.host || _netloc.port != netloc.port) {
+    if (!connected() || _netloc != netloc) {
         panda_log_debug("connecting to " << netloc);
         if (connected()) drop_connection();
         filters().clear();

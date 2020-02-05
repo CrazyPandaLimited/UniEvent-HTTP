@@ -13,9 +13,14 @@ struct Request; using RequestSP = iptr<Request>;
 
 struct NetLoc {
     string   host;
-    uint16_t port = 0;
+    uint16_t port    = 0;
+    SSL_CTX* ssl_ctx = nullptr;
+    URISP    proxy;
 
-    bool operator== (const NetLoc& other) const { return host == other.host && port == other.port; }
+    bool operator== (const NetLoc& other) const {
+        return host == other.host && port == other.port && ssl_ctx == other.ssl_ctx && proxy == other.proxy;
+    }
+    bool operator!= (const NetLoc& other) const { return !operator==(other); }
 };
 std::ostream& operator<< (std::ostream& os, const NetLoc& h);
 
@@ -66,7 +71,7 @@ private:
     ClientSP _client; // holds client when active
     TimerSP  _timer;
 
-    NetLoc netloc () const { return { uri->host(), uri->port() }; }
+    NetLoc netloc () const { return { uri->host(), uri->port(), ssl_ctx, proxy }; }
 
     void check () const {
         if (!uri) throw HttpError("request must have uri");
