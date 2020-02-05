@@ -33,6 +33,7 @@ TServerSP make_server (const LoopSP& loop, Server::Config cfg) {
     loc.host = "127.0.0.1";
     if (secure) loc.ssl_ctx = get_ssl_ctx();
     cfg.locations.push_back(loc);
+    cfg.tcp_nodelay = true;
     server->configure(cfg);
 
     server->run();
@@ -76,6 +77,7 @@ NetLoc TServer::netloc () const {
 }
 
 void TClient::request (const RequestSP& req) {
+    req->tcp_nodelay = true;
     if (sa) {
         req->uri->host(sa.ip());
         req->uri->port(sa.port());

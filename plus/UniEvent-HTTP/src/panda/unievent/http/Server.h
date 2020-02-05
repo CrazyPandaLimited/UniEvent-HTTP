@@ -32,6 +32,7 @@ struct Server : Refcnt, private IStreamSelfListener {
         uint32_t              idle_timeout     = DEFAULT_IDLE_TIMEOUT;     // max idle time connection before it is dropped [ms], 0 = unlimited
         size_t                max_headers_size = DEFAULT_MAX_HEADERS_SIZE; // max size from the start of request to end of headers, 0 = unlimited
         size_t                max_body_size    = DEFAULT_MAX_BODY_SIZE;    // 0 = unlimited
+        bool                  tcp_nodelay      = false;
     };
 
     using Listeners    = std::vector<TcpSP>;

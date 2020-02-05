@@ -13,6 +13,7 @@ void fill (Request* req, const Hash& h) {
     if ((sv = h.fetch("continue_callback"))) req->continue_event.add(xs::in<Request::continue_fn>(sv));
     if ((v  = h.fetch("timeout")))           req->timeout = (double)v * 1000;
     if ((v  = h.fetch("follow_redirect")))   req->follow_redirect = v;
+    if ((v  = h.fetch("tcp_nodelay")))       req->tcp_nodelay = v.is_true();
     if ((v  = h.fetch("redirection_limit"))) req->redirection_limit = v;
     if ((sv = h.fetch("ssl_ctx")))           req->ssl_ctx = xs::in<SSL_CTX*>(sv);
     if ((sv = h.fetch("proxy")))             req->proxy = xs::in<URISP>(sv);
@@ -38,6 +39,7 @@ void fill (Server::Config& cfg, const Hash& h) {
     if ((v  = h.fetch("idle_timeout")))     cfg.idle_timeout     = (double)v * 1000;
     if ((v  = h.fetch("max_headers_size"))) cfg.max_headers_size = v;
     if ((v  = h.fetch("max_body_size")))    cfg.max_body_size    = v;
+    if ((v  = h.fetch("tcp_nodelay")))      cfg.tcp_nodelay      = v.is_true();
 }
 
 void fill (Pool::Config& cfg, const Hash& h) {
