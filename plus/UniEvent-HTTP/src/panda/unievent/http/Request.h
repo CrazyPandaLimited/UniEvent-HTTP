@@ -3,6 +3,7 @@
 #include "Error.h"
 #include "Response.h"
 #include <panda/unievent/Timer.h>
+#include <panda/unievent/Stream.h> // SSL_CTX
 #include <panda/CallbackDispatcher.h>
 
 namespace panda { namespace unievent { namespace http {
@@ -12,9 +13,14 @@ struct Request; using RequestSP = iptr<Request>;
 
 struct NetLoc {
     string   host;
-    uint16_t port = 0;
+    uint16_t port    = 0;
+    SSL_CTX* ssl_ctx = nullptr;
+    URISP    proxy;
 
-    bool operator== (const NetLoc& other) const { return host == other.host && port == other.port; }
+    bool operator== (const NetLoc& other) const {
+        return host == other.host && port == other.port && ssl_ctx == other.ssl_ctx && proxy == other.proxy;
+    }
+    bool operator!= (const NetLoc& other) const { return !operator==(other); }
 };
 std::ostream& operator<< (std::ostream& os, const NetLoc& h);
 
@@ -39,6 +45,8 @@ struct Request : protocol::http::Request {
     CallbackDispatcher<partial_fptr>  partial_event;
     CallbackDispatcher<redirect_fptr> redirect_event;
     CallbackDispatcher<continue_fptr> continue_event;
+    SSL_CTX*                          ssl_ctx           = nullptr;
+    URISP                             proxy;
 
     Request () {}
 
@@ -63,7 +71,7 @@ private:
     ClientSP _client; // holds client when active
     TimerSP  _timer;
 
-    NetLoc netloc () const { return { uri->host(), uri->port() }; }
+    NetLoc netloc () const { return { uri->host(), uri->port(), ssl_ctx, proxy }; }
 
     void check () const {
         if (!uri) throw HttpError("request must have uri");
@@ -101,6 +109,16 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder, RequestS
 
     Builder& redirection_limit (uint16_t redirection_limit) {
         _message->redirection_limit = redirection_limit;
+        return *this;
+    }
+
+    Builder& ssl_ctx (SSL_CTX* ctx) {
+        _message->ssl_ctx = ctx;
+        return *this;
+    }
+
+    Builder& proxy (const URISP& proxy) {
+        _message->proxy = proxy;
         return *this;
     }
 };

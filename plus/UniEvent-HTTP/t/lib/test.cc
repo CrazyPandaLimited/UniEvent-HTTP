@@ -72,7 +72,7 @@ string TServer::location () const {
 }
 
 NetLoc TServer::netloc () const {
-    return { sockaddr().ip(), sockaddr().port() };
+    return { sockaddr().ip(), sockaddr().port(), nullptr, {} };
 }
 
 void TClient::request (const RequestSP& req) {

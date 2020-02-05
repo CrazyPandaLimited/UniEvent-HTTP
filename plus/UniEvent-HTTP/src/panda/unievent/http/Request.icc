@@ -1,5 +1,6 @@
 #include "Request.h"
 #include "Client.h"
+#include <ostream>
 
 namespace panda { namespace unievent { namespace http {
 
