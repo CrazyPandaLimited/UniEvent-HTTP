@@ -75,6 +75,7 @@ StreamSP Server::create_connection (const StreamSP&) {
 
 ServerConnectionSP Server::new_connection (uint64_t id, const ServerConnection::Config& conf) {
     ServerConnectionSP conn = new ServerConnection(this, id, conf);
+    if (_conf.tcp_nodelay) conn->set_nodelay(true);
     return conn;
 }
 

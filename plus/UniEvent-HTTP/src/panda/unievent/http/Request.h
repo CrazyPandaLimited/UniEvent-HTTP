@@ -40,6 +40,7 @@ struct Request : protocol::http::Request {
 
     uint64_t                          timeout           = DEFAULT_TIMEOUT;
     bool                              follow_redirect   = true;
+    bool                              tcp_nodelay       = false;
     uint16_t                          redirection_limit = DEFAULT_REDIRECTION_LIMIT;
     CallbackDispatcher<response_fptr> response_event;
     CallbackDispatcher<partial_fptr>  partial_event;

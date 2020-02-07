@@ -69,6 +69,7 @@ void Client::request (const RequestSP& request) {
             else throw HttpError("client supports only socks5 protocol for proxy");
         }
 
+        if (request->tcp_nodelay) set_nodelay(true);
         _netloc = std::move(netloc);
         connect(_netloc.host, _netloc.port);
     }

@@ -72,6 +72,7 @@ sub make_server {
     my $server = new MyTest::TServer($loop);
     $cfg ||= {};
     $cfg->{locations} = [{host => "127.0.0.1"}];
+    $cfg->{tcp_nodelay} = 1;
     $server->configure($cfg);
     $server->run;
     return $server;
@@ -224,6 +225,7 @@ sub make_server {
     
     sub request {
         my ($self, $req) = @_;
+        $self->set_nodelay(1);
         if (my $sa = $self->{sa}) {
             $req->uri->host($sa->ip);
             $req->uri->port($sa->port);
