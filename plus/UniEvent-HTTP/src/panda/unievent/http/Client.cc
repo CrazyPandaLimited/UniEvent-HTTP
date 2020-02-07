@@ -35,7 +35,7 @@ void Client::request (const RequestSP& request) {
     if (_request) throw HttpError("client supports only one request at a time");
     if (request->_client) throw HttpError("request is already in progress");
     request->check();
-    panda_log_verbose_debug("request " << request->to_string());
+    panda_log_verbose_debug("request:\n" << request->to_string());
 
     request->_client = this;
     if (!request->uri->scheme()) request->uri->scheme("http");
