@@ -219,6 +219,7 @@ void Client::analyze_request () {
 
         if (_pool && (netloc.host != _netloc.host || netloc.port != _netloc.port)) {
             panda_log_verbose_debug("using pool");
+            _last_activity_time = loop()->now();
             _pool->putback(this);
             Tcp::weak(true);
             _pool->request(req);
@@ -258,6 +259,7 @@ void Client::finish_request (const std::error_code& _err) {
         req->_timer->stop();
     }
 
+    _last_activity_time = loop()->now();
     if (_pool) _pool->putback(this);
 
     if (!res) res = static_pointer_cast<Response>(req->new_response()); // ensure we pass non-null response even for earliest errors

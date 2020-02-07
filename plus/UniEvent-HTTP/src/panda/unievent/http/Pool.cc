@@ -1,4 +1,5 @@
 #include "Pool.h"
+#include <panda/log.h>
 
 namespace panda { namespace unievent { namespace http {
 
@@ -89,11 +90,15 @@ void Pool::putback (const ClientSP& client) {
 }
 
 void Pool::check_inactivity () {
+    panda_log_verbose_debug("now = " << _loop->now() << " tmt = " << _idle_timeout);
     auto remove_time = _loop->now() - _idle_timeout;
     for (auto it = _clients.begin(); it != _clients.end();) {
         auto& list = it->second.free;
         for (auto it = list.begin(); it != list.end();) {
-            if ((*it)->last_activity_time() < remove_time) it = list.erase(it);
+            if ((*it)->last_activity_time() < remove_time) {
+                panda_log_verbose_debug("removing inactive connection last activity = " << (*it)->last_activity_time());
+                it = list.erase(it);
+            }
             else ++it;
         }
         if (list.empty() && it->second.busy.empty()) it = _clients.erase(it);
