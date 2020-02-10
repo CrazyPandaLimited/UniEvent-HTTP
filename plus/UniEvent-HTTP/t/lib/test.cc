@@ -4,6 +4,7 @@
 #include <openssl/ssl.h>
 #include <openssl/conf.h>
 #include <openssl/engine.h>
+#include <iostream>
 
 using panda::unievent::Timer;
 using panda::unievent::TimerSP;
@@ -16,22 +17,13 @@ string active_scheme() { return string(secure ? "https" : "http"); }
 int TServer::dcnt;
 int TClient::dcnt;
 
-SSL_CTX* get_ssl_ctx () {
-    static SSL_CTX* ctx = nullptr;
-    if (ctx) return ctx;
-    ctx = SSL_CTX_new(SSLv23_server_method());
-    SSL_CTX_use_certificate_file(ctx, "t/cert/cert.pem", SSL_FILETYPE_PEM);
-    SSL_CTX_use_PrivateKey_file(ctx, "t/cert/key.pem", SSL_FILETYPE_PEM);
-    SSL_CTX_check_private_key(ctx);
-    return ctx;
-}
-
 TServerSP make_server (const LoopSP& loop, Server::Config cfg) {
     TServerSP server = new TServer(loop);
 
     Server::Location loc;
     loc.host = "127.0.0.1";
-    if (secure) loc.ssl_ctx = get_ssl_ctx();
+    SslHolder ssl_ctx;
+    if (secure) { ssl_ctx = TServer::get_context("ca"); loc.ssl_ctx = ssl_ctx.get(); }
     cfg.locations.push_back(loc);
     cfg.tcp_nodelay = true;
     server->configure(cfg);
@@ -74,6 +66,25 @@ string TServer::location () const {
 
 NetLoc TServer::netloc () const {
     return { sockaddr().ip(), sockaddr().port(), nullptr, {} };
+}
+
+SslHolder TServer::get_context(string cert_name) {
+    auto ctx = SSL_CTX_new(SSLv23_server_method());
+    SslHolder r(ctx, [](auto* ctx){ SSL_CTX_free(ctx); });
+    string path("t/cert");
+    string cert = path + "/" + cert_name + ".pem";
+    string key = path + "/" + cert_name + ".key";
+    int err;
+
+    err = SSL_CTX_use_certificate_file(ctx, cert.c_str(), SSL_FILETYPE_PEM);
+    assert(err);
+
+    err = SSL_CTX_use_PrivateKey_file(ctx, key.c_str(), SSL_FILETYPE_PEM);
+    assert(err);
+
+    err = SSL_CTX_check_private_key(ctx);
+    assert(err);
+    return r;
 }
 
 void TClient::request (const RequestSP& req) {
@@ -127,6 +138,34 @@ std::error_code TClient::get_error (const string& uri, Headers&& headers, Body&&
     return get_error(b.build());
 }
 
+SslHolder TClient::get_context(string cert_name, const string& ca_name) {
+    auto ctx = SSL_CTX_new(SSLv23_client_method());
+    SslHolder r(ctx, [](auto* ctx){ SSL_CTX_free(ctx); });
+    string path("t/cert");
+    string ca = path + "/" + ca_name + ".pem";
+    string cert = path + "/" + cert_name + ".pem";
+    string key = path + "/" + cert_name + ".key";
+    int err;
+
+    err = SSL_CTX_load_verify_locations(ctx, ca.c_str(), nullptr);
+    assert(err);
+
+    err = SSL_CTX_use_certificate_file(ctx, cert.c_str(), SSL_FILETYPE_PEM);
+    assert(err);
+
+    err = SSL_CTX_use_PrivateKey_file(ctx, key.c_str(), SSL_FILETYPE_PEM);
+    assert(err);
+
+    SSL_CTX_check_private_key(ctx);
+    assert(err);
+
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
+    SSL_CTX_set_verify_depth(ctx, 4);
+
+    return r;
+}
+
+
 TClientSP TPool::request (const RequestSP& req) {
     TClientSP client = dynamic_pointer_cast<TClient>(Pool::request(req));
     return client;
@@ -157,7 +196,8 @@ ServerPair::ServerPair (const LoopSP& loop, Server::Config cfg) {
     server = make_server(loop, cfg);
 
     conn = new Tcp(loop);
-    if (secure) conn->use_ssl();
+    SslHolder ssl;
+    if (secure) { ssl = TClient::get_context("01-alice"); conn->use_ssl(ssl.get()); }
     conn->connect_event.add([](auto& conn, auto& err, auto){ if (err) throw err; conn->loop()->stop(); });
     conn->connect(server->listeners().front()->sockaddr());
     loop->run();

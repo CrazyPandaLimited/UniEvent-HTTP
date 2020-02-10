@@ -4,6 +4,8 @@
 #include <panda/unievent/http.h>
 #include <panda/unievent/http/Server.h>
 #include <panda/unievent/test/AsyncTest.h>
+#include <memory>
+#include <functional>
 
 using namespace panda;
 using panda::unievent::Tcp;
@@ -28,6 +30,8 @@ string active_scheme();
 
 static auto fail_cb = [](auto...){ FAIL(); };
 
+using SslHolder = std::unique_ptr<SSL_CTX, std::function<void(SSL_CTX*)>>;
+
 struct TServer : Server {
     static int dcnt;
 
@@ -37,6 +41,8 @@ struct TServer : Server {
     void   autorespond (const ServerResponseSP&);
     string location    () const;
     NetLoc netloc      () const;
+
+    static SslHolder get_context(string cert_name = "ca");
 
     ~TServer () { ++dcnt; }
 
@@ -61,6 +67,8 @@ struct TClient : Client {
 
     std::error_code get_error (const RequestSP& req);
     std::error_code get_error (const string& uri, Headers&& = {}, Body&& = {}, bool chunked = false);
+
+    static SslHolder get_context(string cert_name, const string& ca_name = "ca");
 
     ~TClient () { ++dcnt; }
 

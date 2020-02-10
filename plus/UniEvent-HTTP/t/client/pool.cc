@@ -238,7 +238,7 @@ TEST("http_request") {
     auto srv = make_server(test.loop);
     srv->autorespond(new ServerResponse(200, Headers(), Body("hi")));
 
-    auto uristr = (secure ? string("https://") : string("http://")) + srv->location() + '/';
+    auto uristr = active_scheme()+ string("://") + srv->location() + '/';
     auto req = Request::Builder().uri(uristr).build();
     req->response_event.add([&](auto, auto res, auto err) {
         CHECK_FALSE(err);
@@ -254,6 +254,72 @@ TEST("http_request") {
     CHECK(pool->nbusy() == 1);
 
     test.run();
+}
+
+TEST("SSL certificate nuances") {
+    if (!secure) { return; }
+
+    AsyncTest test(1000, 3);
+    auto srv = make_server(test.loop);
+    srv->autorespond(new ServerResponse(200, Headers(), Body("hi")));
+    srv->autorespond(new ServerResponse(200, Headers(), Body("hi")));
+    srv->autorespond(new ServerResponse(200, Headers(), Body("hi")));
+    auto cert1 = TClient::get_context("01-alice");
+    auto cert2 = TClient::get_context("02-bob");
+    TPool p(test.loop);
+
+    TClientSP c1, c2, c3;
+    auto uristr = active_scheme()+ string("://") + srv->location() + '/';
+    auto req1 = Request::Builder().uri(uristr).ssl_ctx(cert1.get()).build();
+    {
+        c1 = p.request(req1);
+        REQUIRE(c1);
+        c1->connect_event.add([&](auto...){ test.happens(); });
+
+        auto reqs1 = std::vector<RequestSP>{req1};
+        auto res1 = p.await_responses(reqs1);
+
+        REQUIRE(res1.size() == 1);
+        CHECK(res1[0]->code == 200);
+
+        CHECK(p.size() == 1);
+        CHECK(p.nbusy() == 0);
+    }
+
+    {   //different client certificate
+        auto req2 = Request::Builder().uri(uristr).ssl_ctx(cert2.get()).build();
+        c2 = p.request(req2);
+        REQUIRE(c2);
+        REQUIRE(c1 != c2);
+        c2->connect_event.add([&](auto...){ test.happens(); });
+
+        auto reqs2 = std::vector<RequestSP>{req2};
+        auto res2 = p.await_responses(reqs2);
+
+        REQUIRE(res2.size() == 1);
+        CHECK(res2[0]->code == 200);
+
+        CHECK(p.size() == 2);
+        CHECK(p.nbusy() == 0);
+    }
+
+    {   // no client certificate
+        auto req3 = Request::Builder().uri(uristr).build();
+        c3 = p.request(req3);
+        REQUIRE(c3);
+        REQUIRE(c3 != c2);
+        REQUIRE(c3 != c1);
+        c3->connect_event.add([&](auto...){ test.happens(); });
+
+        auto reqs3 = std::vector<RequestSP>{req3};
+        auto res3 = p.await_responses(reqs3);
+
+        REQUIRE(res3.size() == 1);
+        CHECK(res3[0]->code == 200);
+
+        CHECK(p.size() == 3);
+        CHECK(p.nbusy() == 0);
+    }
 }
 
 TEST("request/client continue to work fine after pool is unreferenced") {
