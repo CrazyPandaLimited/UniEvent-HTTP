@@ -84,16 +84,16 @@ TEST("if user's response says <close> then don't give a fuck what request says")
 TEST("idle timeout before any requests") {
     AsyncTest test(1000);
     Server::Config cfg;
-    cfg.idle_timeout = 10;
+    cfg.idle_timeout = 50;
     ServerPair p(test.loop, cfg);
-    CHECK(!p.wait_eof(5));
+    CHECK(!p.wait_eof(25));
     CHECK(p.wait_eof(50));
 }
 
 TEST("idle timeout during and after request") {
     AsyncTest test(1000);
     Server::Config cfg;
-    cfg.idle_timeout = 10;
+    cfg.idle_timeout = 50;
 
     ServerPair p(test.loop, cfg);
     TimerSP t = new Timer(test.loop);
@@ -102,12 +102,12 @@ TEST("idle timeout during and after request") {
         t->event.add([&, req](auto){
             req->respond(new ServerResponse(200, Headers(), Body("hello world")));
         });
-        t->once(15); // longer that idle timeout, it should not break connection during active request
+        t->once(60); // longer that idle timeout, it should not break connection during active request
     });
 
     auto res = p.get_response("GET / HTTP/1.1\r\n\r\n");
     CHECK(res->body.to_string() == "hello world");
 
-    CHECK(!p.wait_eof(5)); // after active request finishes we have 10ms again, so no disconnects for at least 5ms
-    CHECK(p.wait_eof(50)); // and soon we are disconnected
+    CHECK(!p.wait_eof(25)); // after active request finishes we have 50ms again, so no disconnects for at least 25ms
+    CHECK(p.wait_eof(50));
 }
