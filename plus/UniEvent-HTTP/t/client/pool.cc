@@ -320,6 +320,15 @@ TEST("SSL certificate nuances") {
         CHECK(p.size() == 3);
         CHECK(p.nbusy() == 0);
     }
+
+    { // with proxy, but the same cert as c1
+        auto proxy = new_proxy(test.loop);
+        auto req = Request::Builder().uri(uristr).ssl_ctx(cert1.get()).proxy(proxy.url).build();
+        auto c4 = p.request(req);
+        REQUIRE(c4 != c1);
+        REQUIRE(c4 != c2);
+        REQUIRE(c4 != c3);
+    }
 }
 
 TEST("request/client continue to work fine after pool is unreferenced") {
@@ -389,4 +398,74 @@ TEST("connection queuing") {
 
     CHECK(p.size() == 2);
     CHECK(p.nbusy() == 0);
+}
+
+TEST("proxies using") {
+    AsyncTest test(1000, 3);
+    auto srv = make_server(test.loop);
+    srv->autorespond(new ServerResponse(200));
+    srv->autorespond(new ServerResponse(200));
+    srv->autorespond(new ServerResponse(200));
+    TPool p(test.loop);
+
+    TClientSP c1, c2, c3;
+    auto p1 = new_proxy(test.loop), p2 = new_proxy(test.loop);
+    REQUIRE(p1.url != p2.url);
+    auto uristr = active_scheme()+ string("://") + srv->location() + '/';
+    auto req1 = Request::Builder().uri(uristr).proxy(p1.url).build();
+    {
+        c1 = p.request(req1);
+        REQUIRE(c1);
+
+        c1->connect_event.add([&](auto...){ test.happens(); });
+
+        auto reqs1 = std::vector<RequestSP>{req1};
+        auto res1 = p.await_responses(reqs1);
+
+        REQUIRE(res1.size() == 1);
+        CHECK(res1[0]->code == 200);
+
+        CHECK(p.size() == 1);
+        CHECK(p.nbusy() == 0);
+    }
+
+    {   //different proxy
+        auto req2 = Request::Builder().uri(uristr).proxy(p2.url).build();
+        c2 = p.request(req2);
+        REQUIRE(c2);
+        REQUIRE(c1 != c2);
+        c2->connect_event.add([&](auto...){ test.happens(); });
+
+        auto reqs2 = std::vector<RequestSP>{req2};
+        auto res2 = p.await_responses(reqs2);
+
+        REQUIRE(res2.size() == 1);
+        CHECK(res2[0]->code == 200);
+
+        CHECK(p.size() == 2);
+        CHECK(p.nbusy() == 0);
+    }
+
+    {   // no proxy
+        auto req3 = Request::Builder().uri(uristr).build();
+        c3 = p.request(req3);
+        REQUIRE(c3);
+        REQUIRE(c3 != c2);
+        REQUIRE(c3 != c1);
+        c3->connect_event.add([&](auto...){ test.happens(); });
+
+        auto reqs3 = std::vector<RequestSP>{req3};
+        auto res3 = p.await_responses(reqs3);
+
+        REQUIRE(res3.size() == 1);
+        CHECK(res3[0]->code == 200);
+
+        CHECK(p.size() == 3);
+        CHECK(p.nbusy() == 0);
+    }
+
+    { // same as client 1
+        auto c4 = p.request(req1);
+        CHECK(c4 == c1);
+    }
 }

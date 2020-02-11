@@ -87,12 +87,19 @@ protected:
 };
 using TPoolSP = iptr<TPool>;
 
+struct TProxy {
+    TcpSP server;
+    URISP url;
+};
+
+TProxy new_proxy(const LoopSP&, const net::SockAddr& sa = net::SockAddr::Inet4("127.0.0.1", 0));
 
 struct ClientPair {
     TServerSP server;
     TClientSP client;
+    TProxy proxy;
 
-    ClientPair (const LoopSP&);
+    ClientPair (const LoopSP&, bool with_proxy = false);
 };
 
 
