@@ -68,7 +68,7 @@ NetLoc TServer::netloc () const {
     return { sockaddr().ip(), sockaddr().port(), nullptr, {} };
 }
 
-SslHolder TServer::get_context(string cert_name) {
+SslHolder TServer::get_context (string cert_name) {
     auto ctx = SSL_CTX_new(SSLv23_server_method());
     SslHolder r(ctx, [](auto* ctx){ SSL_CTX_free(ctx); });
     string path("t/cert");
@@ -85,6 +85,15 @@ SslHolder TServer::get_context(string cert_name) {
     err = SSL_CTX_check_private_key(ctx);
     assert(err);
     return r;
+}
+
+string TServer::uri () const {
+    string uri = secure ? string("https://") : string("http://");
+    uri += sockaddr().ip();
+    uri += ":";
+    uri += to_string(sockaddr().port());
+    uri += "/";
+    return uri;
 }
 
 void TClient::request (const RequestSP& req) {
