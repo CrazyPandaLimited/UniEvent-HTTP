@@ -29,7 +29,7 @@ sub import {
     my ($class) = @_;
 
     my $caller = caller();
-    foreach my $sym_name (qw/variate_catch fail_cb/) {
+    foreach my $sym_name (qw/variate_catch fail_cb catch_run/) {
         no strict 'refs';
         *{"${caller}::$sym_name"} = \&{$sym_name};
     }

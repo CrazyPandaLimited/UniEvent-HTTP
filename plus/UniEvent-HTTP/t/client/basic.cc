@@ -174,3 +174,25 @@ TEST("accept-encoding") {
         p.client->get_response(req);
     }
 }
+
+TEST("request via proxy") {
+    AsyncTest test(1000, {"proxy-1", "proxy-2"});
+    ClientPair p(test.loop, true);
+    p.server->enable_echo();
+
+
+    p.proxy.server->connection_event.add([&](auto...){ test.happens("proxy-1"); });
+    auto req1 = Request::Builder().method(Request::Method::GET).uri("/").proxy(p.proxy.url).build();
+    auto res1 = p.client->get_response(req1);
+
+    CHECK(res1->code == 200);
+    CHECK(res1->http_version == 11);
+
+    auto proxy2 = new_proxy(test.loop);
+    proxy2.server->connection_event.add([&](auto...){ test.happens("proxy-2"); });
+    auto req2 = Request::Builder().method(Request::Method::GET).uri("/").proxy(proxy2.url).build();
+    auto res2 = p.client->get_response(req2);
+
+    CHECK(res2->code == 200);
+    CHECK(res2->http_version == 11);
+}

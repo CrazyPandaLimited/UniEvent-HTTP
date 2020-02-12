@@ -4,6 +4,8 @@
 #include <panda/unievent/http.h>
 #include <panda/unievent/http/Server.h>
 #include <panda/unievent/test/AsyncTest.h>
+#include <memory>
+#include <functional>
 
 using namespace panda;
 using panda::unievent::Tcp;
@@ -28,6 +30,8 @@ string active_scheme();
 
 static auto fail_cb = [](auto...){ FAIL(); };
 
+using SslHolder = std::unique_ptr<SSL_CTX, std::function<void(SSL_CTX*)>>;
+
 struct TServer : Server {
     static int dcnt;
 
@@ -37,6 +41,8 @@ struct TServer : Server {
     void   autorespond (const ServerResponseSP&);
     string location    () const;
     NetLoc netloc      () const;
+
+    static SslHolder get_context(string cert_name = "ca");
 
     ~TServer () { ++dcnt; }
 
@@ -62,6 +68,8 @@ struct TClient : Client {
     std::error_code get_error (const RequestSP& req);
     std::error_code get_error (const string& uri, Headers&& = {}, Body&& = {}, bool chunked = false);
 
+    static SslHolder get_context(string cert_name, const string& ca_name = "ca");
+
     ~TClient () { ++dcnt; }
 
     friend struct TPool;
@@ -79,12 +87,19 @@ protected:
 };
 using TPoolSP = iptr<TPool>;
 
+struct TProxy {
+    TcpSP server;
+    URISP url;
+};
+
+TProxy new_proxy(const LoopSP&, const net::SockAddr& sa = net::SockAddr::Inet4("127.0.0.1", 0));
 
 struct ClientPair {
     TServerSP server;
     TClientSP client;
+    TProxy proxy;
 
-    ClientPair (const LoopSP&);
+    ClientPair (const LoopSP&, bool with_proxy = false);
 };
 
 
