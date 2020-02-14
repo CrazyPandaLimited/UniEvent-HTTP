@@ -10,7 +10,11 @@ static thread_local Pool*  sync_pool;
 
 static bool _init () {
     #ifndef _WIN32
-    pthread_atfork(nullptr, nullptr, []{ sync_loop->handle_fork(); });
+    pthread_atfork(nullptr, nullptr, []{
+        if (sync_loop) {
+            sync_loop->handle_fork();
+        }
+    });
     #endif
     return true;
 }
