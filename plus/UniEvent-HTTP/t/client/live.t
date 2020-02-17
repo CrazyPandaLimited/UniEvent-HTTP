@@ -52,4 +52,10 @@ subtest "https" => sub {
     $loop->run;
 };
 
+subtest "sync simple get" => sub {
+    my ($body, $err) = UE::HTTP::http_get("https://ya.ru");
+    is $err, undef;
+    cmp_ok length($body), '>', 0, "body length = ".length($body);
+};
+
 done_testing();

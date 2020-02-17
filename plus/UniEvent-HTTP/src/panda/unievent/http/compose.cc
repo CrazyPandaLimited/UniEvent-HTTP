@@ -1,3 +1,4 @@
+#include "../http.icc"
 #include "Error.icc"
 #include "Request.icc"
 #include "ServerRequest.icc"

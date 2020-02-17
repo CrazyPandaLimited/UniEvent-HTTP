@@ -9,9 +9,11 @@
 
 using namespace panda;
 using panda::unievent::Tcp;
-using panda::unievent::Loop;
 using panda::unievent::TcpSP;
+using panda::unievent::Loop;
 using panda::unievent::LoopSP;
+using panda::unievent::Async;
+using panda::unievent::AsyncSP;
 using panda::unievent::Timer;
 using panda::unievent::TimerSP;
 using namespace panda::unievent::test;
@@ -41,6 +43,7 @@ struct TServer : Server {
     void   autorespond (const ServerResponseSP&);
     string location    () const;
     NetLoc netloc      () const;
+    string uri         () const;
 
     static SslHolder get_context(string cert_name = "ca");
 
