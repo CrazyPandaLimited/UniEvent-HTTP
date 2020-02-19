@@ -1,8 +1,10 @@
 #include "ServerConnection.h"
 #include "Server.h"
-#include <panda/log.h>
+#include "msg.h" // for uewslog
 
 namespace panda { namespace unievent { namespace http {
+
+static log::Module* panda_log_module = &uewslog;
 
 ServerConnection::ServerConnection (Server* server, uint64_t id, const Config& conf)
     : Tcp(server->loop()), server(server), _id(id), factory(conf.factory), parser(this), idle_timeout(conf.idle_timeout)
@@ -28,11 +30,11 @@ protocol::http::RequestSP ServerConnection::new_request () {
 
 void ServerConnection::on_read (string& buf, const CodeError& err) {
     ServerSP holdsrv = server; // protect against user loosing all server refs in one of the callbacks
-    panda_log_verbose_debug("recv: \n" << buf);
+    panda_log_debug("recv: \n" << buf);
 
     if (err) {
         if (idle_timer) idle_timer->stop();
-        panda_log_info("read error: " << err.whats());
+        panda_log_notice("read error: " << err.whats());
         if (!requests.size() || requests.back()->is_done()) requests.emplace_back(static_pointer_cast<ServerRequest>(new_request()));
         requests.back()->_is_done = true;
         return request_error(requests.back(), errc::parse_error);
@@ -47,16 +49,16 @@ void ServerConnection::on_read (string& buf, const CodeError& err) {
         req->_is_done = result.state >= State::done;
 
         if (result.error) {
-            panda_log_info("parser error: " << result.error);
+            panda_log_notice("parser error: " << result.error);
             return request_error(req, errc::parse_error);
         }
 
         if (result.state <= State::headers) {
-            panda_log_verbose_debug("got part, headers not finished");
+            panda_log_debug("got part, headers not finished");
             return;
         }
 
-        panda_log_verbose_debug("got part, body finished = " << req->is_done());
+        panda_log_debug("got part, body finished = " << req->is_done());
 
         if (!req->_routed) {
             req->_routed = true;
@@ -85,7 +87,7 @@ void ServerConnection::on_read (string& buf, const CodeError& err) {
 
 void ServerConnection::respond (const ServerRequestSP& req, const ServerResponseSP& res) {
     assert(req->_connection == this);
-    panda_log_debug("respond " << req << "," << res << "," << requests.front());
+    panda_log_info("respond " << req << "," << res << "," << requests.front());
     if (req->_response) throw HttpError("double response for request given");
     req->_response = res;
     res->_request = req;
@@ -106,7 +108,7 @@ void ServerConnection::write_next_response () {
         res->body.parts.clear();
     }
 
-    panda_log_verbose_debug("sending <<\n" << res->to_string(req));
+    panda_log_debug("sending <<\n" << res->to_string(req));
 
     auto v = res->to_vector(req);
     write(v.begin(), v.end());
@@ -207,12 +209,12 @@ void ServerConnection::cleanup_request () {
 
 void ServerConnection::on_write (const CodeError& err, const WriteRequestSP&) {
     if (!err) return;
-    panda_log_info("write error: " << err.whats());
+    panda_log_notice("write error: " << err.whats());
     close(make_error_code(std::errc::connection_reset), false);
 }
 
 void ServerConnection::on_eof () {
-    panda_log_debug("eof");
+    panda_log_info("eof");
     close(make_error_code(std::errc::connection_reset), true);
 }
 
@@ -233,7 +235,7 @@ void ServerConnection::drop_requests (const std::error_code& err) {
 }
 
 void ServerConnection::close (const std::error_code& err, bool soft) {
-    panda_log_info("close: " << err);
+    panda_log_notice("close: " << err);
     event_listener(nullptr);
     soft ? disconnect() : reset();
     drop_requests(err);
