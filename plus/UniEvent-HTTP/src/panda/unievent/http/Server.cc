@@ -39,7 +39,7 @@ void Server::run () {
 void Server::stop () {
     if (!_running) return;
     stop_listening();
-    panda_log_debug("stopping " << _connections.size() << " connections");
+    panda_mlog_notice(uewslog, "stopping HTTP server with " << _connections.size() << " connections");
     while (_connections.size()) _connections.begin()->second->close(errc::server_stopping);
     _running = false;
 }
@@ -59,7 +59,7 @@ void Server::start_listening () {
         lst->listen(loc.backlog);
         if (loc.ssl_ctx) lst->use_ssl(loc.ssl_ctx);
 
-        panda_log_info("listening: " << (loc.ssl_ctx ? "https://" : "http://") << loc.host << ":" << lst->sockaddr().port());
+        panda_mlog_notice(uewslog, "listening: " << (loc.ssl_ctx ? "https://" : "http://") << loc.host << ":" << lst->sockaddr().port());
         _listeners.push_back(lst);
     }
 }
@@ -84,7 +84,7 @@ void Server::on_connection (const StreamSP& stream, const CodeError& err) {
     auto connection = dynamic_pointer_cast<ServerConnection>(stream);
     assert(connection);
     _connections[connection->id()] = connection;
-    panda_log_debug("client connected to " << connection->sockaddr() << ", id=" << connection->id() << ", total connections: " << _connections.size());
+    panda_mlog_info(uewslog, "client connected to " << connection->sockaddr() << ", id=" << connection->id() << ", total connections: " << _connections.size());
 }
 
 const string& Server::date_header_now () {
