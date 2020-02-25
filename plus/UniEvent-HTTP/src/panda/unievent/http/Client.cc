@@ -6,6 +6,8 @@
 
 namespace panda { namespace unievent { namespace http {
 
+static log::Module* panda_log_module = &uewslog;
+
 using namespace panda::unievent::socks;
 
 static inline bool is_redirect (int code) {
@@ -35,7 +37,7 @@ void Client::request (const RequestSP& request) {
     if (_request) throw HttpError("client supports only one request at a time");
     if (request->_client) throw HttpError("request is already in progress");
     request->check();
-    panda_log_verbose_debug("request:\n" << request->to_string());
+    panda_log_info("request:\n" << request->to_string());
 
     request->_client = this;
     if (!request->uri->scheme()) request->uri->scheme("http");
@@ -51,7 +53,7 @@ void Client::request (const RequestSP& request) {
     auto netloc = request->netloc();
 
     if (!connected() || _netloc != netloc) {
-        panda_log_verbose_debug("connecting to " << netloc);
+        panda_log_info("connecting to " << netloc);
         if (connected()) drop_connection();
         filters().clear();
 
@@ -108,7 +110,7 @@ void Client::send_final_chunk (const RequestSP& req) {
 
 void Client::cancel (const std::error_code& err) {
     if (!_request) return;
-    panda_log_verbose_debug("cancel with err = " << err);
+    panda_log_info("cancel with err = " << err);
     _parser.reset();
 
     if (_in_redirect) _redirect_canceled = true;
@@ -133,11 +135,11 @@ void Client::on_timer (const TimerSP& t) {
 void Client::on_read (string& buf, const CodeError& err) {
     ClientSP hold = this;
     if (err) return cancel(errc::parse_error);
-    panda_log_verbose_debug("read:\n" << buf);
+    panda_log_debug("read:\n" << buf);
 
     while (buf) {
         if (!_parser.context_request()) {
-            panda_log_info("unexpected buffer: " << buf);
+            panda_log_notice("unexpected buffer: " << buf);
             drop_connection();
             break;
         }
@@ -149,12 +151,12 @@ void Client::on_read (string& buf, const CodeError& err) {
         if (result.error) return cancel(errc::parse_error);
 
         if (result.state <= State::headers) {
-            panda_log_verbose_debug("got part, headers not finished");
+            panda_log_debug("got part, headers not finished");
             return;
         }
 
         if (result.state != State::done) {
-            panda_log_verbose_debug("got part, body not finished");
+            panda_log_debug("got part, body not finished");
             if (_response->code == 100) continue;
             if (_request->follow_redirect && is_redirect(_response->code)) continue;
             _request->partial_event(_request, _response, {});
@@ -166,7 +168,7 @@ void Client::on_read (string& buf, const CodeError& err) {
 }
 
 void Client::analyze_request () {
-    panda_log_verbose_debug("analyze, code = " << _response->code);
+    panda_log_info("analyze, code = " << _response->code);
 
     if (_response->code == 100) {
         _request->continue_event(_request);
@@ -208,7 +210,7 @@ void Client::analyze_request () {
         _request->uri = uri;
         _request->headers.remove("Host"); // will be filled from new uri
         if (_response->code == 303) _request->method = Request::Method::GET;
-        panda_log_debug("following redirect: " << prev_uri->to_string() << " -> " << uri->to_string() << " (" << _request->_redirection_counter << " of " << _request->redirection_limit << ")");
+        panda_log_info("following redirect: " << prev_uri->to_string() << " -> " << uri->to_string() << " (" << _request->_redirection_counter << " of " << _request->redirection_limit << ")");
         auto netloc = _request->netloc();
 
         auto req = std::move(_request);
@@ -217,13 +219,13 @@ void Client::analyze_request () {
         if (!res->keep_alive()) Tcp::reset();
 
         if (_pool && (netloc.host != _netloc.host || netloc.port != _netloc.port)) {
-            panda_log_verbose_debug("using pool");
+            panda_log_debug("using pool");
             _last_activity_time = loop()->now();
             _pool->putback(this);
             Tcp::weak(true);
             _pool->request(req);
         } else {
-            panda_log_verbose_debug("using self again");
+            panda_log_debug("using self again");
             request(req);
         }
         return;
@@ -268,7 +270,7 @@ void Client::finish_request (const std::error_code& _err) {
 }
 
 void Client::on_eof () {
-    panda_log_verbose_debug("got eof");
+    panda_log_info("got eof");
     if (!_request) {
         Tcp::reset();
         return;
