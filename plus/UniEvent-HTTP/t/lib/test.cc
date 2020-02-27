@@ -18,7 +18,7 @@ static int64_t _time_mark;
 
 string active_scheme() { return string(secure ? "https" : "http"); }
 
-static int64_t get_time() {
+int64_t get_time () {
     using namespace std::chrono;
     return duration_cast< milliseconds >(steady_clock::now().time_since_epoch()).count();
 }
@@ -318,12 +318,11 @@ RawResponseSP ServerPair::get_response () {
             conn->loop()->stop();
         });
         conn->loop()->run();
-
         conn->read_event.remove_all();
         conn->eof_event.remove_all();
     }
 
-    if (!response_queue.size()) throw "no response";
+    if (!response_queue.size()) throw std::runtime_error("no response");
     auto ret = response_queue.front();
     response_queue.pop_front();
     return ret;

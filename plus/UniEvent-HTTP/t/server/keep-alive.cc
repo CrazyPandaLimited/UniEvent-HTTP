@@ -92,14 +92,15 @@ TEST("idle timeout before any requests") {
 }
 
 TEST("idle timeout during and after request") {
-    AsyncTest test(1000);
+    AsyncTest test(5000);
     Server::Config cfg;
     cfg.idle_timeout = 50;
-
     ServerPair p(test.loop, cfg);
     TimerSP t = new Timer(test.loop);
+    bool arrived = false;
 
     p.server->request_event.add([&](auto& req){
+        arrived = true;
         t->event.add([&, req](auto){
             time_mark();
             req->respond(new ServerResponse(200, Headers(), Body("hello world")));
@@ -107,8 +108,16 @@ TEST("idle timeout during and after request") {
         t->once(60); // longer that idle timeout, it should not break connection during active request
     });
 
-    auto res = p.get_response("GET / HTTP/1.1\r\n\r\n");
-    CHECK(res->body.to_string() == "hello world");
-    CHECK(p.wait_eof(1000));
+    try {
+        auto res = p.get_response("GET / HTTP/1.1\r\n\r\n");
+        CHECK(res->body.to_string() == "hello world");
+    } catch (const std::runtime_error& err) {
+        if (string(err.what()) == "no response" && !arrived) { // under high load request might have not been arrived in time
+            SUCCEED("server haven't received request in time");
+            return;
+        }
+        throw;
+    }
+    CHECK(p.wait_eof(4000));
     CHECK(time_elapsed() >= 50);
 }

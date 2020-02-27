@@ -38,8 +38,10 @@ sub import {
     }
 }
 
-sub time_mark    { $time_mark = Time::HiRes::time() }
-sub time_elapsed { return Time::HiRes::time() - $time_mark } 
+sub get_time { return Time::HiRes::clock_gettime(Time::HiRes::CLOCK_MONOTONIC()) }
+
+sub time_mark    { $time_mark = get_time() }
+sub time_elapsed { return get_time() - $time_mark } 
 
 sub variate {
     my $sub = pop;

@@ -34,6 +34,7 @@ static auto fail_cb = [](auto...){ FAIL(); };
 
 using SslHolder = std::unique_ptr<SSL_CTX, std::function<void(SSL_CTX*)>>;
 
+int64_t get_time     ();
 void    time_mark    ();
 int64_t time_elapsed ();
 
