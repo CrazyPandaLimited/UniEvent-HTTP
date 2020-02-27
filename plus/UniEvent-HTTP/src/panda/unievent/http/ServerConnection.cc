@@ -13,14 +13,16 @@ ServerConnection::ServerConnection (Server* server, uint64_t id, const Config& c
 
     parser.max_headers_size = conf.max_headers_size;
     parser.max_body_size    = conf.max_body_size;
+}
 
+void ServerConnection::start () {
     if (idle_timeout) {
         idle_timer = new Timer(server->loop());
         idle_timer->event.add([this](auto&){
             assert(!requests.size());
             close({}, true);
         });
-        idle_timer->once(conf.idle_timeout);
+        idle_timer->once(idle_timeout);
     }
 }
 
@@ -236,16 +238,20 @@ void ServerConnection::drop_requests (const std::error_code& err) {
 
 void ServerConnection::close (const std::error_code& err, bool soft) {
     panda_log_notice("close: " << err);
+    ServerConnectionSP hold = this;
+    (void)hold;
+
     event_listener(nullptr);
-    soft ? disconnect() : reset();
-    drop_requests(err);
 
     if (idle_timer) {
         idle_timer->stop();
         idle_timer = nullptr;
     }
 
-    server->remove(this); // after this line <this> is probably a junk
+    soft ? disconnect() : reset();
+    drop_requests(err);
+
+    server->remove(this);
 }
 
 ServerResponseSP ServerConnection::default_error_response (int code) {

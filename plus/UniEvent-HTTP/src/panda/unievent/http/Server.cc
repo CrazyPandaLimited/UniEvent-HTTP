@@ -84,6 +84,7 @@ void Server::on_connection (const StreamSP& stream, const CodeError& err) {
     auto connection = dynamic_pointer_cast<ServerConnection>(stream);
     assert(connection);
     _connections[connection->id()] = connection;
+    connection->start();
     panda_mlog_info(uewslog, "client connected to " << connection->sockaddr() << ", id=" << connection->id() << ", total connections: " << _connections.size());
 }
 

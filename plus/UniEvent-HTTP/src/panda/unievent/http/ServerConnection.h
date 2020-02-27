@@ -26,6 +26,7 @@ struct ServerConnection : Tcp, private ITcpSelfListener, private protocol::http:
 
     uint64_t id () const { return _id; }
 
+    void start ();
     void close (const std::error_code&, bool soft = false);
 
 private:

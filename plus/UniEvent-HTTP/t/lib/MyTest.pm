@@ -2,6 +2,7 @@ package MyTest;
 use 5.012;
 use warnings;
 use Test::More;
+use Time::HiRes();
 use Test::Catch;
 use UniEvent::HTTP;
 use Panda::Lib::Logger;
@@ -14,6 +15,8 @@ my %log_levels = (
     D  => LOG_DEBUG,
     I  => LOG_INFO,
 );
+
+my $time_mark = Time::HiRes::time();;
 
 if (defined(my $l = $log_levels{$ENV{LOG}||''})) {
     set_native_logger(sub {
@@ -29,11 +32,14 @@ sub import {
     my ($class) = @_;
 
     my $caller = caller();
-    foreach my $sym_name (qw/variate_catch fail_cb catch_run/) {
+    foreach my $sym_name (qw/variate_catch fail_cb catch_run time_mark time_elapsed/) {
         no strict 'refs';
         *{"${caller}::$sym_name"} = \&{$sym_name};
     }
 }
+
+sub time_mark    { $time_mark = Time::HiRes::time() }
+sub time_elapsed { return Time::HiRes::time() - $time_mark } 
 
 sub variate {
     my $sub = pop;

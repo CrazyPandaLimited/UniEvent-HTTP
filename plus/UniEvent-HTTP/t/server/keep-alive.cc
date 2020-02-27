@@ -85,9 +85,10 @@ TEST("idle timeout before any requests") {
     AsyncTest test(1000);
     Server::Config cfg;
     cfg.idle_timeout = 50;
+    time_mark();
     ServerPair p(test.loop, cfg);
-    CHECK(!p.wait_eof(25));
-    CHECK(p.wait_eof(50));
+    CHECK(p.wait_eof(1000));
+    CHECK(time_elapsed() >= 50);
 }
 
 TEST("idle timeout during and after request") {
@@ -100,6 +101,7 @@ TEST("idle timeout during and after request") {
 
     p.server->request_event.add([&](auto& req){
         t->event.add([&, req](auto){
+            time_mark();
             req->respond(new ServerResponse(200, Headers(), Body("hello world")));
         });
         t->once(60); // longer that idle timeout, it should not break connection during active request
@@ -107,7 +109,6 @@ TEST("idle timeout during and after request") {
 
     auto res = p.get_response("GET / HTTP/1.1\r\n\r\n");
     CHECK(res->body.to_string() == "hello world");
-
-    CHECK(!p.wait_eof(25)); // after active request finishes we have 50ms again, so no disconnects for at least 25ms
-    CHECK(p.wait_eof(50));
+    CHECK(p.wait_eof(1000));
+    CHECK(time_elapsed() >= 50);
 }

@@ -4,18 +4,27 @@
 #include <openssl/ssl.h>
 #include <openssl/conf.h>
 #include <openssl/engine.h>
+#include <chrono>
 #include <iostream>
 
 using panda::unievent::Timer;
 using panda::unievent::TimerSP;
 
 bool secure = false;
+int TServer::dcnt;
+int TClient::dcnt;
+
+static int64_t _time_mark;
 
 string active_scheme() { return string(secure ? "https" : "http"); }
 
+static int64_t get_time() {
+    using namespace std::chrono;
+    return duration_cast< milliseconds >(steady_clock::now().time_since_epoch()).count();
+}
 
-int TServer::dcnt;
-int TClient::dcnt;
+void    time_mark    () { _time_mark = get_time(); }
+int64_t time_elapsed () { return get_time() - _time_mark; }
 
 TServerSP make_server (const LoopSP& loop, Server::Config cfg) {
     TServerSP server = new TServer(loop);
@@ -302,7 +311,7 @@ RawResponseSP ServerPair::get_response () {
             if (response_queue.size()) conn->loop()->stop();
         });
         conn->eof_event.add([&, this](auto){
-            eof = true;
+            eof = get_time();
             auto result = parser.eof();
             if (result.error) throw result.error;
             if (result.response) response_queue.push_back(result.response);
@@ -320,7 +329,7 @@ RawResponseSP ServerPair::get_response () {
     return ret;
 }
 
-bool ServerPair::wait_eof (int tmt) {
+int64_t ServerPair::wait_eof (int tmt) {
     if (eof) return eof;
 
     TimerSP timer;
@@ -329,7 +338,7 @@ bool ServerPair::wait_eof (int tmt) {
     }, conn->loop());
 
     conn->eof_event.add([this](auto){
-        eof = true;
+        eof = get_time();
         conn->loop()->stop();
     });
 

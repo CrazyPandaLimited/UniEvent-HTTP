@@ -34,6 +34,9 @@ static auto fail_cb = [](auto...){ FAIL(); };
 
 using SslHolder = std::unique_ptr<SSL_CTX, std::function<void(SSL_CTX*)>>;
 
+void    time_mark    ();
+int64_t time_elapsed ();
+
 struct TServer : Server {
     static int dcnt;
 
@@ -118,12 +121,12 @@ struct ServerPair {
 
     RawResponseSP get_response ();
     RawResponseSP get_response (const string& s) { conn->write(s); return get_response(); }
-    bool          wait_eof     (int tmt = 0);
+    int64_t       wait_eof     (int tmt = 0);
 
 private:
     Parser       parser;
     RawResponses response_queue;
-    bool         eof = false;
+    int64_t      eof = 0;
 };
 
 
