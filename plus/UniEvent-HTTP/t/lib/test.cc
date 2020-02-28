@@ -26,6 +26,34 @@ int64_t get_time () {
 void    time_mark    () { _time_mark = get_time(); }
 int64_t time_elapsed () { return get_time() - _time_mark; }
 
+std::vector<ResponseSP> await_responses (const std::vector<RequestSP>& reqs, const LoopSP& loop) {
+    std::vector<ResponseSP> r;
+    for (auto& req : reqs) {
+        req->response_event.add([&](auto, auto& res, auto& err){
+            if (err) throw err;
+            r.emplace_back(res);
+            if (r.size() == reqs.size()) loop->stop();
+        });
+    }
+    loop->run();
+    return r;
+}
+
+ResponseSP await_any (const std::vector<RequestSP>& reqs, const LoopSP& loop) {
+    ResponseSP r;
+    for (auto& req : reqs) {
+        req->response_event.add([&](auto, auto& res, auto& err){
+            if (err) throw err;
+            r = res;
+            loop->stop();
+        });
+    }
+    loop->run();
+    return r;
+}
+
+ResponseSP await_response (const RequestSP& req, const LoopSP& loop) { return await_responses({req}, loop)[0]; } 
+
 TServerSP make_server (const LoopSP& loop, Server::Config cfg) {
     TServerSP server = new TServer(loop);
 
@@ -187,21 +215,6 @@ SslHolder TClient::get_context(string cert_name, const string& ca_name) {
 TClientSP TPool::request (const RequestSP& req) {
     TClientSP client = dynamic_pointer_cast<TClient>(Pool::request(req));
     return client;
-}
-
-std::vector<ResponseSP> TPool::await_responses(std::vector<RequestSP>& reqs) {
-    std::vector<ResponseSP> r;
-    for(auto& req: reqs) {
-        req->response_event.add([&r,&reqs, this](auto, auto& res, auto& err){
-            if (err) throw err;
-            r.emplace_back(res);
-            if (r.size() == reqs.size()) {
-                loop()->stop();
-            }
-        });
-    }
-    loop()->run();
-    return r;
 }
 
 static TcpSP make_socks_server (const LoopSP& loop, const net::SockAddr& sa) {

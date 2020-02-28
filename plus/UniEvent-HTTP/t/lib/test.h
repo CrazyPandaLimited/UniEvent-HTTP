@@ -38,6 +38,10 @@ int64_t get_time     ();
 void    time_mark    ();
 int64_t time_elapsed ();
 
+ResponseSP              await_response (const RequestSP&, const LoopSP&);
+std::vector<ResponseSP> await_responses(const std::vector<RequestSP>&, const LoopSP&);
+ResponseSP              await_any      (const std::vector<RequestSP>&, const LoopSP&);
+
 struct TServer : Server {
     static int dcnt;
 
@@ -87,7 +91,6 @@ struct TPool : Pool {
     using Pool::Pool;
 
     TClientSP request (const RequestSP& req);
-    std::vector<ResponseSP> await_responses(std::vector<RequestSP>& reqs);
 
 protected:
     ClientSP new_client () override { return new TClient(this); }
