@@ -17,6 +17,11 @@ void ServerRequest::redirect (const string& uri) {
     respond(new ServerResponse(302, Headers().location(uri)));
 }
 
+void ServerRequest::drop () {
+    if (!_connection || (_response && _response->completed())) return;
+    _connection->close(make_error_code(std::errc::operation_canceled));
+}
+
 ServerRequest::~ServerRequest () {
     // remove garbage from response in case if user holds response without request after response is finished
     if (_response) _response->_request = nullptr;
