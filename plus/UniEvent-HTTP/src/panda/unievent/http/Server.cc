@@ -79,7 +79,7 @@ ServerConnectionSP Server::new_connection (uint64_t id, const ServerConnection::
     return conn;
 }
 
-void Server::on_connection (const StreamSP& stream, const CodeError& err) {
+void Server::on_connection (const StreamSP& stream, const std::error_code& err) {
     if (err) return;
     auto connection = dynamic_pointer_cast<ServerConnection>(stream);
     assert(connection);

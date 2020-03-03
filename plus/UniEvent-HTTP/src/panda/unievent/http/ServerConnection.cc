@@ -30,13 +30,13 @@ protocol::http::RequestSP ServerConnection::new_request () {
     return factory ? factory->new_request(this) : ServerRequestSP(new ServerRequest(this));
 }
 
-void ServerConnection::on_read (string& buf, const CodeError& err) {
+void ServerConnection::on_read (string& buf, const std::error_code& err) {
     ServerSP holdsrv = server; // protect against user loosing all server refs in one of the callbacks
     panda_log_debug("recv: \n" << buf);
 
     if (err) {
         if (idle_timer) idle_timer->stop();
-        panda_log_notice("read error: " << err.whats());
+        panda_log_notice("read error: " << err);
         if (!requests.size() || requests.back()->is_done()) requests.emplace_back(static_pointer_cast<ServerRequest>(new_request()));
         requests.back()->_is_done = true;
         return request_error(requests.back(), errc::parse_error);
@@ -209,9 +209,9 @@ void ServerConnection::cleanup_request () {
     requests.pop_front();
 }
 
-void ServerConnection::on_write (const CodeError& err, const WriteRequestSP&) {
+void ServerConnection::on_write (const std::error_code& err, const WriteRequestSP&) {
     if (!err) return;
-    panda_log_notice("write error: " << err.whats());
+    panda_log_notice("write error: " << err);
     close(make_error_code(std::errc::connection_reset), false);
 }
 

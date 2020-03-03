@@ -37,9 +37,9 @@ private:
     bool           _in_redirect = false;
     bool           _redirect_canceled = false;
 
-    void on_connect (const CodeError&, const ConnectRequestSP&) override;
-    void on_write   (const CodeError&, const WriteRequestSP&) override;
-    void on_read    (string& buf, const CodeError& err) override;
+    void on_connect (const std::error_code&, const ConnectRequestSP&) override;
+    void on_write   (const std::error_code&, const WriteRequestSP&) override;
+    void on_read    (string& buf, const std::error_code& err) override;
     void on_timer   (const TimerSP&) override;
     void on_eof     () override;
 

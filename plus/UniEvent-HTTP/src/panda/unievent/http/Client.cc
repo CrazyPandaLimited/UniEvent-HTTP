@@ -119,12 +119,12 @@ void Client::cancel (const std::error_code& err) {
     finish_request(err);
 }
 
-void Client::on_connect (const CodeError& err, const ConnectRequestSP&) {
-    if (_request && err) cancel(err.code());
+void Client::on_connect (const std::error_code& err, const ConnectRequestSP&) {
+    if (_request && err) cancel(err);
 }
 
-void Client::on_write (const CodeError& err, const WriteRequestSP&) {
-    if (_request && err) cancel(err.code());
+void Client::on_write (const std::error_code& err, const WriteRequestSP&) {
+    if (_request && err) cancel(err);
 }
 
 void Client::on_timer (const TimerSP& t) {
@@ -133,7 +133,7 @@ void Client::on_timer (const TimerSP& t) {
     cancel(make_error_code(std::errc::timed_out));
 }
 
-void Client::on_read (string& buf, const CodeError& err) {
+void Client::on_read (string& buf, const std::error_code& err) {
     ClientSP hold = this;
     if (err) return cancel(errc::parse_error);
     panda_log_debug("read:\n" << buf);

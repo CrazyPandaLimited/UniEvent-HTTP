@@ -46,8 +46,8 @@ private:
 
     protocol::http::RequestSP new_request () override;
 
-    void on_read  (string&, const CodeError&) override;
-    void on_write (const CodeError&, const WriteRequestSP&) override;
+    void on_read  (string&, const std::error_code&) override;
+    void on_write (const std::error_code&, const WriteRequestSP&) override;
     void on_eof   () override;
 
     void request_error (const ServerRequestSP&, const std::error_code& err);

@@ -90,7 +90,7 @@ private:
 
     StreamSP create_connection (const StreamSP&) override;
 
-    void on_connection (const StreamSP&, const CodeError&) override;
+    void on_connection (const StreamSP&, const std::error_code&) override;
 
     void remove (const ServerConnectionSP& conn) {
         _connections.erase(conn->id());
