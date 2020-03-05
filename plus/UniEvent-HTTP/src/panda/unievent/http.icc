@@ -8,14 +8,14 @@ static thread_local struct {
 
 static thread_local Pool* sync_pool;
 
-expected<ResponseSP, std::error_code> http_request (const RequestSP& req, sync_t) {
+expected<ResponseSP, ErrorCode> http_request (const RequestSP& req, sync_t) {
     auto pool = sync_pool;
     if (!pool) {
         tls.sync_loop = new Loop();
         pool = sync_pool = Pool::instance(tls.sync_loop);
     }
     
-    expected<ResponseSP, std::error_code> ret;
+    expected<ResponseSP, ErrorCode> ret;
     req->response_event.add([&ret](auto&, auto& res, auto& err) {
         if (err) ret = make_unexpected(err);
         else     ret = res;
@@ -29,7 +29,7 @@ expected<ResponseSP, std::error_code> http_request (const RequestSP& req, sync_t
     return ret;
 }
 
-expected<string, std::error_code> http_get (const URISP& uri) {
+expected<string, ErrorCode> http_get (const URISP& uri) {
     auto req = Request::Builder().uri(uri).method(Request::Method::GET).build();
     return http_request(req, sync_t()).map([](const ResponseSP& res) {
         return res->body.to_string();

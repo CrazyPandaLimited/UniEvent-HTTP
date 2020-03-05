@@ -203,7 +203,7 @@ TEST("request parsing error") {
     p.server->error_event.add([&](auto& req, auto& err){
         test.happens();
         CHECK(req->headers.host() == "epta.ru");
-        CHECK(err == errc::parse_error);
+        CHECK(err == panda::protocol::http::errc::lexical_error);
         if (check_code != 400) req->respond(new ServerResponse(check_code));
     });
 

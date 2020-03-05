@@ -1,16 +1,18 @@
 #pragma once
 #include <system_error>
 #include <panda/exception.h>
+#include <panda/unievent/error.h>
 
 namespace panda { namespace unievent { namespace http {
 
 enum class errc {
-    parse_error = 1,
+    connect_error = 1,
     no_redirect_uri,
     redirection_limit,
     unexpected_redirect,
     transfer_aborted,
     server_stopping,
+    pipeline_canceled,
 };
 
 struct ErrorCategory : std::error_category {

@@ -164,8 +164,8 @@ ResponseSP TClient::get_response (const string& uri, Headers&& headers, Body&& b
     return get_response(b.build());
 }
 
-std::error_code TClient::get_error (const RequestSP& req) {
-    std::error_code error;
+ErrorCode TClient::get_error (const RequestSP& req) {
+    ErrorCode error;
 
     req->response_event.add([this, &error](auto, auto, auto& err){
         error = err;
@@ -178,7 +178,7 @@ std::error_code TClient::get_error (const RequestSP& req) {
     return error;
 }
 
-std::error_code TClient::get_error (const string& uri, Headers&& headers, Body&& body, bool chunked) {
+ErrorCode TClient::get_error (const string& uri, Headers&& headers, Body&& body, bool chunked) {
     auto b = Request::Builder().uri(uri).headers(std::move(headers)).body(std::move(body));
     if (chunked) b.chunked();
     return get_error(b.build());

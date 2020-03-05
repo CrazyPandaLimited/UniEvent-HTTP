@@ -1,5 +1,5 @@
 #pragma once
-#include "Error.h"
+#include "error.h"
 #include "Request.h"
 #include <panda/unievent/Tcp.h>
 #include <panda/protocol/http/ResponseParser.h>
@@ -16,7 +16,7 @@ struct Client : Tcp, private ITcpSelfListener, private ITimerListener {
     ~Client () { assert(!_request); }
 
     void request (const RequestSP&);
-    void cancel  (const std::error_code& = make_error_code(std::errc::operation_canceled));
+    void cancel  (const ErrorCode& = make_error_code(std::errc::operation_canceled));
 
     uint64_t      last_activity_time () const { return _last_activity_time; }
     const NetLoc& last_netloc        () const { return _netloc; }
@@ -37,9 +37,9 @@ private:
     bool           _in_redirect = false;
     bool           _redirect_canceled = false;
 
-    void on_connect (const std::error_code&, const ConnectRequestSP&) override;
-    void on_write   (const std::error_code&, const WriteRequestSP&) override;
-    void on_read    (string& buf, const std::error_code& err) override;
+    void on_connect (const ErrorCode&, const ConnectRequestSP&) override;
+    void on_write   (const ErrorCode&, const WriteRequestSP&) override;
+    void on_read    (string& buf, const ErrorCode& err) override;
     void on_timer   (const TimerSP&) override;
     void on_eof     () override;
 
@@ -48,7 +48,7 @@ private:
 
     void drop_connection ();
     void analyze_request ();
-    void finish_request  (const std::error_code&);
+    void finish_request  (const ErrorCode&);
 };
 
 }}}

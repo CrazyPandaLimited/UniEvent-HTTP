@@ -145,5 +145,5 @@ TEST("100-continue unexpected") {
     req->continue_event.add([&](auto) { test.happens(); });
 
     auto err = p.client->get_error(req);
-    CHECK(err == errc::parse_error);
+    CHECK(err == panda::protocol::http::errc::unexpected_continue);
 }

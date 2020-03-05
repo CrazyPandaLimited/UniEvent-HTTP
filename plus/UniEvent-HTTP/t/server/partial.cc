@@ -127,7 +127,7 @@ TEST("client disconnects or request error while in partial mode") {
                 test.happens();
                 if (send_junk) {
                     CHECK(req->is_done());
-                    CHECK(err == errc::parse_error);
+                    CHECK(err == panda::protocol::http::errc::lexical_error);
                 }
                 else {
                     CHECK(err == std::errc::connection_reset);

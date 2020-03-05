@@ -1,5 +1,5 @@
 #pragma once
-#include "Error.h"
+#include "error.h"
 #include "ServerConnection.h"
 #include <map>
 #include <iosfwd>
@@ -38,7 +38,7 @@ struct Server : Refcnt, private IStreamSelfListener {
     using Listeners    = std::vector<TcpSP>;
     using route_fptr   = void(const ServerRequestSP&);
     using request_fptr = ServerRequest::receive_fptr;
-    using error_fptr   = void(const ServerRequestSP&, const std::error_code&);
+    using error_fptr   = void(const ServerRequestSP&, const ErrorCode&);
     using route_fn     = function<route_fptr>;
     using request_fn   = ServerRequest::receive_fn;
     using error_fn     = function<error_fptr>;
@@ -90,7 +90,7 @@ private:
 
     StreamSP create_connection (const StreamSP&) override;
 
-    void on_connection (const StreamSP&, const std::error_code&) override;
+    void on_connection (const StreamSP&, const ErrorCode&) override;
 
     void remove (const ServerConnectionSP& conn) {
         _connections.erase(conn->id());

@@ -11,10 +11,10 @@ inline void http_request (const RequestSP& req, const LoopSP& loop = Loop::defau
     Pool::instance(loop)->request(req);
 }
 
-expected<ResponseSP, std::error_code> http_request (const RequestSP& req, sync_t);
+expected<ResponseSP, ErrorCode> http_request (const RequestSP& req, sync_t);
 
-expected<string, std::error_code> http_get (const URISP& uri);
+expected<string, ErrorCode> http_get (const URISP& uri);
 
-inline expected<string, std::error_code> http_get (const string& url) { return http_get(new URI(url)); }
+inline expected<string, ErrorCode> http_get (const string& url) { return http_get(new URI(url)); }
 
 }}}

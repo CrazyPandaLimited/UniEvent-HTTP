@@ -1,6 +1,6 @@
 #pragma once
 #include "msg.h"
-#include "Error.h"
+#include "error.h"
 #include "Response.h"
 #include <panda/unievent/Timer.h>
 #include <panda/unievent/Stream.h> // SSL_CTX
@@ -26,8 +26,8 @@ std::ostream& operator<< (std::ostream& os, const NetLoc& h);
 
 struct Request : protocol::http::Request {
     struct Builder;
-    using response_fptr = void(const RequestSP&, const ResponseSP&, const std::error_code&);
-    using partial_fptr  = void(const RequestSP&, const ResponseSP&, const std::error_code&);
+    using response_fptr = void(const RequestSP&, const ResponseSP&, const ErrorCode&);
+    using partial_fptr  = void(const RequestSP&, const ResponseSP&, const ErrorCode&);
     using redirect_fptr = void(const RequestSP&, const ResponseSP&, const URISP&);
     using continue_fptr = void(const RequestSP&);
     using response_fn   = function<response_fptr>;
@@ -58,7 +58,7 @@ struct Request : protocol::http::Request {
     void send_chunk        (const string& chunk);
     void send_final_chunk  ();
 
-    void cancel (const std::error_code& = make_error_code(std::errc::operation_canceled));
+    void cancel (const ErrorCode& = make_error_code(std::errc::operation_canceled));
 
 protected:
     protocol::http::ResponseSP new_response () const override { return new Response(); }

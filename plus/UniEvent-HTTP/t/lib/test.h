@@ -76,8 +76,8 @@ struct TClient : Client {
     ResponseSP get_response (const RequestSP& req);
     ResponseSP get_response (const string& uri, Headers&& = {}, Body&& = {}, bool chunked = false);
 
-    std::error_code get_error (const RequestSP& req);
-    std::error_code get_error (const string& uri, Headers&& = {}, Body&& = {}, bool chunked = false);
+    ErrorCode get_error (const RequestSP& req);
+    ErrorCode get_error (const string& uri, Headers&& = {}, Body&& = {}, bool chunked = false);
 
     static SslHolder get_context(string cert_name, const string& ca_name = "ca");
 

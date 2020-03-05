@@ -30,7 +30,7 @@ protocol::http::RequestSP ServerConnection::new_request () {
     return factory ? factory->new_request(this) : ServerRequestSP(new ServerRequest(this));
 }
 
-void ServerConnection::on_read (string& buf, const std::error_code& err) {
+void ServerConnection::on_read (string& buf, const ErrorCode& err) {
     ServerSP holdsrv = server; // protect against user loosing all server refs in one of the callbacks
     panda_log_debug("recv: \n" << buf);
 
@@ -39,7 +39,7 @@ void ServerConnection::on_read (string& buf, const std::error_code& err) {
         panda_log_notice("read error: " << err);
         if (!requests.size() || requests.back()->is_done()) requests.emplace_back(static_pointer_cast<ServerRequest>(new_request()));
         requests.back()->_is_done = true;
-        return request_error(requests.back(), errc::parse_error);
+        return request_error(requests.back(), err);
     }
 
     while (buf) {
@@ -52,7 +52,7 @@ void ServerConnection::on_read (string& buf, const std::error_code& err) {
 
         if (result.error) {
             panda_log_notice("parser error: " << result.error);
-            return request_error(req, errc::parse_error);
+            return request_error(req, result.error);
         }
 
         if (result.state <= State::headers) {
@@ -124,7 +124,7 @@ void ServerConnection::write_next_response () {
 
         if (requests.size() > 1) { // drop all pipelined requests
             requests.pop_front();
-            drop_requests(make_error_code(std::errc::connection_reset));
+            drop_requests(errc::pipeline_canceled);
             requests.push_front(req);
         }
     }
@@ -209,10 +209,10 @@ void ServerConnection::cleanup_request () {
     requests.pop_front();
 }
 
-void ServerConnection::on_write (const std::error_code& err, const WriteRequestSP&) {
+void ServerConnection::on_write (const ErrorCode& err, const WriteRequestSP&) {
     if (!err) return;
     panda_log_notice("write error: " << err);
-    close(make_error_code(std::errc::connection_reset), false);
+    close(err, false);
 }
 
 void ServerConnection::on_eof () {
@@ -220,7 +220,7 @@ void ServerConnection::on_eof () {
     close(make_error_code(std::errc::connection_reset), true);
 }
 
-void ServerConnection::drop_requests (const std::error_code& err) {
+void ServerConnection::drop_requests (const ErrorCode& err) {
     while (requests.size()) {
         auto req = requests.front();
         // remove request from pool first, because no one listen for responses,
@@ -236,7 +236,7 @@ void ServerConnection::drop_requests (const std::error_code& err) {
     }
 }
 
-void ServerConnection::close (const std::error_code& err, bool soft) {
+void ServerConnection::close (const ErrorCode& err, bool soft) {
     panda_log_notice("close: " << err);
     ServerConnectionSP hold = this;
     (void)hold;
@@ -281,7 +281,7 @@ ServerResponseSP ServerConnection::default_error_response (int code) {
     return res;
 }
 
-void ServerConnection::request_error (const ServerRequestSP& req, const std::error_code& err) {
+void ServerConnection::request_error (const ServerRequestSP& req, const ErrorCode& err) {
     auto hold = req; // in case of respond in _event that remove req from requests
     read_ignore();
     if (req->_partial) req->partial_event(req, err);
