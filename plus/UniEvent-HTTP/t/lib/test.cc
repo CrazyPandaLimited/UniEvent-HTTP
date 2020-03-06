@@ -4,18 +4,55 @@
 #include <openssl/ssl.h>
 #include <openssl/conf.h>
 #include <openssl/engine.h>
+#include <chrono>
 #include <iostream>
 
 using panda::unievent::Timer;
 using panda::unievent::TimerSP;
 
 bool secure = false;
+int TServer::dcnt;
+int TClient::dcnt;
+
+static int64_t _time_mark;
 
 string active_scheme() { return string(secure ? "https" : "http"); }
 
+int64_t get_time () {
+    using namespace std::chrono;
+    return duration_cast< milliseconds >(steady_clock::now().time_since_epoch()).count();
+}
 
-int TServer::dcnt;
-int TClient::dcnt;
+void    time_mark    () { _time_mark = get_time(); }
+int64_t time_elapsed () { return get_time() - _time_mark; }
+
+std::vector<ResponseSP> await_responses (const std::vector<RequestSP>& reqs, const LoopSP& loop) {
+    std::vector<ResponseSP> r;
+    for (auto& req : reqs) {
+        req->response_event.add([&](auto, auto& res, auto& err){
+            if (err) throw err;
+            r.emplace_back(res);
+            if (r.size() == reqs.size()) loop->stop();
+        });
+    }
+    loop->run();
+    return r;
+}
+
+ResponseSP await_any (const std::vector<RequestSP>& reqs, const LoopSP& loop) {
+    ResponseSP r;
+    for (auto& req : reqs) {
+        req->response_event.add([&](auto, auto& res, auto& err){
+            if (err) throw err;
+            r = res;
+            loop->stop();
+        });
+    }
+    loop->run();
+    return r;
+}
+
+ResponseSP await_response (const RequestSP& req, const LoopSP& loop) { return await_responses({req}, loop)[0]; } 
 
 TServerSP make_server (const LoopSP& loop, Server::Config cfg) {
     TServerSP server = new TServer(loop);
@@ -127,8 +164,8 @@ ResponseSP TClient::get_response (const string& uri, Headers&& headers, Body&& b
     return get_response(b.build());
 }
 
-std::error_code TClient::get_error (const RequestSP& req) {
-    std::error_code error;
+ErrorCode TClient::get_error (const RequestSP& req) {
+    ErrorCode error;
 
     req->response_event.add([this, &error](auto, auto, auto& err){
         error = err;
@@ -141,7 +178,7 @@ std::error_code TClient::get_error (const RequestSP& req) {
     return error;
 }
 
-std::error_code TClient::get_error (const string& uri, Headers&& headers, Body&& body, bool chunked) {
+ErrorCode TClient::get_error (const string& uri, Headers&& headers, Body&& body, bool chunked) {
     auto b = Request::Builder().uri(uri).headers(std::move(headers)).body(std::move(body));
     if (chunked) b.chunked();
     return get_error(b.build());
@@ -178,21 +215,6 @@ SslHolder TClient::get_context(string cert_name, const string& ca_name) {
 TClientSP TPool::request (const RequestSP& req) {
     TClientSP client = dynamic_pointer_cast<TClient>(Pool::request(req));
     return client;
-}
-
-std::vector<ResponseSP> TPool::await_responses(std::vector<RequestSP>& reqs) {
-    std::vector<ResponseSP> r;
-    for(auto& req: reqs) {
-        req->response_event.add([&r,&reqs, this](auto, auto& res, auto& err){
-            if (err) throw err;
-            r.emplace_back(res);
-            if (r.size() == reqs.size()) {
-                loop()->stop();
-            }
-        });
-    }
-    loop()->run();
-    return r;
 }
 
 static TcpSP make_socks_server (const LoopSP& loop, const net::SockAddr& sa) {
@@ -302,25 +324,24 @@ RawResponseSP ServerPair::get_response () {
             if (response_queue.size()) conn->loop()->stop();
         });
         conn->eof_event.add([&, this](auto){
-            eof = true;
+            eof = get_time();
             auto result = parser.eof();
             if (result.error) throw result.error;
             if (result.response) response_queue.push_back(result.response);
             conn->loop()->stop();
         });
         conn->loop()->run();
-
         conn->read_event.remove_all();
         conn->eof_event.remove_all();
     }
 
-    if (!response_queue.size()) throw "no response";
+    if (!response_queue.size()) throw std::runtime_error("no response");
     auto ret = response_queue.front();
     response_queue.pop_front();
     return ret;
 }
 
-bool ServerPair::wait_eof (int tmt) {
+int64_t ServerPair::wait_eof (int tmt) {
     if (eof) return eof;
 
     TimerSP timer;
@@ -329,7 +350,7 @@ bool ServerPair::wait_eof (int tmt) {
     }, conn->loop());
 
     conn->eof_event.add([this](auto){
-        eof = true;
+        eof = get_time();
         conn->loop()->stop();
     });
 

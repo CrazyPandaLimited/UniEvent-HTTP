@@ -22,10 +22,8 @@ TEST("reusing connection") {
 
     c->connect_event.add([&](auto...){ test.happens(); }); // should connect only once
 
-    auto req1 =std::vector<RequestSP>{req};
-    auto res = p.await_responses(req1);
-    REQUIRE(res.size() == 1);
-    CHECK(res[0]->code == 200);
+    auto res = await_response(req, test.loop);
+    CHECK(res->code == 200);
 
     CHECK(p.size() == 1);
     CHECK(p.nbusy() == 0);
@@ -36,9 +34,8 @@ TEST("reusing connection") {
     CHECK(p.size() == 1);
     CHECK(p.nbusy() == 1);
 
-    res = p.await_responses(req1);
-    REQUIRE(res.size() == 1);
-    CHECK(res[0]->code == 200);
+    res = await_response(req, test.loop);
+    CHECK(res->code == 200);
 }
 
 TEST("reusing connection after c=close") {
@@ -55,11 +52,9 @@ TEST("reusing connection after c=close") {
 
     c->connect_event.add([&](auto...){ test.happens(); }); // should connect twice
 
-    auto req1 =std::vector<RequestSP>{req};
-    auto res = p.await_responses(req1);
-    REQUIRE(res.size() == 1);
-    CHECK(res[0]->code == 200);
-    CHECK_FALSE(res[0]->keep_alive());
+    auto res = await_response(req, test.loop);
+    CHECK(res->code == 200);
+    CHECK_FALSE(res->keep_alive());
 
     CHECK(p.size() == 1);
     CHECK(p.nbusy() == 0);
@@ -70,9 +65,8 @@ TEST("reusing connection after c=close") {
     CHECK(p.size() == 1);
     CHECK(p.nbusy() == 1);
 
-    res = p.await_responses(req1);
-    REQUIRE(res.size() == 1);
-    CHECK(res[0]->code == 200);
+    res = await_response(req, test.loop);
+    CHECK(res->code == 200);
 }
 
 
@@ -90,10 +84,8 @@ TEST("different servers") {
     REQUIRE(c);
     c->connect_event.add([&](auto...){ test.happens(); });
 
-    auto reqs1 =std::vector<RequestSP>{req1};
-    auto res = p.await_responses(reqs1);
-    REQUIRE(res.size() == 1);
-    CHECK(res[0]->code == 200);
+    auto res = await_response(req1, test.loop);
+    CHECK(res->code == 200);
 
     CHECK(p.size() == 1);
     CHECK(p.nbusy() == 0);
@@ -107,10 +99,8 @@ TEST("different servers") {
     CHECK(p.size() == 2);
     CHECK(p.nbusy() == 1);
 
-    auto reqs2 =std::vector<RequestSP>{req2};
-    res = p.await_responses(reqs2);
-    REQUIRE(res.size() == 1);
-    CHECK(res[0]->code == 200);
+    res = await_response(req2, test.loop);
+    CHECK(res->code == 200);
 
     CHECK(p.size() == 2);
     CHECK(p.nbusy() == 0);
@@ -141,7 +131,7 @@ TEST("several requests to the same server at once") {
     CHECK(p.nbusy() == 2);
 
     auto req1 =std::vector<RequestSP>{r1, r2};
-    auto res1 = p.await_responses(req1);
+    auto res1 = await_responses(req1, test.loop);
     REQUIRE(res1.size() == 2);
     CHECK(res1[0]->code == 200);
     CHECK(res1[0]->body.to_string() == "1");
@@ -165,7 +155,7 @@ TEST("several requests to the same server at once") {
     CHECK(p.nbusy() == 2);
 
     auto req2 =std::vector<RequestSP>{r3, r4};
-    auto res2 = p.await_responses(req2);
+    auto res2 = await_responses(req2, test.loop);
     REQUIRE(res2.size() == 2);
     CHECK(res2[0]->code == 200);
     CHECK(res2[0]->body.to_string() == "2");
@@ -216,10 +206,8 @@ TEST("idle timeout") {
     CHECK(p->size() == 1);
     CHECK(p->nbusy() == 1);
 
-    auto reqs2 =std::vector<RequestSP>{req2};
-    auto res = p->await_responses(reqs2);
-    REQUIRE(res.size() == 1);
-    CHECK(res[0]->code == 200);
+    auto res = await_response(req2, test.loop);
+    CHECK(res->code == 200);
 }
 
 TEST("instance") {
@@ -276,11 +264,9 @@ TEST("SSL certificate nuances") {
         REQUIRE(c1);
         c1->connect_event.add([&](auto...){ test.happens(); });
 
-        auto reqs1 = std::vector<RequestSP>{req1};
-        auto res1 = p.await_responses(reqs1);
+        auto res = await_response(req1, test.loop);
 
-        REQUIRE(res1.size() == 1);
-        CHECK(res1[0]->code == 200);
+        CHECK(res->code == 200);
 
         CHECK(p.size() == 1);
         CHECK(p.nbusy() == 0);
@@ -293,11 +279,9 @@ TEST("SSL certificate nuances") {
         REQUIRE(c1 != c2);
         c2->connect_event.add([&](auto...){ test.happens(); });
 
-        auto reqs2 = std::vector<RequestSP>{req2};
-        auto res2 = p.await_responses(reqs2);
+        auto res = await_response(req2, test.loop);
 
-        REQUIRE(res2.size() == 1);
-        CHECK(res2[0]->code == 200);
+        CHECK(res->code == 200);
 
         CHECK(p.size() == 2);
         CHECK(p.nbusy() == 0);
@@ -311,11 +295,9 @@ TEST("SSL certificate nuances") {
         REQUIRE(c3 != c1);
         c3->connect_event.add([&](auto...){ test.happens(); });
 
-        auto reqs3 = std::vector<RequestSP>{req3};
-        auto res3 = p.await_responses(reqs3);
+        auto res = await_response(req3, test.loop);
 
-        REQUIRE(res3.size() == 1);
-        CHECK(res3[0]->code == 200);
+        CHECK(res->code == 200);
 
         CHECK(p.size() == 3);
         CHECK(p.nbusy() == 0);
@@ -355,48 +337,40 @@ TEST("request/client continue to work fine after pool is unreferenced") {
 }
 
 TEST("connection queuing") {
-    AsyncTest test(1000, 2);
+    AsyncTest test(5000);
     Pool::Config cfg;
-    cfg.max_connections = 2;
+    cfg.max_connections = 1;
     TPool p(test.loop, cfg);
     auto srv = make_server(test.loop);
     srv->autorespond(new ServerResponse(200));
     srv->autorespond(new ServerResponse(200));
-    srv->autorespond(new ServerResponse(200));
 
     auto uri = active_scheme() +  "://" + srv->location() + "/";
+    std::vector<RequestSP> v;
+
     auto r1 = Request::Builder().method(Request::Method::GET).uri(uri).build();
     auto r2 = Request::Builder().method(Request::Method::GET).uri(uri).build();
     auto r3 = Request::Builder().method(Request::Method::GET).uri(uri).build();
+
     auto c1 = p.request(r1);
     auto c2 = p.request(r2);
-    auto c3 = p.request(r3);
-
-    c1->connect_event.add([&](auto...){ test.happens(); });
-    c2->connect_event.add([&](auto...){ test.happens(); });
 
     REQUIRE(c1);
-    REQUIRE(c2);
-    REQUIRE(!c3);
+    REQUIRE(!c2);
 
-    CHECK(p.size() == 2);
-    CHECK(p.nbusy() == 2);
-
-    auto req1 =std::vector<RequestSP>{r1, r2};
-    auto res1 = p.await_responses(req1);
-    REQUIRE(res1.size() == 2);
-    CHECK(res1[0]->code == 200);
-    CHECK(res1[1]->code == 200);
-
-    CHECK(p.size() == 2);
+    CHECK(p.size() == 1);
     CHECK(p.nbusy() == 1);
 
-    auto req2 =std::vector<RequestSP>{r3};
-    auto res2 = p.await_responses(req2);
-    REQUIRE(res2.size() == 1);
-    CHECK(res2[0]->code == 200);
+    auto res = await_response(r1, test.loop);
+    CHECK(res->code == 200);
 
-    CHECK(p.size() == 2);
+    CHECK(p.size() == 1);
+    CHECK(p.nbusy() == 1);
+
+    res = await_response(r2, test.loop);
+    CHECK(res->code == 200);
+
+    CHECK(p.size() == 1);
     CHECK(p.nbusy() == 0);
 }
 
@@ -419,11 +393,9 @@ TEST("proxies using") {
 
         c1->connect_event.add([&](auto...){ test.happens(); });
 
-        auto reqs1 = std::vector<RequestSP>{req1};
-        auto res1 = p.await_responses(reqs1);
+        auto res = await_response(req1, test.loop);
 
-        REQUIRE(res1.size() == 1);
-        CHECK(res1[0]->code == 200);
+        CHECK(res->code == 200);
 
         CHECK(p.size() == 1);
         CHECK(p.nbusy() == 0);
@@ -436,11 +408,9 @@ TEST("proxies using") {
         REQUIRE(c1 != c2);
         c2->connect_event.add([&](auto...){ test.happens(); });
 
-        auto reqs2 = std::vector<RequestSP>{req2};
-        auto res2 = p.await_responses(reqs2);
+        auto res = await_response(req2, test.loop);
 
-        REQUIRE(res2.size() == 1);
-        CHECK(res2[0]->code == 200);
+        CHECK(res->code == 200);
 
         CHECK(p.size() == 2);
         CHECK(p.nbusy() == 0);
@@ -454,11 +424,9 @@ TEST("proxies using") {
         REQUIRE(c3 != c1);
         c3->connect_event.add([&](auto...){ test.happens(); });
 
-        auto reqs3 = std::vector<RequestSP>{req3};
-        auto res3 = p.await_responses(reqs3);
+        auto res = await_response(req3, test.loop);
 
-        REQUIRE(res3.size() == 1);
-        CHECK(res3[0]->code == 200);
+        CHECK(res->code == 200);
 
         CHECK(p.size() == 3);
         CHECK(p.nbusy() == 0);

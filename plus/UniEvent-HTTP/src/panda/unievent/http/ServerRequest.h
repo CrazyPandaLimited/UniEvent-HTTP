@@ -1,6 +1,7 @@
 #pragma once
 #include "msg.h"
 #include "ServerResponse.h"
+#include <panda/error.h>
 #include <panda/CallbackDispatcher.h>
 
 namespace panda { namespace unievent { namespace http {
@@ -11,8 +12,8 @@ struct ServerConnection;
 
 struct ServerRequest : protocol::http::Request {
     using receive_fptr = void(const ServerRequestSP&);
-    using partial_fptr = void(const ServerRequestSP&, const std::error_code&);
-    using drop_fptr    = void(const ServerRequestSP&, const std::error_code&);
+    using partial_fptr = void(const ServerRequestSP&, const ErrorCode&);
+    using drop_fptr    = void(const ServerRequestSP&, const ErrorCode&);
     using receive_fn   = function<receive_fptr>;
     using partial_fn   = function<partial_fptr>;
     using drop_fn      = function<drop_fptr>;
@@ -27,11 +28,13 @@ struct ServerRequest : protocol::http::Request {
 
     void enable_partial () { _partial = true; }
 
-    void respond (const ServerResponseSP&);
-    void send_continue ();
+    virtual void respond (const ServerResponseSP&);
+    virtual void send_continue ();
 
-    void redirect (const string&);
+    virtual void redirect (const string&);
     void redirect (const URISP& uri) { redirect(uri->to_string()); }
+
+    virtual void drop ();
 
 protected:
     ServerRequest (ServerConnection* conn) : _connection(conn) {}

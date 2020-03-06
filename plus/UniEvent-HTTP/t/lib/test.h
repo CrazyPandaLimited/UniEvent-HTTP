@@ -34,6 +34,14 @@ static auto fail_cb = [](auto...){ FAIL(); };
 
 using SslHolder = std::unique_ptr<SSL_CTX, std::function<void(SSL_CTX*)>>;
 
+int64_t get_time     ();
+void    time_mark    ();
+int64_t time_elapsed ();
+
+ResponseSP              await_response (const RequestSP&, const LoopSP&);
+std::vector<ResponseSP> await_responses(const std::vector<RequestSP>&, const LoopSP&);
+ResponseSP              await_any      (const std::vector<RequestSP>&, const LoopSP&);
+
 struct TServer : Server {
     static int dcnt;
 
@@ -68,8 +76,8 @@ struct TClient : Client {
     ResponseSP get_response (const RequestSP& req);
     ResponseSP get_response (const string& uri, Headers&& = {}, Body&& = {}, bool chunked = false);
 
-    std::error_code get_error (const RequestSP& req);
-    std::error_code get_error (const string& uri, Headers&& = {}, Body&& = {}, bool chunked = false);
+    ErrorCode get_error (const RequestSP& req);
+    ErrorCode get_error (const string& uri, Headers&& = {}, Body&& = {}, bool chunked = false);
 
     static SslHolder get_context(string cert_name, const string& ca_name = "ca");
 
@@ -83,7 +91,6 @@ struct TPool : Pool {
     using Pool::Pool;
 
     TClientSP request (const RequestSP& req);
-    std::vector<ResponseSP> await_responses(std::vector<RequestSP>& reqs);
 
 protected:
     ClientSP new_client () override { return new TClient(this); }
@@ -118,12 +125,12 @@ struct ServerPair {
 
     RawResponseSP get_response ();
     RawResponseSP get_response (const string& s) { conn->write(s); return get_response(); }
-    bool          wait_eof     (int tmt = 0);
+    int64_t       wait_eof     (int tmt = 0);
 
 private:
     Parser       parser;
     RawResponses response_queue;
-    bool         eof = false;
+    int64_t      eof = 0;
 };
 
 

@@ -127,7 +127,7 @@ TEST("client disconnects or request error while in partial mode") {
                 test.happens();
                 if (send_junk) {
                     CHECK(req->is_done());
-                    CHECK(err == errc::parse_error);
+                    CHECK(err == panda::protocol::http::errc::lexical_error);
                 }
                 else {
                     CHECK(err == std::errc::connection_reset);
@@ -354,3 +354,90 @@ TEST("100-continue after response given") {
     CHECK(res->code == 200);
 }
 
+TEST("drop request") {
+    AsyncTest test(2000);
+    ServerPair p(test.loop);
+
+    auto dcb = [&](auto, auto& err) {
+        CHECK(err == std::errc::operation_canceled);
+        test.happens("drop");
+    };
+
+    string data;
+    p.conn->read_event.add([&](auto&, auto& str, auto& err) {
+        if (err) throw err;
+        data += str;
+    });
+
+    p.conn->eof_event.add([&](auto) {
+        test.happens("eof");
+        test.loop->stop();
+    });
+
+    SECTION("fully received but not started response") {
+        test.expected = std::vector<string>{"drop", "eof"};
+        p.server->request_event.add([&](auto req) {
+            req->drop_event.add(dcb);
+            req->drop();
+        });
+        p.conn->write("GET / HTTP/1.1\r\n\r\n");
+        test.run();
+        CHECK(data.length() == 0);
+    }
+
+    SECTION("not yet fully received") {
+        test.expected = std::vector<string>{"partial", "partial", "eof"};
+        p.server->route_event.add([&](auto& req){
+            req->enable_partial();
+            req->drop_event.add(dcb);
+            req->partial_event.add([&](auto& req, auto& err) {
+                REQUIRE(!err);
+                test.happens("partial");
+                req->partial_event.remove_all();
+                req->partial_event.add([&](auto&, auto& err) {
+                    test.happens("partial");
+                    CHECK(err == std::errc::operation_canceled);
+                });
+                req->drop();
+            });
+        });
+        p.conn->write(
+            "GET / HTTP/1.1\r\n"
+            "Content-Length: 10\r\n"
+            "\r\n"
+            "12345"
+        );
+        test.run();
+        CHECK(data.length() == 0);
+    }
+
+    SECTION("received and started response") {
+        test.expected = std::vector<string>{"drop", "eof"};
+        p.server->request_event.add([&](auto req) {
+            ServerResponseSP res = new ServerResponse(200);
+            res->chunked = true;
+            req->respond(res);
+            res->send_chunk("epta");
+            req->drop_event.add(dcb);
+            req->drop();
+        });
+        p.conn->write("GET / HTTP/1.1\r\n\r\n");
+        test.run();
+        auto npos = string::npos;
+        CHECK(data.find("4\r\nepta\r\n") != npos);
+    }
+
+    SECTION("received and fully sent response") {
+        test.expected = std::vector<string>{"eof"};
+        p.server->request_event.add([&](auto req) {
+            ServerResponseSP res = new ServerResponse(200);
+            res->keep_alive(false);
+            req->respond(res);
+            req->drop_event.add(dcb);
+            req->drop(); // will be ignored, drop_event should not be called
+        });
+        p.conn->write("GET / HTTP/1.1\r\n\r\n");
+        test.run();
+        CHECK(data.length() > 0);
+    }
+}

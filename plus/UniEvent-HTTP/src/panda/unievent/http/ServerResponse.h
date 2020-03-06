@@ -14,8 +14,8 @@ struct ServerResponse : protocol::http::Response {
         : protocol::http::Response(code, std::move(header), std::move(body), chunked, http_version, message), _request(), _completed()
     {}
 
-    void send_chunk       (const string& chunk);
-    void send_final_chunk ();
+    virtual void send_chunk       (const string& chunk);
+    virtual void send_final_chunk ();
 
     bool completed () const { return _completed; }
 

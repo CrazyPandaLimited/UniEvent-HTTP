@@ -79,11 +79,12 @@ ServerConnectionSP Server::new_connection (uint64_t id, const ServerConnection::
     return conn;
 }
 
-void Server::on_connection (const StreamSP& stream, const CodeError& err) {
+void Server::on_connection (const StreamSP& stream, const ErrorCode& err) {
     if (err) return;
     auto connection = dynamic_pointer_cast<ServerConnection>(stream);
     assert(connection);
     _connections[connection->id()] = connection;
+    connection->start();
     panda_mlog_info(uewslog, "client connected to " << connection->sockaddr() << ", id=" << connection->id() << ", total connections: " << _connections.size());
 }
 

@@ -50,7 +50,7 @@ subtest "parsing error" => sub {
         my ($req, $err) = @_;
         $test->happens;
         is $req->header("host"), "epta.ru";
-        is $err, UE::HTTP::errc::parse_error;
+        is $err, Protocol::HTTP::errc::lexical_error;
         $req->respond(new UE::HTTP::ServerResponse({code => 404}));
     });
 

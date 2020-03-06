@@ -19,7 +19,7 @@ void Request::send_final_chunk () {
     _client->send_final_chunk(this);
 }
 
-void Request::cancel (const std::error_code& err) {
+void Request::cancel (const ErrorCode& err) {
     if (_client) _client->cancel(err);
 }
 

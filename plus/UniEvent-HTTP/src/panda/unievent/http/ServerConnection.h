@@ -26,7 +26,8 @@ struct ServerConnection : Tcp, private ITcpSelfListener, private protocol::http:
 
     uint64_t id () const { return _id; }
 
-    void close (const std::error_code&, bool soft = false);
+    void start ();
+    void close (const ErrorCode&, bool soft = false);
 
 private:
     friend ServerRequest; friend ServerResponse;
@@ -45,11 +46,11 @@ private:
 
     protocol::http::RequestSP new_request () override;
 
-    void on_read  (string&, const CodeError&) override;
-    void on_write (const CodeError&, const WriteRequestSP&) override;
+    void on_read  (string&, const ErrorCode&) override;
+    void on_write (const ErrorCode&, const WriteRequestSP&) override;
     void on_eof   () override;
 
-    void request_error (const ServerRequestSP&, const std::error_code& err);
+    void request_error (const ServerRequestSP&, const ErrorCode& err);
 
     void respond             (const ServerRequestSP&, const ServerResponseSP&);
     void write_next_response ();
@@ -58,7 +59,7 @@ private:
     void send_final_chunk    (const ServerResponseSP&);
     void finish_request      ();
     void cleanup_request     ();
-    void drop_requests       (const std::error_code&);
+    void drop_requests       (const ErrorCode&);
 
     ServerResponseSP default_error_response (int code);
 };

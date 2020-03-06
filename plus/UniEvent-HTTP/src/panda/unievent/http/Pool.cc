@@ -3,8 +3,11 @@
 
 namespace panda { namespace unievent { namespace http {
 
-static thread_local std::vector<PoolSP> s_instances;
-thread_local std::vector<PoolSP>* Pool::_instances = &s_instances;
+static thread_local struct {
+    std::vector<PoolSP> s_instances;
+} tls;
+
+thread_local std::vector<PoolSP>* Pool::_instances = &tls.s_instances;
 
 Pool::Pool (const LoopSP& loop, Config cfg) : _loop(loop), _max_connections(cfg.max_connections), _factory(cfg.factory)  {
     idle_timeout(cfg.idle_timeout);

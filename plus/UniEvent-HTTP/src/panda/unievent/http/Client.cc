@@ -108,7 +108,7 @@ void Client::send_final_chunk (const RequestSP& req) {
     write(v.begin(), v.end());
 }
 
-void Client::cancel (const std::error_code& err) {
+void Client::cancel (const ErrorCode& err) {
     if (!_request) return;
     panda_log_info("cancel with err = " << err);
     _parser.reset();
@@ -118,12 +118,12 @@ void Client::cancel (const std::error_code& err) {
     finish_request(err);
 }
 
-void Client::on_connect (const CodeError& err, const ConnectRequestSP&) {
-    if (_request && err) cancel(err.code());
+void Client::on_connect (const ErrorCode& err, const ConnectRequestSP&) {
+    if (_request && err) cancel(nest_error(errc::connect_error, err));
 }
 
-void Client::on_write (const CodeError& err, const WriteRequestSP&) {
-    if (_request && err) cancel(err.code());
+void Client::on_write (const ErrorCode& err, const WriteRequestSP&) {
+    if (_request && err) cancel(err);
 }
 
 void Client::on_timer (const TimerSP& t) {
@@ -132,9 +132,9 @@ void Client::on_timer (const TimerSP& t) {
     cancel(make_error_code(std::errc::timed_out));
 }
 
-void Client::on_read (string& buf, const CodeError& err) {
+void Client::on_read (string& buf, const ErrorCode& err) {
     ClientSP hold = this;
-    if (err) return cancel(errc::parse_error);
+    if (err) return cancel(err);
     panda_log_debug("read:\n" << buf);
 
     while (buf) {
@@ -148,7 +148,7 @@ void Client::on_read (string& buf, const CodeError& err) {
         _response = static_pointer_cast<Response>(result.response);
         _response->_is_done = result.state >= State::done;
 
-        if (result.error) return cancel(errc::parse_error);
+        if (result.error) return cancel(result.error);
 
         if (result.state <= State::headers) {
             panda_log_debug("got part, headers not finished");
@@ -240,7 +240,7 @@ void Client::drop_connection () {
     _request = std::move(req);
 }
 
-void Client::finish_request (const std::error_code& _err) {
+void Client::finish_request (const ErrorCode& _err) {
     auto req = std::move(_request);
     auto res = std::move(_response);
 
@@ -282,7 +282,7 @@ void Client::on_eof () {
     _response->_is_done = true;
 
     if (result.error) {
-        cancel(make_error_code(std::errc::connection_reset));
+        cancel(result.error);
     } else {
         analyze_request();
     }
