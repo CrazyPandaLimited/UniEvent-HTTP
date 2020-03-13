@@ -128,12 +128,12 @@ TEST("compression") {
         .method(Request::Method::POST)
         .uri("/")
         .body("hello world")
-        .compress(compression::GZIP)
+        .compress(Compression::GZIP)
         .build();
-    CHECK(req->compressed == compression::GZIP);
+    CHECK(req->compression.type == Compression::GZIP);
     
     auto res = p.client->get_response(req);
-    CHECK(res->compressed == compression::GZIP);
+    CHECK(res->compression.type == Compression::GZIP);
 
     CHECK(res->code == 200);
     CHECK(res->http_version == 11);
@@ -162,10 +162,10 @@ TEST("accept-encoding") {
         auto req = Request::Builder()
             .method(Request::Method::POST)
             .uri("/")
-            .allow_compression(compression::IDENTITY)
+            .allow_compression(Compression::IDENTITY)
             .build();
 
-        CHECK(req->compression_prefs != static_cast<std::uint8_t>(compression::IDENTITY));
+        CHECK(req->compression_prefs != static_cast<std::uint8_t>(Compression::IDENTITY));
 
         p.server->request_event.add([&](auto& req){
             test.happens();

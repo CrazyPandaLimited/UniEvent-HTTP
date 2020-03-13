@@ -85,8 +85,8 @@ void Client::request (const RequestSP& request) {
     );
 
     using namespace panda::protocol::http;
-    if (request->compression_prefs == static_cast<std::uint8_t>(compression::IDENTITY) && !request->headers.has("Accept-Encoding")) {
-        request->allow_compression(compression::GZIP);
+    if (request->compression_prefs == static_cast<std::uint8_t>(Compression::IDENTITY) && !request->headers.has("Accept-Encoding")) {
+        request->allow_compression(Compression::GZIP);
     }
 
     auto data = request->to_vector();

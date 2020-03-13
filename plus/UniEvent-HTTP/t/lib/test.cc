@@ -78,7 +78,7 @@ void TServer::enable_echo () {
         h.remove("Accept-Encoding");
         h.remove("Content-Length"); /* causes problems if req is not compressed, and res is */
         auto res = new ServerResponse(200, std::move(h), Body(req->body.to_string()));
-        res->compressed = compression::GZIP;
+        res->compression.type = Compression::GZIP;
         req->respond(res);
     });
 }
