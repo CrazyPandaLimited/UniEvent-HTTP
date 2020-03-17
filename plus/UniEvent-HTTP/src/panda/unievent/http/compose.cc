@@ -6,6 +6,6 @@
 
 namespace panda { namespace unievent { namespace http {
 
-log::Module uewslog("UniEvent::HTTP", log::Warning);
+log::Module uehtlog("UniEvent::HTTP", log::Warning);
 
 }}}

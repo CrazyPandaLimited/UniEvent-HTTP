@@ -6,7 +6,7 @@
 
 namespace panda { namespace unievent { namespace http {
 
-static log::Module* panda_log_module = &uewslog;
+static const auto& panda_log_module = uehtlog;
 
 using namespace panda::unievent::socks;
 
