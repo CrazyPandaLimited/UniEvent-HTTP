@@ -38,7 +38,11 @@ sub import {
     }
 }
 
-sub get_time { return Time::HiRes::clock_gettime(Time::HiRes::CLOCK_MONOTONIC()) }
+sub get_time {
+    my $l = UniEvent::Loop::default;
+    $l->update_time();
+    return $l->now;
+}
 
 sub time_mark    { $time_mark = get_time() }
 sub time_elapsed { return get_time() - $time_mark } 

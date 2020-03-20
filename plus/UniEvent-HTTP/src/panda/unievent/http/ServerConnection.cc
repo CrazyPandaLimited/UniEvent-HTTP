@@ -1,10 +1,10 @@
 #include "ServerConnection.h"
 #include "Server.h"
-#include "msg.h" // for uewslog
+#include "msg.h" // for uehtlog
 
 namespace panda { namespace unievent { namespace http {
 
-static log::Module* panda_log_module = &uewslog;
+static const auto& panda_log_module = uehtlog;
 
 ServerConnection::ServerConnection (Server* server, uint64_t id, const Config& conf)
     : Tcp(server->loop()), server(server), _id(id), factory(conf.factory), parser(this), idle_timeout(conf.idle_timeout)
