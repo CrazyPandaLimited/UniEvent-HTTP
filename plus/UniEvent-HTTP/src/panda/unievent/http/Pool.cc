@@ -31,7 +31,7 @@ void Pool::idle_timeout (uint32_t val) {
     else {
         _idle_timer = new Timer(_loop);
         _idle_timer->weak(true);
-        _idle_timer->event.add([this](auto&){ check_inactivity(); });
+        _idle_timer->event.add([this](auto&){ this->check_inactivity(); });
     }
 
     _idle_timer->start(val >= 1000 ? 1000 : val);

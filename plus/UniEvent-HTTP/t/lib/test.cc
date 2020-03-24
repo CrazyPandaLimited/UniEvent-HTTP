@@ -149,7 +149,7 @@ ResponseSP TClient::get_response (const RequestSP& req) {
     req->response_event.add([this, &response](auto, auto& res, auto& err){
         if (err) throw err;
         response = res;
-        loop()->stop();
+        this->loop()->stop();
     });
 
     request(req);
@@ -169,7 +169,7 @@ ErrorCode TClient::get_error (const RequestSP& req) {
 
     req->response_event.add([this, &error](auto, auto, auto& err){
         error = err;
-        loop()->stop();
+        this->loop()->stop();
     });
 
     request(req);
