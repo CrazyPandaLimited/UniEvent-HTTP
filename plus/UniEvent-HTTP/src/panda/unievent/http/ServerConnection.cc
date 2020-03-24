@@ -20,7 +20,7 @@ void ServerConnection::start () {
         idle_timer = new Timer(server->loop());
         idle_timer->event.add([this](auto&){
             assert(!requests.size());
-            close({}, true);
+            this->close({}, true);
         });
         idle_timer->once(idle_timeout);
     }
