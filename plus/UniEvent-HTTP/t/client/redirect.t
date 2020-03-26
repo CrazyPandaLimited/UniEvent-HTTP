@@ -68,7 +68,7 @@ subtest "redirection limit" => sub {
         redirection_limit => 0,
         redirect_callback => sub { fail("should not be called") },
     });
-    is $err, UE::HTTP::errc::unexpected_redirect;
+    is $err, UE::HTTP::Error::unexpected_redirect;
 };
 
 done_testing();
