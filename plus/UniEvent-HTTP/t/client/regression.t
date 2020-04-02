@@ -32,4 +32,15 @@ subtest 'r2' => sub {
     $client->loop->run;
 };
 
+subtest 'MEIACORE-1287 pool request and then pool dies and request timeouts (SEGV)' => sub {
+    my $pool = UniEvent::HTTP::Pool->new;
+    $pool->request({
+        uri => 'http://google.com:81/',
+        timeout => 0.01,
+    });
+    undef $pool;
+    UE::Loop->default_loop->run;
+    pass("no SEGV");
+};
+
 done_testing();
