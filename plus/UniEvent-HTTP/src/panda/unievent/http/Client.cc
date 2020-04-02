@@ -137,7 +137,6 @@ void Client::on_timer (const TimerSP& t) {
 }
 
 void Client::on_read (string& buf, const ErrorCode& err) {
-    ClientSP hold = this;
     if (err) return cancel(err);
     panda_log_debug("read:\n" << buf);
 
@@ -279,7 +278,6 @@ void Client::on_eof () {
         return;
     }
 
-    ClientSP hold = this;
     auto result = _parser.eof();
     _response = static_pointer_cast<Response>(result.response);
     _response->_is_done = true;
