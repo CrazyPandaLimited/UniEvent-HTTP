@@ -52,7 +52,7 @@ TEST("timeout") {
     ClientPair p(test.loop);
 
     auto err = p.client->get_error(Request::Builder().uri("/").timeout(5).build());
-    CHECK(err == std::errc::timed_out);
+    CHECK(err.contains(make_error_code(std::errc::timed_out)));
 }
 
 TEST("client retains until request is complete") {

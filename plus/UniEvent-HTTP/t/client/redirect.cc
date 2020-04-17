@@ -136,7 +136,7 @@ TEST("timeout") { // timeout is for whole request including all redirections
     auto req = Request::Builder().uri("/").timeout(5).build();
 
     auto err = p.client->get_error(req);
-    CHECK(err == std::errc::timed_out);
+    CHECK(err.contains(make_error_code(std::errc::timed_out)));
 }
 
 TEST("cancel from redirect event") {
