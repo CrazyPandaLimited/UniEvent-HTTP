@@ -4,6 +4,8 @@
 #include <panda/log.h>
 #include <panda/unievent/socks.h>
 
+#define HOLD_ON(this) ClientSP hold = this; (void)hold
+
 namespace panda { namespace unievent { namespace http {
 
 static const auto& panda_log_module = uehtlog;
@@ -127,13 +129,13 @@ void Client::on_write (const ErrorCode& err, const WriteRequestSP&) {
 }
 
 void Client::on_timer (const TimerSP& t) {
+    HOLD_ON(this);
     assert(_request);
     assert(_request->_timer == t);
     cancel(make_error_code(std::errc::timed_out));
 }
 
 void Client::on_read (string& buf, const ErrorCode& err) {
-    ClientSP hold = this;
     if (err) return cancel(err);
     panda_log_debug("read:\n" << buf);
 
@@ -248,8 +250,7 @@ void Client::finish_request (const ErrorCode& _err) {
     if (!err && !req->_transfer_completed) err = errc::transfer_aborted;
 
     if (err || !res->keep_alive()) drop_connection();
-
-    Tcp::weak(true);
+    else Tcp::weak(true);
 
     req->_redirection_counter = 0;
     req->_client = nullptr;
@@ -276,7 +277,6 @@ void Client::on_eof () {
         return;
     }
 
-    ClientSP hold = this;
     auto result = _parser.eof();
     _response = static_pointer_cast<Response>(result.response);
     _response->_is_done = true;

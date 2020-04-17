@@ -223,11 +223,6 @@ TEST("request drop event when client disconnects and response not yet completed"
     AsyncTest test(1000, 2);
     ServerPair p(test.loop);
 
-    SECTION("no response at all") {}
-    SECTION("partial response") {
-        p.server->autorespond(new ServerResponse(200, Headers(), Body(), true));
-    }
-
     p.server->request_event.add([&](auto& req){
         test.happens();
         req->drop_event.add([&](auto& req, auto& err){
@@ -244,6 +239,11 @@ TEST("request drop event when client disconnects and response not yet completed"
         "Host: epta.ru\r\n"
         "\r\n"
     );
+
+    SECTION("no response at all") {}
+    SECTION("partial response") {
+        p.server->autorespond(new ServerResponse(200, Headers(), Body(), true));
+    }
 
     test.run();
 }
