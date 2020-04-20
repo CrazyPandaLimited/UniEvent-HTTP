@@ -8,8 +8,6 @@
 
 namespace panda { namespace unievent { namespace http {
 
-static const auto& panda_log_module = uehtlog;
-
 using namespace panda::unievent::socks;
 
 static inline bool is_redirect (int code) {
