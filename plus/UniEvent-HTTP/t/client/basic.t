@@ -29,7 +29,7 @@ subtest "timeout" => sub {
     my $p    = new MyTest::ClientPair($test->loop);
 
     my $err = $p->client->get_error({uri => "/", timeout => 0.005});
-    is $err, XS::STL::errc::timed_out;
+    ok $err & XS::STL::errc::timed_out;
 };
 
 subtest 'bad request' => sub {

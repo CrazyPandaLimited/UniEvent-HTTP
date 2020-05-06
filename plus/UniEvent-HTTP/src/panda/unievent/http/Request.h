@@ -2,14 +2,16 @@
 #include "msg.h"
 #include "error.h"
 #include "Response.h"
+#include <panda/unievent/Tcp.h>
 #include <panda/unievent/Timer.h>
-#include <panda/unievent/Stream.h> // SSL_CTX
+#include <panda/unievent/AddrInfo.h>
 #include <panda/CallbackDispatcher.h>
 
 namespace panda { namespace unievent { namespace http {
 
 struct Client;  using ClientSP  = iptr<Client>;
 struct Request; using RequestSP = iptr<Request>;
+using panda::unievent::AddrInfoHints;
 
 struct NetLoc {
     string   host;
@@ -48,6 +50,7 @@ struct Request : protocol::http::Request {
     CallbackDispatcher<continue_fptr> continue_event;
     SSL_CTX*                          ssl_ctx           = nullptr;
     URISP                             proxy;
+    AddrInfoHints                     tcp_hints         = Tcp::defhints;
 
     Request () {}
 
@@ -120,6 +123,16 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder, RequestS
 
     Builder& proxy (const URISP& proxy) {
         _message->proxy = proxy;
+        return *this;
+    }
+
+    Builder& tcp_nodelay (bool val) {
+        _message->tcp_nodelay = val;
+        return *this;
+    }
+
+    Builder& tcp_hints (const AddrInfoHints& hints) {
+        _message->tcp_hints = hints;
         return *this;
     }
 };

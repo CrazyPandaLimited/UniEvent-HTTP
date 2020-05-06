@@ -1,6 +1,5 @@
 #include "Server.h"
 #include <ostream>
-#include <panda/log.h>
 #include <panda/time.h>
 
 namespace panda { namespace unievent { namespace http {
@@ -39,7 +38,7 @@ void Server::run () {
 void Server::stop () {
     if (!_running) return;
     stop_listening();
-    panda_mlog_notice(uehtlog, "stopping HTTP server with " << _connections.size() << " connections");
+    panda_log_notice("stopping HTTP server with " << _connections.size() << " connections");
     while (_connections.size()) _connections.begin()->second->close(errc::server_stopping);
     _running = false;
 }
@@ -59,7 +58,7 @@ void Server::start_listening () {
         lst->listen(loc.backlog);
         if (loc.ssl_ctx) lst->use_ssl(loc.ssl_ctx);
 
-        panda_mlog_notice(uehtlog, "listening: " << (loc.ssl_ctx ? "https://" : "http://") << loc.host << ":" << lst->sockaddr().port());
+        panda_log_notice("listening: " << (loc.ssl_ctx ? "https://" : "http://") << loc.host << ":" << lst->sockaddr().port());
         _listeners.push_back(lst);
     }
 }
@@ -85,7 +84,7 @@ void Server::on_connection (const StreamSP& stream, const ErrorCode& err) {
     assert(connection);
     _connections[connection->id()] = connection;
     connection->start();
-    panda_mlog_info(uehtlog, "client connected to " << connection->sockaddr() << ", id=" << connection->id() << ", total connections: " << _connections.size());
+    panda_log_info("client connected to " << connection->sockaddr() << ", id=" << connection->id() << ", total connections: " << _connections.size());
 }
 
 const string& Server::date_header_now () {

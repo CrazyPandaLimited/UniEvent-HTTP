@@ -8,8 +8,6 @@
 
 namespace panda { namespace unievent { namespace http {
 
-static const auto& panda_log_module = uehtlog;
-
 using namespace panda::unievent::socks;
 
 static inline bool is_redirect (int code) {
@@ -46,12 +44,6 @@ void Client::request (const RequestSP& request) {
     if (!request->_redirection_counter) request->_original_uri = request->uri;
     if (!request->chunked || request->body.length()) request->_transfer_completed = true;
 
-    if (request->timeout) {
-        if (!request->_timer) request->_timer = new Timer(loop());
-        request->_timer->event_listener(this);
-        if (!request->_timer->active()) request->_timer->once(request->timeout); // if active it may be redirected request
-    }
-
     auto netloc = request->netloc();
 
     if (!connected() || _netloc != netloc) {
@@ -75,8 +67,16 @@ void Client::request (const RequestSP& request) {
 
         if (request->tcp_nodelay) set_nodelay(true);
         _netloc = std::move(netloc);
-        connect(_netloc.host, _netloc.port);
+        connect(_netloc.host, _netloc.port, request->timeout, request->tcp_hints);
     }
+
+    // this code should be after connect, because in case of connect timeout, timer inside Tcp class must react first to mark multiDNS address as bad
+    if (request->timeout) {
+        if (!request->_timer) request->_timer = new Timer(loop());
+        request->_timer->event_listener(this);
+        if (!request->_timer->active()) request->_timer->once(request->timeout); // if active it may be redirected request
+    }
+
     Tcp::weak(false);
     _request = request;
 

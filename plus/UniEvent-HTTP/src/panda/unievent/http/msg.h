@@ -13,6 +13,6 @@ using protocol::http::Compression;
 using panda::uri::URI;
 using panda::uri::URISP;
 
-extern log::Module uehtlog;
+extern log::Module panda_log_module;
 
 }}}

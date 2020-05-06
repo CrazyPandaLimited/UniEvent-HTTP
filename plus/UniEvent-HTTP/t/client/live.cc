@@ -2,6 +2,8 @@
 
 #define TEST(name) TEST_CASE("client-live: " name, "[client-live]" VSSL)
 
+#define panda_log_module panda::unievent::http::panda_log_module
+
 TEST("get real sites") {
     std::vector<string> sites = {
         "http://google.com",

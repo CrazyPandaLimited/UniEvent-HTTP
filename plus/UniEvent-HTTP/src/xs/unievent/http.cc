@@ -17,6 +17,7 @@ void fill (Request* req, const Hash& h) {
     if ((v  = h.fetch("redirection_limit"))) req->redirection_limit = v;
     if ((sv = h.fetch("ssl_ctx")))           req->ssl_ctx = xs::in<SSL_CTX*>(sv);
     if ((sv = h.fetch("proxy")))             req->proxy = xs::in<URISP>(sv);
+    if ((sv = h.fetch("tcp_hints")))         req->tcp_hints = xs::in<AddrInfoHints>(sv);
 }
 
 void fill (ServerResponse* res, const Hash& h) {
