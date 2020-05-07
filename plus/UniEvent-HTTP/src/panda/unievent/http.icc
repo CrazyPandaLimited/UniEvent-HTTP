@@ -22,7 +22,8 @@ expected<ResponseSP, ErrorCode> http_request (const RequestSP& req, sync_t) {
     });
     
     auto loop = pool->loop();
-    loop->run_nowait(); // catch all EOFs from timed out keep-alive connections, otherwise current request may catch false-positive EOF
+    // catch all EOFs from timed out keep-alive connections, otherwise current request may catch false-positive EOF
+    if (!pool->empty()) loop->run(Loop::RunMode::NOWAIT_FORCE);
     pool->request(req);
     loop->run(); // ue-http must have no event leaks or run() will never complete
     

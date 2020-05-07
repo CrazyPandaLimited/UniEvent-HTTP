@@ -42,6 +42,8 @@ struct Pool : Refcnt {
     size_t size  () const;
     size_t nbusy () const;
 
+    bool empty () const { return _clients.size() == 0; }
+
 protected:
     virtual ClientSP new_client () { return _factory ? _factory->new_client(this) : ClientSP(new Client(this)); }
 
