@@ -5,25 +5,16 @@ use Test::More;
 use Time::HiRes();
 use Test::Catch;
 use UniEvent::HTTP;
-use Panda::Lib::Logger;
 use Scalar::Util 'weaken';
 
 XS::Loader::load();
 
-my %log_levels = (
-    VD => LOG_VERBOSE_DEBUG,
-    D  => LOG_DEBUG,
-    I  => LOG_INFO,
-);
-
 my $time_mark = Time::HiRes::time();;
 
-if (defined(my $l = $log_levels{$ENV{LOG}||''})) {
-    set_native_logger(sub {
-        my ($level, $cp, $msg) = @_;
-        say "$cp $msg";
-    });
-    set_log_level($l);
+if ($ENV{LOGGER}) {
+    require XLog;
+    XLog::set_logger(sub { say $_[1] });
+    XLog::set_level(XLog::VERBOSE_DEBUG());
 }
 
 $SIG{PIPE} = 'IGNORE';
