@@ -1,5 +1,5 @@
-#include <xs.h>
 #include "test.h"
+#include <xs.h>
 
 using namespace xs;
 using namespace panda;
