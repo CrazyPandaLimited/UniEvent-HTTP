@@ -236,7 +236,7 @@ TEST("response connection=close cancels all further requests") {
         reqs.push_back(req);
         if (reqs.size() == 2) req->drop_event.add([&](auto&, auto& err){
             test.happens("drop");
-            CHECK(err == errc::pipeline_canceled);
+            CHECK(err & errc::pipeline_canceled);
         });
         if (reqs.size() < 3) return;
         req->enable_partial();
@@ -245,7 +245,7 @@ TEST("response connection=close cancels all further requests") {
             CHECK(!req->is_done());
             req->partial_event.remove_all();
             req->partial_event.add([&](auto&, auto& err){
-                CHECK(err == errc::pipeline_canceled);
+                CHECK(err & errc::pipeline_canceled);
                 test.happens("partial-err");
             });
             reqs[0]->respond(new ServerResponse(200, Headers().connection("close"), Body("hello")));

@@ -102,11 +102,11 @@ TEST("redirection limit") {
         CHECK(rcnt == count);
     } else if (req->redirection_limit) {
         auto err = client->get_error(req);
-        CHECK(err == errc::redirection_limit);
+        CHECK(err & errc::redirection_limit);
         CHECK(rcnt == count - 1);
     } else {
         auto err = client->get_error(req);
-        CHECK(err == errc::unexpected_redirect);
+        CHECK(err & errc::unexpected_redirect);
         CHECK(rcnt == 0);
     }
 }
@@ -155,7 +155,7 @@ TEST("cancel from redirect event") {
     });
     req->response_event.add([&](auto, auto, auto err) {
         test.happens("response");
-        CHECK(err == std::errc::operation_canceled);
+        CHECK(err & std::errc::operation_canceled);
         test.loop->stop();
     });
     p.client->request(req);

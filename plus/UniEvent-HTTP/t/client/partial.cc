@@ -104,7 +104,7 @@ TEST("receiving full response before transfer completed") {
     req->response_event.add([&](auto, auto res, auto err) {
         CHECK(res->code == 200);
         CHECK(res->body.to_string() == "hi");
-        CHECK(err == errc::transfer_aborted);
+        CHECK(err & errc::transfer_aborted);
         CHECK_THROWS(req->send_chunk("epta")); // client must cease transmission on receiving final status code
         test.loop->stop();
     });
@@ -145,5 +145,5 @@ TEST("100-continue unexpected") {
     req->continue_event.add([&](auto) { test.happens(); });
 
     auto err = p.client->get_error(req);
-    CHECK(err == panda::protocol::http::errc::unexpected_continue);
+    CHECK(err & panda::protocol::http::errc::unexpected_continue);
 }
