@@ -203,7 +203,7 @@ TEST("request parsing error") {
     p.server->error_event.add([&](auto& req, auto& err){
         test.happens();
         CHECK(req->headers.host() == "epta.ru");
-        CHECK(err == panda::protocol::http::errc::lexical_error);
+        CHECK(err & panda::protocol::http::errc::lexical_error);
         if (check_code != 400) req->respond(new ServerResponse(check_code));
     });
 
@@ -227,7 +227,7 @@ TEST("request drop event when client disconnects and response not yet completed"
         test.happens();
         req->drop_event.add([&](auto& req, auto& err){
             test.happens();
-            CHECK(err == std::errc::connection_reset);
+            CHECK(err & std::errc::connection_reset);
             CHECK(req->headers.host() == "epta.ru");
             test.loop->stop();
         });

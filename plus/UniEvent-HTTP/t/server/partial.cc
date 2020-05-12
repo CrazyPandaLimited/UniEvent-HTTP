@@ -127,10 +127,10 @@ TEST("client disconnects or request error while in partial mode") {
                 test.happens();
                 if (send_junk) {
                     CHECK(req->is_done());
-                    CHECK(err == panda::protocol::http::errc::lexical_error);
+                    CHECK(err & panda::protocol::http::errc::lexical_error);
                 }
                 else {
-                    CHECK(err == std::errc::connection_reset);
+                    CHECK(err & std::errc::connection_reset);
                 }
                 test.loop->stop();
             });
@@ -359,7 +359,7 @@ TEST("drop request") {
     ServerPair p(test.loop);
 
     auto dcb = [&](auto, auto& err) {
-        CHECK(err == std::errc::operation_canceled);
+        CHECK(err & std::errc::operation_canceled);
         test.happens("drop");
     };
 
@@ -396,7 +396,7 @@ TEST("drop request") {
                 req->partial_event.remove_all();
                 req->partial_event.add([&](auto&, auto& err) {
                     test.happens("partial");
-                    CHECK(err == std::errc::operation_canceled);
+                    CHECK(err & std::errc::operation_canceled);
                 });
                 req->drop();
             });
