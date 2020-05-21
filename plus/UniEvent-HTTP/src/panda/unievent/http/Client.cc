@@ -10,6 +10,9 @@ namespace panda { namespace unievent { namespace http {
 
 using namespace panda::unievent::socks;
 
+const string DEFAULT_UA = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36 UniEvent-HTTP/1.0";
+
+
 static inline bool is_redirect (int code) {
     switch (code) {
         case 300:
@@ -42,7 +45,6 @@ void Client::request (const RequestSP& request) {
 
     request->_client = this;
     if (!request->uri->scheme()) request->uri->scheme("http");
-    if (!request->_redirection_counter) request->_original_uri = request->uri;
     if (!request->chunked || request->body.length()) request->_transfer_completed = true;
 
     auto netloc = request->netloc();
@@ -81,10 +83,7 @@ void Client::request (const RequestSP& request) {
     Tcp::weak(false);
     _request = request;
 
-    if (!request->headers.has("User-Agent")) request->headers.add(
-        "User-Agent",
-        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36 UniEvent-HTTP/1.0"
-    );
+    if (!request->headers.has("User-Agent")) request->headers.add("User-Agent", DEFAULT_UA);
 
     using namespace panda::protocol::http;
     if (request->compression_prefs == static_cast<std::uint8_t>(Compression::IDENTITY) && !request->headers.has("Accept-Encoding")) {
@@ -193,9 +192,23 @@ void Client::analyze_request () {
             if (prev_uri->explicit_port()) uri->port(prev_uri->port());
         }
 
+        // record prev context
+        RedirectContextSP redirect_ctx(new RedirectContext{prev_uri,  _request->ssl_ctx,  _request->cookies });
+        auto& headers = _request->headers.fields;
+        for (auto it = headers.begin(); it != headers.end();) {
+            auto& name = it->name;
+            if ((name == "Authorization" ) || (name == "Cookie" ) || (name == "Host") || (name == "Referer")) {
+                redirect_ctx->removed_headers.add(name, it->value);
+                it = headers.erase(it);
+            } else ++it;
+        }
+        _request->ssl_ctx = nullptr;
+        _request->cookies.clear();
+        _request->uri = uri;
+
         try {
             _in_redirect = true;
-            _request->redirect_event(_request, _response, uri);
+            _request->redirect_event(_request, _response, redirect_ctx);
             _in_redirect = false;
         }
         catch (...) {
@@ -210,9 +223,11 @@ void Client::analyze_request () {
             return;
         }
 
-        _request->uri = uri;
-        _request->headers.remove("Host"); // will be filled from new uri
-        if (_response->code == 303) _request->method = Request::Method::GET;
+        if (_response->code == 303) {
+            _request->method = Request::Method::GET;
+            _request->body.clear();
+        }
+
         panda_log_info("following redirect: " << prev_uri->to_string() << " -> " << uri->to_string() << " (" << _request->_redirection_counter << " of " << _request->redirection_limit << ")");
         auto netloc = _request->netloc();
 

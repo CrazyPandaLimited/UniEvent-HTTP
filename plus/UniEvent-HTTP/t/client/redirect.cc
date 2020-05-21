@@ -18,14 +18,23 @@ TEST("same server") {
 
     p.client->connect_event.add([&](auto...){ test.happens("connect"); });
 
-    auto req = Request::Builder().method(Request::Method::POST).uri("/").header("h", "v").body("b").build();
-    req->redirect_event.add([&](auto req, auto res, auto uri) {
+    auto req = Request::Builder().method(Request::Method::POST).uri("/")
+            .header("h", "v").header("Authorization", "secret")
+            .cookie("c", "cv")
+            .body("b").build();
+    req->redirect_event.add([&](auto req, auto res, auto& red_ctx) {
         test.happens("redirect");
         CHECK(res->code == 302);
         CHECK(res->headers.location() == "/index");
-        CHECK(uri->path() == "/index");
-        CHECK(req->uri->path() == "/");
-        CHECK(req->original_uri() == req->uri);
+        CHECK(req->uri->path() == "/index");
+        CHECK(req->ssl_ctx == nullptr);
+        CHECK(req->cookies.empty());
+        CHECK(req->headers.get("h") == "v");
+        CHECK(red_ctx->uri->path() == "/");
+        CHECK(red_ctx->cookies.size() == 1);
+        CHECK(red_ctx->cookies.get("c") == "cv");
+        CHECK(red_ctx->removed_headers.size() == 1);
+        CHECK(red_ctx->removed_headers.get("Authorization") == "secret");
     });
 
     auto res = p.client->get_response(req);
@@ -33,7 +42,6 @@ TEST("same server") {
     CHECK(res->headers.get("h") == "v");
     CHECK(res->body.to_string() == "b");
     CHECK(req->uri->path() == "/index");
-    CHECK(req->original_uri()->path() == "/");
 }
 
 TEST("different server") {
@@ -52,11 +60,12 @@ TEST("different server") {
     p.client->connect_event.add([&](auto...){ test.happens("connect"); });
 
     auto req = Request::Builder().uri("/").header("h", "v").body("b").build();
-    req->redirect_event.add([&](auto, auto res, auto uri) {
+    req->redirect_event.add([&](auto req, auto res, auto&) {
         test.happens("redirect");
         CHECK(res->code == 302);
         auto check_uri = string("//") + backend->location() + '/';
         CHECK(res->headers.location() == check_uri);
+        auto& uri = req->uri;
         CHECK(uri->to_string() == (secure ? string("https:") : string("http:")) + check_uri);
     });
 

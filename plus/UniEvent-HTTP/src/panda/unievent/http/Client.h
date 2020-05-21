@@ -10,6 +10,8 @@ struct Pool;
 struct Client;
 using ClientSP = iptr<Client>;
 
+extern const string DEFAULT_UA;
+
 struct Client : Tcp, private ITcpSelfListener, private ITimerListener {
     Client (const LoopSP& = Loop::default_loop());
 

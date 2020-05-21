@@ -23,24 +23,25 @@ subtest "basic redirect" => sub {
     my $req = new UE::HTTP::Request({
         uri     => "/",
         headers => {h => 'v'},
+        cookies => {c => 'cv'},
         body    => 'b',
         redirect_callback => sub {
-            my ($req, $res, $uri) = @_;
+            my ($req, $res, $ctx) = @_;
             $test->happens("redirect");
             is $res->code, 302;
             is $res->header("location"), "/index";
-            is $uri->path, "/index";
-            is $req->uri->path, "/";
-            is $req->original_uri, $req->uri;
+            is $req->uri->path, "/index";
+            is $ctx->uri->path, "/";
         },
     });
 
     my $res = $p->client->get_response($req);
     is $res->code, 200;
+
     is $res->header("h"), "v";
     is $res->body, "b";
     is $req->uri->path, "/index";
-    is $req->original_uri->path, "/";
+    is $req->cookie('c'), undef;
 };
 
 subtest "do not follow redirections" => sub {

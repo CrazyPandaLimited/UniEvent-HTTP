@@ -18,6 +18,7 @@ void fill (Pool::Config&,     const Hash&);
 
 namespace xs {
 
+
 template <class TYPE>
 struct Typemap<panda::unievent::http::Request*, TYPE> : Typemap<panda::protocol::http::Request*, TYPE> {
     static panda::string_view package () { return "UniEvent::HTTP::Request"; }
@@ -55,7 +56,10 @@ struct Typemap<panda::unievent::http::Pool*, TYPE> : TypemapObject<panda::unieve
     static panda::string_view package () { return "UniEvent::HTTP::Pool"; }
 };
 
-
+template <class TYPE>
+struct Typemap<panda::unievent::http::RedirectContext*, TYPE> : TypemapObject<panda::unievent::http::RedirectContext*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMG> {
+    static panda::string_view package () { return "UniEvent::HTTP::RedirectContext"; }
+};
 
 template <class TYPE>
 struct Typemap<panda::unievent::http::ServerRequest*, TYPE> : Typemap<panda::protocol::http::Request*, TYPE> {

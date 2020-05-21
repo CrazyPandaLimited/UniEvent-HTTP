@@ -9,8 +9,10 @@
 
 namespace panda { namespace unievent { namespace http {
 
-struct Client;  using ClientSP  = iptr<Client>;
-struct Request; using RequestSP = iptr<Request>;
+struct Client;          using ClientSP  = iptr<Client>;
+struct Request;         using RequestSP = iptr<Request>;
+struct RedirectContext; using RedirectContextSP = iptr<RedirectContext>;
+
 using panda::unievent::AddrInfoHints;
 
 struct NetLoc {
@@ -30,7 +32,7 @@ struct Request : protocol::http::Request {
     struct Builder;
     using response_fptr = void(const RequestSP&, const ResponseSP&, const ErrorCode&);
     using partial_fptr  = void(const RequestSP&, const ResponseSP&, const ErrorCode&);
-    using redirect_fptr = void(const RequestSP&, const ResponseSP&, const URISP&);
+    using redirect_fptr = void(const RequestSP&, const ResponseSP&, const RedirectContextSP&);
     using continue_fptr = void(const RequestSP&);
     using response_fn   = function<response_fptr>;
     using partial_fn    = function<partial_fptr>;
@@ -54,8 +56,6 @@ struct Request : protocol::http::Request {
 
     Request () {}
 
-    const URISP& original_uri () const { return _original_uri; }
-
     bool transfer_completed () const { return _transfer_completed; }
 
     void send_chunk        (const string& chunk);
@@ -69,7 +69,6 @@ protected:
 private:
     friend Client; friend struct Pool;
 
-    URISP    _original_uri;
     uint16_t _redirection_counter = 0;
     bool     _transfer_completed  = false;
     ClientSP _client; // holds client when active
@@ -136,5 +135,16 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder, RequestS
         return *this;
     }
 };
+
+struct RedirectContext: Refcnt {
+    URISP    uri;
+    SSL_CTX* ssl_ctx;
+    Request::Cookies cookies;
+    protocol::http::Headers removed_headers;
+
+    RedirectContext(const URISP& uri_, SSL_CTX* ssl_ctx_, const Request::Cookies& cookies_):
+        uri(uri_), ssl_ctx{ssl_ctx_}, cookies{cookies_} {}
+};
+
 
 }}}
