@@ -26,10 +26,13 @@ struct UserAgent: Refcnt {
         string cert;
         string key;
         URISP proxy;
+        bool lax_context = false;
 
         Config() {};
     };
     using CookieJarSP = protocol::http::CookieJarSP;
+    using Date = protocol::http::CookieJar::Date;
+
 
     UserAgent(const LoopSP& loop, const string& serialized = {}, const Config& config = Config());
 
@@ -50,9 +53,12 @@ struct UserAgent: Refcnt {
     const string&      cert()       const noexcept { return _config.cert;     }
     const string&      key()        const noexcept { return _config.key;      }
     const URISP&       proxy()      const noexcept { return _config.proxy;    }
+    const LoopSP&      loop()       const noexcept { return _pool->loop();    }
+
+    string to_string(bool include_session = false) noexcept;
 
 private:
-    void inject(const RequestSP& req) noexcept;
+    void inject(const RequestSP& req, const Date& now) noexcept;
 
     PoolSP _pool;
     CookieJarSP _cookie_jar;

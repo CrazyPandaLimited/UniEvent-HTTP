@@ -20,20 +20,25 @@ UserAgent::UserAgent(const LoopSP& loop, const string& serialized, const Config&
 ClientSP UserAgent::request (const RequestSP& req) {
     if (!req->headers.has("User-Agent")) req->headers.add("User-Agent", _config.identity);
     req->response_event.add([ua = UserAgentSP(this)](auto& req, auto& res, auto& err){
-        if (!err) ua->cookie_jar()->collect(*res, req->uri);
+        if (!err) {
+            auto now = Date(ua->loop()->now());
+            ua->cookie_jar()->collect(*res, req->uri, now);
+        }
     });
     req->redirect_event.add([ua = UserAgentSP(this)](auto& req, auto& res, auto& redirect_ctx){
         auto& jar = ua->cookie_jar();
-        jar->collect(*res, redirect_ctx->uri);
-        ua->inject(req);
+        auto now = Date(ua->loop()->now());
+        jar->collect(*res, redirect_ctx->uri, now);
+        ua->inject(req, now);
     });
 
-    inject(req);
+    auto now = Date(loop()->now());
+    inject(req, now);
     return _pool->request(req);
 }
 
-void UserAgent::inject(const RequestSP& req) noexcept {
-    _cookie_jar->populate(*req);
+void UserAgent::inject(const RequestSP& req, const Date& now) noexcept {
+    _cookie_jar->populate(*req, now, _config.lax_context);
     if (!req->headers.has("User-Agent")) req->headers.add("User-Agent", _config.identity);
     if (_sslsp && !req->ssl_ctx) req->ssl_ctx = _sslsp.get();
     if (_config.proxy && !req->proxy) req->proxy = _config.proxy;
@@ -63,6 +68,11 @@ void UserAgent::commit_ssl() {
 
         _sslsp = std::move(ssl);
     }
+}
+
+string UserAgent::to_string(bool include_session) noexcept {
+    auto now = Date(loop()->now());
+    return _cookie_jar->to_string(include_session, now);
 }
 
 
