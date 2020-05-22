@@ -36,7 +36,8 @@ struct UserAgent: Refcnt {
 
     UserAgent(const LoopSP& loop, const string& serialized = {}, const Config& config = Config());
 
-    ClientSP request (const RequestSP& req);
+    ClientSP request (const RequestSP& req, const URISP& context_uri, bool top_level = true);
+    ClientSP request (const RequestSP& req, bool top_level = true) { return request(req, req->uri, top_level); }
 
     void cookie_jar(CookieJarSP& value)  noexcept { _cookie_jar = value;      }
     void identity  (const string& value) noexcept { _config.identity = value; }
@@ -58,7 +59,7 @@ struct UserAgent: Refcnt {
     string to_string(bool include_session = false) noexcept;
 
 private:
-    void inject(const RequestSP& req, const Date& now) noexcept;
+    void inject(const RequestSP& req, const URISP& context_uri, bool top_level, const Date& now) noexcept;
 
     PoolSP _pool;
     CookieJarSP _cookie_jar;
