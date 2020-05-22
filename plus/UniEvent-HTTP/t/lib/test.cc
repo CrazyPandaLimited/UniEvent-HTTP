@@ -30,7 +30,7 @@ std::vector<ResponseSP> await_responses (const std::vector<RequestSP>& reqs, con
     std::vector<ResponseSP> r;
     for (auto& req : reqs) {
         req->response_event.add([&](auto, auto& res, auto& err){
-            if (err) throw err;
+            if (err) throw err.what();
             r.emplace_back(res);
             if (r.size() == reqs.size()) loop->stop();
         });
@@ -68,6 +68,30 @@ TServerSP make_server (const LoopSP& loop, Server::Config cfg) {
     server->run();
     return server;
 }
+
+TServerSP make_ssl_server (const LoopSP& loop) {
+    auto server_ctx = TServer::get_context("ca");
+    auto err = SSL_CTX_load_verify_locations(server_ctx.get(), "t/cert/ca.pem", nullptr);
+    assert(err);
+
+    SSL_CTX_set_verify(server_ctx.get(), SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
+    SSL_CTX_set_verify_depth(server_ctx.get(), 4);
+
+    Server::Location loc;
+    loc.host = "127.0.0.1";
+    loc.ssl_ctx = server_ctx.get();
+
+    Server::Config server_cfg;
+    server_cfg.locations.push_back(loc);
+    server_cfg.tcp_nodelay = true;
+
+    TServerSP server = new TServer(loop);
+    server->configure(server_cfg);
+    server_ctx.release();
+    server->run();
+    return server;
+}
+
 
 void TServer::enable_echo () {
     request_event.remove_all();
