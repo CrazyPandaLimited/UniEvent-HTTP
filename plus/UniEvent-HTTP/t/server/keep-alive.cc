@@ -88,7 +88,7 @@ TEST("idle timeout before any requests") {
     time_mark();
     ServerPair p(test.loop, cfg);
     CHECK(p.wait_eof(1000));
-    CHECK(time_elapsed() >= 50);
+    CHECK(time_elapsed() >= 49);
 }
 
 TEST("idle timeout during and after request") {

@@ -48,4 +48,12 @@ void fill (Pool::Config& cfg, const Hash& h) {
     if ((v = h.fetch("timeout"))) cfg.idle_timeout = (double)v * 1000;
 }
 
+void fill (UserAgent::Config& cfg, const Hash& h) {
+    Sv sv; Simple v;
+    if ((v  = h.fetch("identity")))   cfg.identity = v.as_string();
+    if ((sv = h.fetch("ssl_ctx")))    cfg.ssl_ctx  = xs::in<SSL_CTX*>(sv);
+    if ((sv = h.fetch("proxy")))      cfg.proxy    = xs::in<URISP>(sv);
+}
+
+
 }}}
