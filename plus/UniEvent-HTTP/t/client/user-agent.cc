@@ -103,10 +103,8 @@ TEST("SSL-context injection") {
     URISP uri(new URI(srv->uri()));
 
     UserAgentSP ua(new UserAgent(test.loop));
-    ua->ca("t/cert/ca.pem");
-    ua->cert("t/cert/01-alice.pem");
-    ua->key("t/cert/01-alice.key");
-    ua->commit_ssl();
+    auto client_cert = TClient::get_context("01-alice");
+    ua->ssl_ctx(client_cert.get());
 
     auto req = Request::Builder().uri(uri).build();
     ua->request(req);
