@@ -83,8 +83,6 @@ void Client::request (const RequestSP& request) {
     Tcp::weak(false);
     _request = request;
 
-    if (!request->headers.has("User-Agent")) request->headers.add("User-Agent", DEFAULT_UA);
-
     using namespace panda::protocol::http;
     if (request->compression_prefs == static_cast<std::uint8_t>(Compression::IDENTITY) && !request->headers.has("Accept-Encoding")) {
         request->allow_compression(Compression::GZIP);

@@ -15,7 +15,7 @@ TEST("simple + identity") {
         if (req->cookies.get("coo-2")) {
             res->cookies.add("coo-3", Response::Cookie("val-val-val"));
         }
-        res->headers.add("ua", req->headers.get("User-Agent"));
+        if (req->headers.has("User-Agent")) res->headers.add("ua", req->headers.get("User-Agent"));
         req->respond(res);
     });
 
@@ -40,11 +40,12 @@ TEST("simple + identity") {
 
     // another one
     req = Request::Builder().uri(uri).build();
+    ua->identity(UserAgent::Identity());
     ua->request(req);
     res = await_response(req, test.loop);
     CHECK(res->code == 200);
     CHECK(res->headers.get("h") == "ok");
-    CHECK(res->headers.get("ua") == cfg.identity);
+    CHECK(!res->headers.has("ua"));
     CHECK(res->cookies.get("coo-2").value().value() == "val-val");
     CHECK(res->cookies.get("coo-3").value().value() == "val-val-val");
 }

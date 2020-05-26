@@ -1,13 +1,6 @@
 #include "UserAgent.h"
 #include <openssl/ssl.h>
 
-namespace panda {
-
-void refcnt_inc (const SSL_CTX* o) { SSL_CTX_up_ref((SSL_CTX*)o); }
-void refcnt_dec (const SSL_CTX* o) { SSL_CTX_free((SSL_CTX*)o); }
-
-}
-
 namespace panda { namespace unievent { namespace http {
 
 using namespace panda::protocol::http;
@@ -17,7 +10,6 @@ UserAgent::UserAgent(const LoopSP& loop, const string& serialized, const Config&
 }
 
 ClientSP UserAgent::request (const RequestSP& req,  const URISP& context_uri, bool top_level) {
-    if (!req->headers.has("User-Agent")) req->headers.add("User-Agent", _config.identity);
     req->response_event.add([ua = UserAgentSP(this)](auto& req, auto& res, auto& err){
         if (!err) {
             auto now = Date(ua->loop()->now());
@@ -38,7 +30,7 @@ ClientSP UserAgent::request (const RequestSP& req,  const URISP& context_uri, bo
 
 void UserAgent::inject(const RequestSP& req, const URISP& context_uri, bool top_level, const Date& now) noexcept {
     _cookie_jar->populate(*req, context_uri, top_level, now);
-    if (!req->headers.has("User-Agent")) req->headers.add("User-Agent", _config.identity);
+    if (!req->headers.has("User-Agent") && _config.identity) req->headers.add("User-Agent", _config.identity.value());
     if (_config.ssl_ctx && !req->ssl_ctx) req->ssl_ctx = _config.ssl_ctx;
     if (_config.proxy && !req->proxy) req->proxy = _config.proxy;
 }
