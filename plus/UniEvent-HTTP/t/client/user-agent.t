@@ -17,7 +17,7 @@ subtest "simple UA usage" => sub {
     my $uri = URI::XS->new($srv->uri);
 
 
-    my $ua = MyTest::TUserAgent->new($test->loop);
+    my $ua = MyTest::TUserAgent->new({}, $test->loop);
     $ua->identity('test-ua');
     my $req = UniEvent::HTTP::Request->new({ uri  => $uri });
 
@@ -27,7 +27,7 @@ subtest "simple UA usage" => sub {
     is $res->code, 200;
     is scalar(keys %{ $ua->cookie_jar->all_cookies }), 1;
 
-    my $ua2 = MyTest::TUserAgent->new($test->loop, {serialized => $ua->to_string(1)});
+    my $ua2 = MyTest::TUserAgent->new({serialized => $ua->to_string(1)}, $test->loop);
     is_deeply $ua2->cookie_jar->to_string(1), $ua->to_string(1);
 };
 
