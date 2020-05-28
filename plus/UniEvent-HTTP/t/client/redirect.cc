@@ -27,7 +27,7 @@ TEST("same server") {
         CHECK(res->code == 302);
         CHECK(res->headers.location() == "/index");
         CHECK(req->uri->path() == "/index");
-        CHECK(req->ssl_ctx == nullptr);
+        CHECK(!req->ssl_ctx);
         CHECK(req->cookies.empty());
         CHECK(req->headers.get("h") == "v");
         CHECK(red_ctx->uri->path() == "/");

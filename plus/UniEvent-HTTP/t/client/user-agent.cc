@@ -105,7 +105,7 @@ TEST("SSL-context injection") {
 
     UserAgentSP ua(new UserAgent(test.loop));
     auto client_cert = TClient::get_context("01-alice");
-    ua->ssl_ctx(client_cert.get());
+    ua->ssl_ctx(client_cert);
 
     auto req = Request::Builder().uri(uri).build();
     ua->request(req);

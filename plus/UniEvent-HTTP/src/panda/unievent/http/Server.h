@@ -6,8 +6,6 @@
 #include <vector>
 #include <atomic>
 
-struct ssl_ctx_st; typedef ssl_ctx_st SSL_CTX; // avoid including openssl headers
-
 namespace panda { namespace unievent { namespace http {
 
 using panda::protocol::http::SIZE_UNLIMITED;
@@ -19,12 +17,12 @@ struct Server : Refcnt, private IStreamSelfListener {
     static constexpr const size_t   DEFAULT_MAX_BODY_SIZE    = SIZE_UNLIMITED;
 
     struct Location {
-        string   host;
-        uint16_t port       = 0;
-        bool     reuse_port = true; // several listeners(servers) can be bound to the same port if true, useful for threaded apps
-        int      backlog    = DEFAULT_BACKLOG; // max accept queue
-        SSL_CTX* ssl_ctx    = nullptr; // if set, will use SSL
-        int      domain     = AF_INET;
+        string     host;
+        uint16_t   port       = 0;
+        bool       reuse_port = true; // several listeners(servers) can be bound to the same port if true, useful for threaded apps
+        int        backlog    = DEFAULT_BACKLOG; // max accept queue
+        SslContext ssl_ctx    = nullptr; // if set, will use SSL
+        int        domain     = AF_INET;
     };
 
     struct Config {

@@ -200,7 +200,7 @@ void Client::analyze_request () {
                 it = headers.erase(it);
             } else ++it;
         }
-        _request->ssl_ctx = nullptr;
+        _request->ssl_ctx.reset();
         _request->cookies.clear();
         _request->uri = uri;
 

@@ -16,10 +16,10 @@ struct RedirectContext; using RedirectContextSP = iptr<RedirectContext>;
 using panda::unievent::AddrInfoHints;
 
 struct NetLoc {
-    string   host;
-    uint16_t port    = 0;
-    SSL_CTX* ssl_ctx = nullptr;
-    URISP    proxy;
+    string     host;
+    uint16_t   port    = 0;
+    SslContext ssl_ctx = nullptr;
+    URISP      proxy;
 
     bool operator== (const NetLoc& other) const {
         return host == other.host && port == other.port && ssl_ctx == other.ssl_ctx && proxy == other.proxy;
@@ -50,7 +50,7 @@ struct Request : protocol::http::Request {
     CallbackDispatcher<partial_fptr>  partial_event;
     CallbackDispatcher<redirect_fptr> redirect_event;
     CallbackDispatcher<continue_fptr> continue_event;
-    SSL_CTX*                          ssl_ctx           = nullptr;
+    SslContext                        ssl_ctx           = nullptr;
     URISP                             proxy;
     AddrInfoHints                     tcp_hints         = Tcp::defhints;
 
@@ -115,7 +115,7 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder, RequestS
         return *this;
     }
 
-    Builder& ssl_ctx (SSL_CTX* ctx) {
+    Builder& ssl_ctx (const SslContext& ctx) {
         _message->ssl_ctx = ctx;
         return *this;
     }
@@ -138,11 +138,11 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder, RequestS
 
 struct RedirectContext: Refcnt {
     URISP    uri;
-    SSL_CTX* ssl_ctx;
+    SslContext ssl_ctx;
     Request::Cookies cookies;
     protocol::http::Headers removed_headers;
 
-    RedirectContext(const URISP& uri_, SSL_CTX* ssl_ctx_, const Request::Cookies& cookies_):
+    RedirectContext(const URISP& uri_, const SslContext& ssl_ctx_, const Request::Cookies& cookies_):
         uri(uri_), ssl_ctx{ssl_ctx_}, cookies{cookies_} {}
 };
 

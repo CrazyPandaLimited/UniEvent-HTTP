@@ -17,6 +17,7 @@ using panda::unievent::Async;
 using panda::unievent::AsyncSP;
 using panda::unievent::Timer;
 using panda::unievent::TimerSP;
+using panda::unievent::SslContext;
 using namespace panda::unievent::test;
 using namespace panda::unievent::http;
 using RawRequest    = panda::protocol::http::Request;
@@ -32,8 +33,6 @@ extern bool secure;
 string active_scheme();
 
 static auto fail_cb = [](auto...){ FAIL(); };
-
-using SslHolder = std::unique_ptr<SSL_CTX, std::function<void(SSL_CTX*)>>;
 
 int64_t get_time     ();
 void    time_mark    ();
@@ -54,7 +53,7 @@ struct TServer : Server {
     NetLoc netloc      () const;
     string uri         () const;
 
-    static SslHolder get_context(string cert_name = "ca");
+    static SslContext get_context(string cert_name = "ca");
 
     ~TServer () { ++dcnt; }
 
@@ -80,7 +79,7 @@ struct TClient : Client {
     ErrorCode get_error (const RequestSP& req);
     ErrorCode get_error (const string& uri, Headers&& = {}, Body&& = {}, bool chunked = false);
 
-    static SslHolder get_context(string cert_name, const string& ca_name = "ca");
+    static SslContext get_context(string cert_name, const string& ca_name = "ca");
 
     ~TClient () { ++dcnt; }
 

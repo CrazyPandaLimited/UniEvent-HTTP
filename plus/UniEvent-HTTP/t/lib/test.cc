@@ -59,8 +59,7 @@ TServerSP make_server (const LoopSP& loop, Server::Config cfg) {
 
     Server::Location loc;
     loc.host = "127.0.0.1";
-    SslHolder ssl_ctx;
-    if (secure) { ssl_ctx = TServer::get_context("ca"); loc.ssl_ctx = ssl_ctx.get(); }
+    if (secure) { loc.ssl_ctx = TServer::get_context("ca"); }
     cfg.locations.push_back(loc);
     cfg.tcp_nodelay = true;
     server->configure(cfg);
@@ -71,15 +70,15 @@ TServerSP make_server (const LoopSP& loop, Server::Config cfg) {
 
 TServerSP make_ssl_server (const LoopSP& loop) {
     auto server_ctx = TServer::get_context("ca");
-    auto err = SSL_CTX_load_verify_locations(server_ctx.get(), "t/cert/ca.pem", nullptr);
+    auto err = SSL_CTX_load_verify_locations(server_ctx, "t/cert/ca.pem", nullptr);
     assert(err);
 
-    SSL_CTX_set_verify(server_ctx.get(), SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
-    SSL_CTX_set_verify_depth(server_ctx.get(), 4);
+    SSL_CTX_set_verify(server_ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
+    SSL_CTX_set_verify_depth(server_ctx, 4);
 
     Server::Location loc;
     loc.host = "127.0.0.1";
-    loc.ssl_ctx = server_ctx.get();
+    loc.ssl_ctx = server_ctx;
 
     Server::Config server_cfg;
     server_cfg.locations.push_back(loc);
@@ -87,7 +86,6 @@ TServerSP make_ssl_server (const LoopSP& loop) {
 
     TServerSP server = new TServer(loop);
     server->configure(server_cfg);
-    server_ctx.release();
     server->run();
     return server;
 }
@@ -129,9 +127,9 @@ NetLoc TServer::netloc () const {
     return { sockaddr().ip(), sockaddr().port(), nullptr, {} };
 }
 
-SslHolder TServer::get_context (string cert_name) {
+SslContext TServer::get_context (string cert_name) {
     auto ctx = SSL_CTX_new(SSLv23_server_method());
-    SslHolder r(ctx, [](auto* ctx){ SSL_CTX_free(ctx); });
+    auto r = SslContext::attach(ctx);
     string path("t/cert");
     string cert = path + "/" + cert_name + ".pem";
     string key = path + "/" + cert_name + ".key";
@@ -208,9 +206,9 @@ ErrorCode TClient::get_error (const string& uri, Headers&& headers, Body&& body,
     return get_error(b.build());
 }
 
-SslHolder TClient::get_context(string cert_name, const string& ca_name) {
+SslContext TClient::get_context(string cert_name, const string& ca_name) {
     auto ctx = SSL_CTX_new(SSLv23_client_method());
-    SslHolder r(ctx, [](auto* ctx){ SSL_CTX_free(ctx); });
+    auto r = SslContext::attach(ctx);
     string path("t/cert");
     string ca = path + "/" + ca_name + ".pem";
     string cert = path + "/" + cert_name + ".pem";
@@ -318,8 +316,7 @@ ServerPair::ServerPair (const LoopSP& loop, Server::Config cfg) {
     server = make_server(loop, cfg);
 
     conn = new Tcp(loop);
-    SslHolder ssl;
-    if (secure) { ssl = TClient::get_context("01-alice"); conn->use_ssl(ssl.get()); }
+    if (secure) {  conn->use_ssl( TClient::get_context("01-alice")); }
     conn->connect_event.add([](auto& conn, auto& err, auto){ if (err) throw err; conn->loop()->stop(); });
     conn->connect(server->listeners().front()->sockaddr());
     loop->run();
