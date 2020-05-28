@@ -3,6 +3,7 @@
 #include <panda/log.h>
 #include <panda/unievent/http.h>
 #include <panda/unievent/http/Server.h>
+#include <panda/unievent/http/UserAgent.h>
 #include <panda/unievent/test/AsyncTest.h>
 #include <memory>
 #include <functional>
@@ -135,3 +136,4 @@ private:
 
 
 TServerSP make_server (const LoopSP&, Server::Config = {});
+TServerSP make_ssl_server (const LoopSP&);

@@ -125,6 +125,15 @@ sub make_server {
         my $sa = shift->sockaddr;
         return $sa->ip. ':' . $sa->port;
     }
+
+    sub uri {
+        my ($self, $secure) = @_;
+        $secure //= 0;
+
+        my $loc = $self->location;
+        my $scheme = $secure ? 'https' : 'http';
+        return "$scheme://$loc/";
+    }
 }
 
 {
@@ -313,6 +322,21 @@ sub make_server {
     use parent 'UniEvent::HTTP::Pool';
     use 5.012;
     
+    sub request {
+        my $client = shift->SUPER::request(@_);
+        if ($client) {
+            XS::Framework::obj2hv($client);
+            bless $client, 'MyTest::TClient';
+        }
+        return $client;
+    }
+}
+
+{
+    package MyTest::TUserAgent;
+    use parent 'UniEvent::HTTP::UserAgent';
+    use 5.012;
+
     sub request {
         my $client = shift->SUPER::request(@_);
         if ($client) {

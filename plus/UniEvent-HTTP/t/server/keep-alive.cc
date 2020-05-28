@@ -88,13 +88,13 @@ TEST("idle timeout before any requests") {
     time_mark();
     ServerPair p(test.loop, cfg);
     CHECK(p.wait_eof(1000));
-    CHECK(time_elapsed() >= 50);
+    CHECK(time_elapsed() >= 49);
 }
 
 TEST("idle timeout during and after request") {
     AsyncTest test(5000);
     Server::Config cfg;
-    cfg.idle_timeout = 50;
+    cfg.idle_timeout = 10;
     ServerPair p(test.loop, cfg);
     TimerSP t = new Timer(test.loop);
     bool arrived = false;
@@ -105,7 +105,7 @@ TEST("idle timeout during and after request") {
             time_mark();
             req->respond(new ServerResponse(200, Headers(), Body("hello world")));
         });
-        t->once(60); // longer that idle timeout, it should not break connection during active request
+        t->once(11); // longer that idle timeout, it should not break connection during active request
     });
 
     try {
@@ -119,5 +119,6 @@ TEST("idle timeout during and after request") {
         throw;
     }
     CHECK(p.wait_eof(4000));
-    CHECK(time_elapsed() >= 50);
+    /* -1 to compensate that idle timer and test timer do start at different times */
+    CHECK(time_elapsed() >= cfg.idle_timeout - 1);
 }

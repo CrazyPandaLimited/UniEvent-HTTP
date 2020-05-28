@@ -12,25 +12,8 @@ bool init_ssl() { secure = true; return secure; }
 bool _init_ssl = init_ssl();
 
 static TServerSP create_server(const LoopSP& loop) {
-    auto server_ctx = TServer::get_context("ca");
-    auto err = SSL_CTX_load_verify_locations(server_ctx.get(), "t/cert/ca.pem", nullptr);
-    assert(err);
+    auto server = make_ssl_server(loop);
 
-    SSL_CTX_set_verify(server_ctx.get(), SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
-    SSL_CTX_set_verify_depth(server_ctx.get(), 4);
-
-    Server::Location loc;
-    loc.host = "127.0.0.1";
-    loc.ssl_ctx = server_ctx.get();
-
-    Server::Config server_cfg;
-    server_cfg.locations.push_back(loc);
-    server_cfg.tcp_nodelay = true;
-
-    TServerSP server = new TServer(loop);
-    server->configure(server_cfg);
-
-    server->run();
     server->enable_echo();
     return server;
 }

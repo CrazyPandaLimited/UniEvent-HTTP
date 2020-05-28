@@ -3,20 +3,23 @@
 #include <xs/protocol/http.h>
 #include <panda/unievent/http.h>
 #include <panda/unievent/http/Server.h>
+#include <panda/unievent/http/UserAgent.h>
 
 namespace xs { namespace unievent { namespace http {
 
 using namespace panda::unievent::http;
 
-void fill (Request*,          const Hash&);
-void fill (ServerResponse*,   const Hash&);
-void fill (Server::Location&, const Hash&);
-void fill (Server::Config&,   const Hash&);
-void fill (Pool::Config&,     const Hash&);
+void fill (Request*,           const Hash&);
+void fill (Pool::Config&,      const Hash&);
+void fill (ServerResponse*,    const Hash&);
+void fill (Server::Location&,  const Hash&);
+void fill (Server::Config&,    const Hash&);
+void fill (UserAgent::Config&, const Hash&);
 
 }}}
 
 namespace xs {
+
 
 template <class TYPE>
 struct Typemap<panda::unievent::http::Request*, TYPE> : Typemap<panda::protocol::http::Request*, TYPE> {
@@ -55,7 +58,10 @@ struct Typemap<panda::unievent::http::Pool*, TYPE> : TypemapObject<panda::unieve
     static panda::string_view package () { return "UniEvent::HTTP::Pool"; }
 };
 
-
+template <class TYPE>
+struct Typemap<panda::unievent::http::RedirectContext*, TYPE> : TypemapObject<panda::unievent::http::RedirectContext*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMG> {
+    static panda::string_view package () { return "UniEvent::HTTP::RedirectContext"; }
+};
 
 template <class TYPE>
 struct Typemap<panda::unievent::http::ServerRequest*, TYPE> : Typemap<panda::protocol::http::Request*, TYPE> {
@@ -78,6 +84,12 @@ struct Typemap<panda::unievent::http::ServerResponseSP, panda::iptr<TYPE>> : Typ
         return ret;
     }
 };
+
+template <class TYPE>
+struct Typemap<panda::unievent::http::UserAgent*, TYPE> : TypemapObject<panda::unievent::http::UserAgent*, TYPE, ObjectTypeRefcntPtr, ObjectStorageMG> {
+    static panda::string_view package () { return "UniEvent::HTTP::UserAgent"; }
+};
+
 
 template <class TYPE> struct Typemap<panda::unievent::http::Server::Location, TYPE> : TypemapBase<panda::unievent::http::Server::Location, TYPE> {
     static TYPE in (SV* arg) { TYPE loc; xs::unievent::http::fill(loc, arg); return loc; }
