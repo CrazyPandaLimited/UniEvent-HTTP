@@ -13,7 +13,7 @@ my $time_mark = Time::HiRes::time();;
 
 if ($ENV{LOGGER}) {
     require XLog;
-    XLog::set_logger(sub { say $_[1] });
+    XLog::set_logger(sub { say $_[0] });
     XLog::set_level(XLog::VERBOSE_DEBUG());
 }
 
@@ -74,7 +74,7 @@ sub make_server {
     my ($loop, $cfg) = @_;
     my $server = new MyTest::TServer($loop);
     $cfg ||= {};
-    $cfg->{locations} = [{host => "127.0.0.1"}];
+    $cfg->{locations} ||= [{host => "127.0.0.1"}];
     $cfg->{tcp_nodelay} = 1;
     $server->configure($cfg);
     $server->run;
@@ -242,7 +242,7 @@ sub make_server {
             $req->uri->host($sa->ip);
             $req->uri->port($sa->port);
         }
-        #if (secure) req->uri->scheme("https");
+        $req->uri->scheme("https") if ($req->ssl_ctx);
         return $self->SUPER::request($req);
     }
 
