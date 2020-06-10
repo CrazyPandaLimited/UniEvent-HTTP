@@ -1,5 +1,6 @@
 #pragma once
 #include <xs/unievent/Tcp.h>
+#include <xs/unievent/Ssl.h>
 #include <xs/protocol/http.h>
 #include <panda/unievent/http.h>
 #include <panda/unievent/http/Server.h>

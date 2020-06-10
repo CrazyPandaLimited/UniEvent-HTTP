@@ -258,7 +258,7 @@ TEST("SSL certificate nuances") {
 
     TClientSP c1, c2, c3;
     auto uristr = active_scheme()+ string("://") + srv->location() + '/';
-    auto req1 = Request::Builder().uri(uristr).ssl_ctx(cert1.get()).build();
+    auto req1 = Request::Builder().uri(uristr).ssl_ctx(cert1).build();
     {
         c1 = p.request(req1);
         REQUIRE(c1);
@@ -273,7 +273,7 @@ TEST("SSL certificate nuances") {
     }
 
     {   //different client certificate
-        auto req2 = Request::Builder().uri(uristr).ssl_ctx(cert2.get()).build();
+        auto req2 = Request::Builder().uri(uristr).ssl_ctx(cert2).build();
         c2 = p.request(req2);
         REQUIRE(c2);
         REQUIRE(c1 != c2);
@@ -305,7 +305,7 @@ TEST("SSL certificate nuances") {
 
     { // with proxy, but the same cert as c1
         auto proxy = new_proxy(test.loop);
-        auto req = Request::Builder().uri(uristr).ssl_ctx(cert1.get()).proxy(proxy.url).build();
+        auto req = Request::Builder().uri(uristr).ssl_ctx(cert1).proxy(proxy.url).build();
         auto c4 = p.request(req);
         REQUIRE(c4 != c1);
         REQUIRE(c4 != c2);
