@@ -110,7 +110,7 @@ sub make_server {
         $self->request_callback(sub {
             my $req = shift;
             my $h = $req->headers;
-            delete $h->%{qw/host accept-encoding user-agent content-encoding/};
+            delete @$h{qw/host accept-encoding user-agent content-encoding/};
             my $response = UE::HTTP::ServerResponse->new({
                 code       => 200, 
                 headers    => $h, 
