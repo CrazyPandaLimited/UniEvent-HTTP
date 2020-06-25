@@ -52,7 +52,7 @@ TEST("chunked request send") {
 
     size_t count = 10;
     p.server->route_event.add([&](auto sreq) {
-        CHECK(sreq->method == Request::Method::POST);
+        CHECK(sreq->method_raw() == Request::Method::POST);
         CHECK(sreq->uri->path() == "/");
         sreq->enable_partial();
 
