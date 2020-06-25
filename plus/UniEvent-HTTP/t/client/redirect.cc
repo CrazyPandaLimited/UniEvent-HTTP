@@ -8,10 +8,10 @@ TEST("same server") {
 
     p.server->request_event.add([&](auto req){
         if (req->uri->to_string() == "/") {
-            CHECK(req->method == Request::Method::POST);
+            CHECK(req->method_raw() == Request::Method::POST);
             req->redirect("/index");
         } else if (req->uri->to_string() == "/index") {
-            CHECK(req->method == Request::Method::POST); // preserves original method
+            CHECK(req->method_raw() == Request::Method::POST); // preserves original method
             req->respond(new ServerResponse(200, Headers().add("h", req->headers.get("h")), Body(req->body)));
         }
     });
@@ -201,10 +201,10 @@ TEST("redirect with 303 (method changing to GET)") {
 
     p.server->request_event.add([&](auto req){
         if (req->uri->to_string() == "/") {
-            CHECK(req->method == Request::Method::POST);
+            CHECK(req->method_raw() == Request::Method::POST);
             req->respond(new ServerResponse(303, Headers().location("/index")));
         } else if (req->uri->to_string() == "/index") {
-            CHECK(req->method == Request::Method::GET); // method changed to GET
+            CHECK(req->method_raw() == Request::Method::GET); // method changed to GET
             req->respond(new ServerResponse(200));
         }
     });
