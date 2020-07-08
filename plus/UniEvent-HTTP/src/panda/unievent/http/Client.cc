@@ -135,7 +135,6 @@ void Client::on_timer (const TimerSP& t) {
 
 void Client::on_read (string& buf, const ErrorCode& err) {
     if (err) return cancel(err);
-    panda_log_debug("read:\n" << buf);
 
     while (buf) {
         if (!_parser.context_request()) {
@@ -169,6 +168,8 @@ void Client::on_read (string& buf, const ErrorCode& err) {
 
 void Client::analyze_request () {
     panda_log_info("analyze, code = " << _response->code);
+    /* nullptr as we don't want to compression be applied */
+    panda_log_debug("analyze, (uncompressed) response = " << _response->to_string(nullptr));
 
     if (_response->code == 100) {
         _request->continue_event(_request);
