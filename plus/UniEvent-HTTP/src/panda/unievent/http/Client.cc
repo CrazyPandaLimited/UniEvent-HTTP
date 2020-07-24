@@ -134,7 +134,7 @@ void Client::on_timer (const TimerSP& t) {
 
 void Client::on_read (string& buf, const ErrorCode& err) {
     if (err) return cancel(err);
-    panda_log_debug("read *" << buf.size() << " bytes):\n" << buf);
+    panda_log_debug("read (" << buf.size() << " bytes):\n" << buf);
     while (buf) {
         if (!_parser.context_request()) {
             panda_log_notice("unexpected buffer: " << buf);
