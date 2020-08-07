@@ -39,11 +39,12 @@ Client::Client (Pool* pool) : Client(pool->loop()) {
 void Client::request (const RequestSP& request) {
     if (_request) throw HttpError("client supports only one request at a time");
     if (request->_client) {
-        panda_log_error("request with a present client: " << request->_client);
+        panda_log_error("request " << request << "with a present client: " << request->_client);
+        abort();
         throw HttpError("request is already in progress");
     }
     request->check();
-    panda_log_info("request:\n" << request->to_string());
+    panda_log_info("request:" << request << " in client:" << this << "\n" << request->to_string());
 
     request->_client = this;
     if (!request->uri->scheme()) request->uri->scheme("http");
@@ -283,11 +284,11 @@ void Client::finish_request (const ErrorCode& _err) {
 
     if (!res) res = static_pointer_cast<Response>(req->new_response()); // ensure we pass non-null response even for earliest errors
 
-    panda_log_info("finish_request 1, client: " << req->_client);
+    panda_log_info("finish_request 1, req:" << req << " client: " << req->_client);
     req->partial_event(req, res, err);
-    panda_log_info("finish_request 2, client: " << req->_client);
+    panda_log_info("finish_request 2, req:" << req << " client: " << req->_client);
     req->response_event(req, res, err);
-    panda_log_info("finish_request 3, client: " << req->_client);
+    panda_log_info("finish_request 3, req:" << req << " client: " << req->_client);
 }
 
 void Client::on_eof () {
