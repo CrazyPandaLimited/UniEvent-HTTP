@@ -4,7 +4,18 @@ namespace panda { namespace unievent { namespace http {
 
 static thread_local struct {
     LoopSP sync_loop;
+    bool   busy = false;
 } tls;
+
+struct BusyGuard {
+    BusyGuard (bool* busy) : busy(busy) {
+        if (*busy) throw panda::exception("recursive syncronous http request detected");
+        *busy = true;
+    }
+    ~BusyGuard () { *busy = false; }
+private:
+    bool* busy;
+};
 
 static thread_local Pool* sync_pool;
 
@@ -14,6 +25,8 @@ expected<ResponseSP, ErrorCode> http_request (const RequestSP& req, sync_t) {
         tls.sync_loop = new Loop();
         pool = sync_pool = Pool::instance(tls.sync_loop);
     }
+    
+    BusyGuard busy_guard(&tls.busy);
     
     expected<ResponseSP, ErrorCode> ret;
     req->response_event.add([&ret](auto&, auto& res, auto& err) {

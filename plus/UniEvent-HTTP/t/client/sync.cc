@@ -57,3 +57,32 @@ TEST("simple get") {
 
     CHECK(txt == "big file");
 }
+
+TEST("recursive sync") {
+    LoopSP sloop = new Loop();
+    AsyncSP async = new Async(sloop);
+    auto server = make_server(sloop);
+    auto uri = server->uri();
+
+    auto thr = std::thread([&] {
+        async->event.add([&](auto) {
+            sloop->stop();
+        });
+
+        server->request_event.add([](auto& req) {
+            req->respond(new ServerResponse(200, Headers(), Body("big file")));
+        });
+        sloop->run();
+
+        server->stop();
+    });
+
+    auto req = Request::Builder().uri(uri).timeout(10000).response_callback([&](auto&, auto&, auto&) {
+        CHECK_THROWS(http_get(uri));
+    }).build();
+    auto res = http_request(req, sync_t()).value();
+    async->send();
+    thr.join();
+
+    CHECK(res->body.to_string() == "big file");
+}
