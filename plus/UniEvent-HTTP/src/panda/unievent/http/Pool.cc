@@ -79,7 +79,6 @@ void Pool::putback (const ClientSP& client) {
     if (queue.size()) {
         auto req = queue.front();
         queue.pop_front();
-        panda_log_info("next requst from queue:" << req);
         client->request(req);
     }
     // mark connection as free
