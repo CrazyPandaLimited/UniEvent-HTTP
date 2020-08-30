@@ -1,5 +1,5 @@
 #pragma once
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 #include <panda/log.h>
 #include <panda/unievent/http.h>
 #include <panda/unievent/http/Server.h>
