@@ -40,8 +40,7 @@ void Client::request (const RequestSP& request) {
     if (_request) throw HttpError("client supports only one request at a time");
     if (request->_client) throw HttpError("request is already in progress");
     request->check();
-    panda_log_info("request " << request->uri->to_string());
-    panda_log_debug("\n" << request->to_string());
+    panda_log_info("request:\n" << request->to_string());
 
     request->_client = this;
     if (!request->uri->scheme()) request->uri->scheme("http");
@@ -135,8 +134,7 @@ void Client::on_timer (const TimerSP& t) {
 
 void Client::on_read (string& buf, const ErrorCode& err) {
     if (err) return cancel(err);
-    panda_log_debug("read:\n" << buf);
-
+    panda_log_debug("read (" << buf.size() << " bytes):\n" << buf);
     while (buf) {
         if (!_parser.context_request()) {
             panda_log_notice("unexpected buffer: " << buf);
@@ -169,6 +167,8 @@ void Client::on_read (string& buf, const ErrorCode& err) {
 
 void Client::analyze_request () {
     panda_log_info("analyze, code = " << _response->code);
+    /* nullptr as we don't want to compression be applied */
+    panda_log_debug("analyze, (uncompressed) response = " << _response->to_string(nullptr));
 
     if (_response->code == 100) {
         _request->continue_event(_request);
