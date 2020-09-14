@@ -3,6 +3,7 @@
 #include <ostream>
 #include <panda/log.h>
 #include <panda/unievent/socks.h>
+#include <openssl/ssl.h>
 
 #define HOLD_ON(this) ClientSP hold = this; (void)hold
 
@@ -56,6 +57,8 @@ void Client::request (const RequestSP& request) {
         if (request->uri->secure()) {
             if (request->ssl_ctx) Tcp::use_ssl(request->ssl_ctx);
             else                  Tcp::use_ssl();
+            auto ssl = Tcp::get_ssl();
+            SSL_set_tlsext_host_name(ssl, request->uri->host().c_str());
         }
 
         if (request->proxy) {
