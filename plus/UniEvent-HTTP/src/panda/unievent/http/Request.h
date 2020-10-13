@@ -2,6 +2,7 @@
 #include "msg.h"
 #include "error.h"
 #include "Response.h"
+#include "Form.h"
 #include <panda/unievent/Tcp.h>
 #include <panda/unievent/Timer.h>
 #include <panda/unievent/AddrInfo.h>
@@ -38,6 +39,7 @@ struct Request : protocol::http::Request {
     using partial_fn    = function<partial_fptr>;
     using redirect_fn   = function<redirect_fptr>;
     using continue_fn   = function<continue_fptr>;
+    using Form          = std::vector<FormFieldSP>;
 
     static constexpr const uint64_t DEFAULT_TIMEOUT           = 20000; // [ms]
     static constexpr const uint16_t DEFAULT_REDIRECTION_LIMIT = 20;    // [hops]
@@ -53,6 +55,7 @@ struct Request : protocol::http::Request {
     SslContext                        ssl_ctx           = nullptr;
     URISP                             proxy;
     AddrInfoHints                     tcp_hints         = Tcp::defhints;
+    Form                              form;
 
     Request () {}
 

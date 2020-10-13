@@ -1,6 +1,7 @@
 #pragma once
 #include "error.h"
 #include "Request.h"
+#include "Form.h"
 #include <panda/unievent/Tcp.h>
 #include <panda/protocol/http/ResponseParser.h>
 
@@ -27,7 +28,7 @@ protected:
     Client (Pool*);
 
 private:
-    friend Pool; friend Request;
+    friend Pool; friend Request; friend IFormField;
     using ResponseParser = protocol::http::ResponseParser;
 
     Pool*          _pool = nullptr;
@@ -38,6 +39,7 @@ private:
     uint64_t       _last_activity_time = 0;
     bool           _in_redirect = false;
     bool           _redirect_canceled = false;
+    int32_t        _form_field = -1;
 
     void on_connect (const ErrorCode&, const ConnectRequestSP&) override;
     void on_write   (const ErrorCode&, const WriteRequestSP&) override;
@@ -51,6 +53,9 @@ private:
     void drop_connection ();
     void analyze_request ();
     void finish_request  (const ErrorCode&);
+
+    void send_form() noexcept;
+    void send_chunk(const Chunk& chunk) noexcept;
 };
 
 }}}

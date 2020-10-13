@@ -92,8 +92,14 @@ void Client::request (const RequestSP& request) {
 
     auto data = request->to_vector();
     _parser.set_context_request(request);
-    read_start();
+
     write(data.begin(), data.end());
+    if (request->form_streaming()) {
+        _form_field = 0;
+        send_form();
+    } else {
+        read_start();
+    }
 }
 
 void Client::send_chunk (const RequestSP& req, const string& chunk) {
@@ -302,6 +308,29 @@ void Client::on_eof () {
         cancel(result.error);
     } else {
         analyze_request();
+    }
+}
+
+void Client::send_chunk(const Chunk &chunk) noexcept {
+    write(chunk.begin(), chunk.end());
+}
+
+void Client::send_form() noexcept {
+    assert(_request);
+    auto& form = _request->form;
+    while(_form_field < (int32_t)form.size()) {
+        auto& field = form.at(_form_field);
+        auto result = field->produce(*_request, *this);
+        assert(!(bool)result.ec); // handle later?
+        if (!result.finished) break;
+        ++_form_field;
+    }
+
+    if (_form_field == (int32_t)form.size()) {
+        _form_field = -1;
+        auto form_trailer = _request->form_finish();
+        send_chunk(form_trailer);
+        read_start();
     }
 }
 
