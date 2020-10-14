@@ -156,6 +156,12 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder, RequestS
         return *this;
     }
 
+    Builder& form_file (const string& name, Streamer::IInputSP in, const string& mime_type = "application/octet-stream", const string& filename = "") {
+        _message->form_stream();
+        _message->form.emplace_back(new FormFile(name, std::move(in), mime_type, filename));
+        return *this;
+    }
+
 };
 
 struct RedirectContext: Refcnt {

@@ -43,9 +43,9 @@ struct FormEmbeddedFile: FormField {
 };
 
 struct FormFile: IFormItem {
+    Streamer::IInputSP in;
     string mime_type;
     string filename;
-    Streamer::IInputSP in;
     StreamerSP streamer;
     size_t max_buf;
 
@@ -56,8 +56,8 @@ struct FormFile: IFormItem {
         ErrorCode write (const string& data) override;
     };
 
-    FormFile(const string& name_, const string& mime_, const string& filename_, Streamer::IInputSP in_, size_t max_buf_ = 10000000) noexcept:
-        IFormItem(name_), mime_type{mime_}, filename{filename_}, in{in_}, max_buf{max_buf_}  {
+    FormFile(const string& name_, Streamer::IInputSP in_, const string& mime_, const string& filename_, size_t max_buf_ = 10000000) noexcept:
+        IFormItem(name_), in{in_}, mime_type{mime_}, filename{filename_}, max_buf{max_buf_}  {
     }
 
     bool start(proto::Request& req, Client& out) noexcept override;
