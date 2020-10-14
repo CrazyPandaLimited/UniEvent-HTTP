@@ -28,7 +28,7 @@ protected:
     Client (Pool*);
 
 private:
-    friend Pool; friend Request; friend IFormField;
+    friend Pool; friend Request; friend IFormField; friend FormFile::ClientOutput;
     using ResponseParser = protocol::http::ResponseParser;
 
     Pool*          _pool = nullptr;
@@ -56,6 +56,7 @@ private:
 
     void send_form() noexcept;
     void send_chunk(const Chunk& chunk) noexcept;
+    void form_file_compete(const ErrorCode& ec) noexcept;
 };
 
 }}}

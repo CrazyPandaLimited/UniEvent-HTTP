@@ -291,6 +291,9 @@ void Client::finish_request (const ErrorCode& _err) {
 
     req->partial_event(req, res, err);
     req->response_event(req, res, err);
+    if (_form_field >= 0) {
+        req->form[_form_field]->stop();
+    }
 }
 
 void Client::on_eof () {
@@ -320,9 +323,8 @@ void Client::send_form() noexcept {
     auto& form = _request->form;
     while(_form_field < (int32_t)form.size()) {
         auto& field = form.at(_form_field);
-        auto result = field->produce(*_request, *this);
-        assert(!(bool)result.ec); // handle later?
-        if (!result.finished) break;
+        auto done = field->start(*_request, *this);
+        if (!done) break;
         ++_form_field;
     }
 
@@ -333,5 +335,15 @@ void Client::send_form() noexcept {
         read_start();
     }
 }
+
+void Client::form_file_compete(const ErrorCode& ec) noexcept {
+    if (ec) {
+        std::abort();
+        return;
+    }
+    ++_form_field;
+    send_form();
+}
+
 
 }}}
