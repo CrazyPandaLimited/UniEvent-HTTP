@@ -39,7 +39,7 @@ struct Request : protocol::http::Request {
     using partial_fn    = function<partial_fptr>;
     using redirect_fn   = function<redirect_fptr>;
     using continue_fn   = function<continue_fptr>;
-    using Form          = std::vector<FormFieldSP>;
+    using Form          = std::vector<FormItemSP>;
 
     static constexpr const uint64_t DEFAULT_TIMEOUT           = 20000; // [ms]
     static constexpr const uint16_t DEFAULT_REDIRECTION_LIMIT = 20;    // [hops]
@@ -144,12 +144,17 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder, RequestS
         return *this;
     }
 
-    Builder& form_field (FormFieldSP& value) {
+    Builder& form_item (FormItemSP& value) {
         _message->form_stream();
         _message->form.emplace_back(value);
         return *this;
     }
 
+    Builder& form_file (const string& name, const string& value, const string& mime_type = "application/octet-stream", const string& filename = "") {
+        _message->form_stream();
+        _message->form.emplace_back(new FormEmbeddedFile(name, value, mime_type, filename));
+        return *this;
+    }
 
 };
 

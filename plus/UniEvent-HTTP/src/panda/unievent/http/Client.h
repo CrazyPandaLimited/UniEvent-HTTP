@@ -28,7 +28,7 @@ protected:
     Client (Pool*);
 
 private:
-    friend Pool; friend Request; friend IFormField; friend FormFile;
+    friend Pool; friend Request; friend IFormItem; friend FormFile;
     using ResponseParser = protocol::http::ResponseParser;
 
     Pool*          _pool = nullptr;

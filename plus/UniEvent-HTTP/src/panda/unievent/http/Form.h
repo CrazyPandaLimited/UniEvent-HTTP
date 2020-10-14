@@ -12,22 +12,22 @@ namespace proto = protocol::http;
 struct Client;
 using Chunk = proto::Request::wrapped_chunk;
 
-struct IFormField: panda::Refcnt {
+struct IFormItem: panda::Refcnt {
     string name;
 
-    IFormField(const string& name_) noexcept: name{name_}{};
+    IFormItem(const string& name_) noexcept: name{name_}{};
 
     virtual bool start(proto::Request& req, Client& out) noexcept = 0;
     virtual void stop() noexcept {}
 protected:
     void produce(const Chunk& chunk, Client& out) noexcept;
 };
-using FormFieldSP = iptr<IFormField>;
+using FormItemSP = iptr<IFormItem>;
 
-struct FormField: IFormField {
+struct FormField: IFormItem {
     string content;
 
-    inline FormField(const string& name_, const string& content_) noexcept: IFormField(name_), content{content_} {}
+    inline FormField(const string& name_, const string& content_) noexcept: IFormItem(name_), content{content_} {}
 
     bool start(proto::Request& req, Client& out) noexcept override;
 };
@@ -36,13 +36,13 @@ struct FormEmbeddedFile: FormField {
     string mime_type;
     string filename;
 
-    FormEmbeddedFile(const string& name_, const string& content_, const string& mime_, const string& filename_) noexcept:
+    FormEmbeddedFile(const string& name_, const string& content_, const string& mime_ = "application/octet-stream", const string& filename_ = "") noexcept:
         FormField(name_, content_), mime_type{mime_}, filename{filename_} {}
 
     bool start(proto::Request& req, Client& out) noexcept override;
 };
 
-struct FormFile: IFormField {
+struct FormFile: IFormItem {
     string mime_type;
     string filename;
     Streamer::IInputSP in;
@@ -57,7 +57,7 @@ struct FormFile: IFormField {
     };
 
     FormFile(const string& name_, const string& mime_, const string& filename_, Streamer::IInputSP in_, size_t max_buf_ = 10000000) noexcept:
-        IFormField(name_), mime_type{mime_}, filename{filename_}, in{in_}, max_buf{max_buf_}  {
+        IFormItem(name_), mime_type{mime_}, filename{filename_}, in{in_}, max_buf{max_buf_}  {
     }
 
     bool start(proto::Request& req, Client& out) noexcept override;
