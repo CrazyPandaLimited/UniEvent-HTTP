@@ -52,7 +52,7 @@ struct FormFile: IFormItem {
     struct ClientOutput: streamer::StreamOutput {
         proto::RequestSP req;
 
-        using streamer::StreamOutput::StreamOutput;
+        ClientOutput(const StreamSP& stream, const proto::RequestSP& req_):StreamOutput(stream), req{req_} {}
         ErrorCode write (const string& data) override;
     };
 

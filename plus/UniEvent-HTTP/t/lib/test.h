@@ -25,6 +25,7 @@ using RawRequestSP  = panda::protocol::http::RequestSP;
 using RawResponseSP = panda::protocol::http::ResponseSP;
 
 namespace compression = panda::protocol::http::compression;
+namespace streamer = panda::unievent::streamer;
 
 #define VSSL "[v-ssl]"
 
