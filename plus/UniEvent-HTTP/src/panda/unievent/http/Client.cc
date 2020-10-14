@@ -336,7 +336,7 @@ void Client::send_form() noexcept {
     }
 }
 
-void Client::form_file_compete(const ErrorCode& ec) noexcept {
+void Client::form_file_complete(const ErrorCode& ec) noexcept {
     if (ec) {
         std::abort();
         return;

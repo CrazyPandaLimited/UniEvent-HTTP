@@ -137,6 +137,20 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder, RequestS
         _message->tcp_hints = hints;
         return *this;
     }
+
+    Builder& form_field (const string& name, const string& value) {
+        _message->form_stream();
+        _message->form.emplace_back(new FormField(name, value));
+        return *this;
+    }
+
+    Builder& form_field (FormFieldSP& value) {
+        _message->form_stream();
+        _message->form.emplace_back(value);
+        return *this;
+    }
+
+
 };
 
 struct RedirectContext: Refcnt {

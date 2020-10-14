@@ -24,6 +24,9 @@ bool FormEmbeddedFile::start(proto::Request &req, Client &out) noexcept {
 bool FormFile::start(proto::Request& req, Client& out) noexcept {
     Streamer::IOutputSP out_stream = new ClientOutput(ClientSP(&out));
     streamer = new Streamer(std::move(in), out_stream, max_buf, out.loop());
+    streamer->finish_event.add_back([&](auto& error_code){
+        out.form_file_complete(error_code);
+    });
     streamer->start();
     produce(req.form_file(name, filename, mime_type), out);
     return false;
@@ -39,14 +42,6 @@ ErrorCode FormFile::ClientOutput::write (const string& data) {
     stream->write(chunk.begin(), chunk.end());
     return {};
 }
-
-void FormFile::ClientOutput::stop () {
-    req.reset();
-    auto client = dynamic_pointer_cast<Client>(stream);
-    client->form_file_compete(ErrorCode());
-}
-
-
 
 
 }}}

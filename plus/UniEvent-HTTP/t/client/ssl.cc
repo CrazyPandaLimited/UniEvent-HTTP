@@ -7,9 +7,9 @@
 
 #define TEST(name) TEST_CASE("ssl: " name, "[ssl]")
 
-bool init_ssl() { secure = true; return secure; }
+static bool init_ssl() { secure = true; return secure; }
 
-bool _init_ssl = init_ssl();
+static bool _init_ssl = init_ssl();
 
 static TServerSP create_server(const LoopSP& loop) {
     auto server = make_ssl_server(loop);

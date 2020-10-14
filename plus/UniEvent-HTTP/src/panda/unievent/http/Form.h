@@ -53,7 +53,6 @@ struct FormFile: IFormField {
         proto::RequestSP req;
 
         using streamer::StreamOutput::StreamOutput;
-        void      stop  ()                   override;
         ErrorCode write (const string& data) override;
     };
 
