@@ -16,6 +16,7 @@ void fill (ServerResponse*,    const Hash&);
 void fill (Server::Location&,  const Hash&);
 void fill (Server::Config&,    const Hash&);
 void fill (UserAgent::Config&, const Hash&);
+void fill_form(Request* req,   const Sv& sv);
 
 }}}
 

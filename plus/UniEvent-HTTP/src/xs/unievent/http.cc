@@ -1,6 +1,7 @@
 #include "http.h"
 #include <xs/function.h>
 #include <xs/unievent/Ssl.h>
+#include <xs/unievent/Streamer.h>
 
 namespace xs { namespace unievent { namespace http {
 
@@ -55,6 +56,85 @@ void fill (UserAgent::Config& cfg, const Hash& h) {
     if ((v  = h.fetch("identity")))   cfg.identity = v.as_string();
     if ((sv = h.fetch("ssl_ctx")))    cfg.ssl_ctx  = xs::in<SslContext>(sv);
     if ((sv = h.fetch("proxy")))      cfg.proxy    = xs::in<URISP>(sv);
+}
+
+static bool needs_streaming(const Array& arr) noexcept {
+    bool even = arr.size() % 2 == 0;
+    size_t last = even ? arr.size() - 1 : arr.size() - 2;
+    for(size_t i = 0; i < last; i += 2) {
+        auto value = arr.at(i + 1);
+        if(value.is_array_ref()) {
+            Array items(value);
+            if (items.size() >= 2) {
+                Sv file_content = items[1];
+                if (file_content.is_object_ref()) {
+                    /*
+                    Object obj(file_content);
+                    if (obj.isa("UniEvent::Streamer::IInput")) {
+                        return true;
+                    }
+                    */
+                    // we do not expect anything else
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+static void fill_form_fields(Request* req, Array& arr) {
+    using namespace panda;
+    bool even = arr.size() % 2 == 0;
+    size_t last = even ? arr.size() - 1 : arr.size() - 2;
+    auto& form = req->form;
+    for(size_t i = 0; i < last; i += 2) {
+        string key = arr.at(i).as_string();
+        auto value = arr.at(i + 1);
+        if (value.is_array_ref()) {
+            Array items(value);
+            if (value.is_simple()) {
+                form.emplace_back(new FormField(key, value.as_string()));
+            }
+            if (items.size() >= 2) {
+                string mime_type = (items.size() > 2) ? items.at(2).as_string() : "application/octet-stream";
+                string filename = items.at(0).as_string();
+                auto file_content = items.at(1);
+                if (file_content.is_object_ref()) {
+                    auto fc = xs::in<panda::unievent::Streamer::IInput*>(file_content);
+                    form.emplace_back(new FormFile(key, fc, mime_type, filename));
+                }
+                else {
+                    form.emplace_back(new FormEmbeddedFile(key, file_content.as_string() , mime_type, filename));
+                }
+            }
+        }
+    }
+}
+
+void fill_form(Request* req, const Sv& sv) {
+    bool streaming = false;
+    if (sv.is_array_ref())    {
+        streaming = needs_streaming(Array(sv));
+    } else if(sv.is_hash_ref()) {
+        Hash h(sv);
+        Sv fields = h.fetch("fields");
+        if (fields) streaming = needs_streaming(Array(fields));
+    }
+    if (!streaming) {
+        protocol::http::fill_form(req, sv);
+    } else {
+        req->form_stream();
+        Array arr;
+        if (sv.is_array_ref()) {
+            arr = sv;
+        }
+        else {
+            Hash h(sv);
+            arr = h.fetch("fields");
+        }
+        fill_form_fields(req, arr);
+    }
 }
 
 
