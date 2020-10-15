@@ -17,8 +17,8 @@ struct IFormItem: panda::Refcnt {
 
     IFormItem(const string& name_) noexcept: name{name_}{};
 
-    virtual bool start(proto::Request& req, Client& out) noexcept = 0;
-    virtual void stop() noexcept {}
+    virtual bool start(proto::Request& req, Client& out) = 0;
+    virtual void stop() {}
 protected:
     void produce(const Chunk& chunk, Client& out) noexcept;
 };
@@ -29,7 +29,7 @@ struct FormField: IFormItem {
 
     inline FormField(const string& name_, const string& content_) noexcept: IFormItem(name_), content{content_} {}
 
-    bool start(proto::Request& req, Client& out) noexcept override;
+    bool start(proto::Request& req, Client& out) override;
 };
 
 struct FormEmbeddedFile: FormField {
@@ -39,7 +39,7 @@ struct FormEmbeddedFile: FormField {
     FormEmbeddedFile(const string& name_, const string& content_, const string& mime_ = "application/octet-stream", const string& filename_ = "") noexcept:
         FormField(name_, content_), mime_type{mime_}, filename{filename_} {}
 
-    bool start(proto::Request& req, Client& out) noexcept override;
+    bool start(proto::Request& req, Client& out) override;
 };
 
 struct FormFile: IFormItem {
@@ -60,8 +60,8 @@ struct FormFile: IFormItem {
         IFormItem(name_), in{in_}, mime_type{mime_}, filename{filename_}, max_buf{max_buf_}  {
     }
 
-    bool start(proto::Request& req, Client& out) noexcept override;
-    void stop() noexcept override;
+    bool start(proto::Request& req, Client& out) override;
+    void stop() override;
 };
 
 

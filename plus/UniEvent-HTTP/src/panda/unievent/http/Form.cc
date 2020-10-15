@@ -9,19 +9,19 @@ void IFormItem::produce(const Chunk &chunk, Client& out) noexcept {
     out.send_chunk(chunk);
 }
 
-bool FormField::start(proto::Request &req, Client &out) noexcept {
+bool FormField::start(proto::Request &req, Client &out)  {
     produce(req.form_field(name, content), out);
     return true;
 }
 
-bool FormEmbeddedFile::start(proto::Request &req, Client &out) noexcept {
+bool FormEmbeddedFile::start(proto::Request &req, Client &out)  {
     produce(req.form_file(name, filename, mime_type), out);
     produce(req.form_data(content), out);
     return true;
 }
 
 
-bool FormFile::start(proto::Request& req, Client& out) noexcept {
+bool FormFile::start(proto::Request& req, Client& out)  {
     Streamer::IOutputSP out_stream = new ClientOutput(ClientSP(&out), proto::RequestSP(&req));
     streamer = new Streamer(std::move(in), out_stream, max_buf, out.loop());
     streamer->finish_event.add_back([&](auto& error_code){
@@ -32,7 +32,7 @@ bool FormFile::start(proto::Request& req, Client& out) noexcept {
     return false;
 }
 
-void FormFile::stop() noexcept {
+void FormFile::stop()  {
     streamer->stop();
     streamer.reset();
 }

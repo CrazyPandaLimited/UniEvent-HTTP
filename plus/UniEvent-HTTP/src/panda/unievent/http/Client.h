@@ -56,7 +56,7 @@ private:
 
     void send_form() noexcept;
     void send_chunk(const Chunk& chunk) noexcept;
-    void form_file_complete(const ErrorCode& ec) noexcept;
+    void form_file_complete(const ErrorCode& ec);
 };
 
 }}}

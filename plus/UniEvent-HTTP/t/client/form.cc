@@ -9,7 +9,6 @@ static bool init_ssl() { secure = true; return secure; }
 
 static bool _init_ssl = init_ssl();
 
-
 TEST("form field") {
     AsyncTest test(1000, 1);
     ClientPair p(test.loop);
@@ -104,3 +103,20 @@ TEST("form file streaming + fields") {
     CHECK(res->code == 200);
 }
 
+TEST("form file streaming error") {
+    AsyncTest test(1000, 1);
+    ClientPair p(test.loop);
+
+    auto req = Request::Builder().uri("/")
+            .form_file("source", new streamer::FileInput("t/client/not-existant.zzz"), "application/pdf", "cv.pdf")
+            .form_field("signature", "Looser")
+            .build();
+    try {
+        p.client->get_response(req);
+    }  catch (const ErrorCode& ec) {
+        using namespace panda::unievent;
+        test.happens();
+        CHECK(ec);
+        CHECK(ec.code() == streamer_errc::read_error);
+    }
+}

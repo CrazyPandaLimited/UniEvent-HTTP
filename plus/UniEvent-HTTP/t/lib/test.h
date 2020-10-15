@@ -18,6 +18,7 @@ using panda::unievent::AsyncSP;
 using panda::unievent::Timer;
 using panda::unievent::TimerSP;
 using panda::unievent::SslContext;
+using panda::unievent::Streamer;
 using namespace panda::unievent::test;
 using namespace panda::unievent::http;
 using RawRequest    = panda::protocol::http::Request;

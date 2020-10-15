@@ -45,7 +45,6 @@ void Client::request (const RequestSP& request) {
 
     request->_client = this;
     if (!request->uri->scheme()) request->uri->scheme("http");
-    if (!request->chunked || request->body.length()) request->_transfer_completed = true;
 
     auto netloc = request->netloc();
 
@@ -98,6 +97,7 @@ void Client::request (const RequestSP& request) {
         _form_field = 0;
         send_form();
     } else {
+        if (!request->chunked || request->body.length()) request->_transfer_completed = true;
         read_start();
     }
 }
@@ -293,6 +293,7 @@ void Client::finish_request (const ErrorCode& _err) {
     req->response_event(req, res, err);
     if (_form_field >= 0) {
         req->form[_form_field]->stop();
+        _form_field = -1;
     }
 }
 
@@ -332,15 +333,14 @@ void Client::send_form() noexcept {
         _form_field = -1;
         auto form_trailer = _request->form_finish();
         send_chunk(form_trailer);
+        _request->_transfer_completed = true;
         read_start();
     }
 }
 
-void Client::form_file_complete(const ErrorCode& ec) noexcept {
-    if (ec) {
-        std::abort();
-        return;
-    }
+void Client::form_file_complete(const ErrorCode& ec)  {
+    if (ec) return finish_request(ec);
+
     ++_form_field;
     send_form();
 }
