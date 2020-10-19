@@ -3,7 +3,7 @@ use lib 't/lib';
 use MyTest;
 use Test::More;
 
-#variate_catch('[user-agent]', 'ssl');
+variate_catch('[user-agent]', 'ssl');
 
 subtest "simple UA usage" => sub {
     my $test = UE::Test::Async->new;
