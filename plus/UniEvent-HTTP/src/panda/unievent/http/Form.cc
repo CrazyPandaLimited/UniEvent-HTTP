@@ -4,7 +4,6 @@
 
 namespace panda { namespace unievent { namespace http {
 
-
 void IFormItem::produce(const Chunk &chunk, Client& out) noexcept {
     out.send_chunk(chunk);
 }
@@ -24,7 +23,7 @@ bool FormEmbeddedFile::start(proto::Request &req, Client &out)  {
 bool FormFile::start(proto::Request& req, Client& out)  {
     Streamer::IOutputSP out_stream = new ClientOutput(ClientSP(&out), proto::RequestSP(&req));
     streamer = new Streamer(std::move(in), out_stream, max_buf, out.loop());
-    streamer->finish_event.add_back([&](auto& error_code){
+    streamer->finish_event.add([&](auto& error_code){
         out.form_file_complete(error_code);
     });
     streamer->start();
@@ -39,7 +38,9 @@ void FormFile::stop()  {
 
 ErrorCode FormFile::ClientOutput::write (const string& data) {
     auto chunk = req->form_data(data);
-    stream->write(chunk.begin(), chunk.end());
+    for (auto& piece : chunk) {
+        streamer::StreamOutput::write(piece);
+    }
     return {};
 }
 

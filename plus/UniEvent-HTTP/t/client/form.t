@@ -3,7 +3,6 @@ use lib 't/lib';
 use MyTest;
 use Test::More;
 
-=x
 catch_run('[form]');
 
 subtest "non-streaming form" => sub {
@@ -24,8 +23,6 @@ subtest "non-streaming form" => sub {
     my $res = $p->client->get_response({uri => "/", form => ['kk' => 'vv'] });
     is $res->code, 200;
 };
-
-=cut
 
 subtest "stream form file, embedded-file and field" => sub {
     my $test = new UE::Test::Async(1);
@@ -48,14 +45,13 @@ subtest "stream form file, embedded-file and field" => sub {
     });
 
     my $in = UE::Streamer::FileInput->new("t/client/form.t");
-    ok $in->isa('UniEvent::Streamer::IInput');
+    $p->client->set_nodelay(1);
     my $res = $p->client->get_response({uri => "/", form => [
-        #'kk' => 'vv',
-        #'k2' => ['a.pdf' => '[pdf]', 'application/pdf'],
+        'kk' => 'vv',
+        'k2' => ['a.pdf' => '[pdf]', 'application/pdf'],
         'k3' => ['my.pl' => $in, 'text/plain'],
     ] });
     is $res->code, 200;
 };
-
 
 done_testing();

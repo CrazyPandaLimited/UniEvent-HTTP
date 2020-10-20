@@ -91,11 +91,11 @@ static void fill_form_fields(Request* req, Array& arr) {
     for(size_t i = 0; i < last; i += 2) {
         string key = arr.at(i).as_string();
         auto value = arr.at(i + 1);
-        if (value.is_array_ref()) {
+        if (value.is_simple()) {
+            form.emplace_back(new FormField(key, value.as_string()));
+        }
+        else if (value.is_array_ref()) {
             Array items(value);
-            if (value.is_simple()) {
-                form.emplace_back(new FormField(key, value.as_string()));
-            }
             if (items.size() >= 2) {
                 string mime_type = (items.size() > 2) ? items.at(2).as_string() : "application/octet-stream";
                 string filename = items.at(0).as_string();
@@ -108,6 +108,20 @@ static void fill_form_fields(Request* req, Array& arr) {
                     form.emplace_back(new FormEmbeddedFile(key, file_content.as_string() , mime_type, filename));
                 }
             }
+            else {
+                string err = "incorrect field '";
+                err += key;
+                err + "'";
+                err += "; it should be like '";
+                err += key;
+                err += "' => [$filename => $content_or_filestream, 'mime/type']";
+                throw err;
+            }
+        } else {
+            string err = "incorrect field '";
+            err += key;
+            err + "'";
+            throw err;
         }
     }
 }
