@@ -50,7 +50,7 @@ subtest "stream form file, embedded-file and field" => sub {
         'kk' => 'vv',
         'k2' => ['a.pdf' => '[pdf]', 'application/pdf'],
         'k3' => ['my.pl' => $in, 'text/plain'],
-    ] });
+    ]});
     is $res->code, 200;
 };
 
