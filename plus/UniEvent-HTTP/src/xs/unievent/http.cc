@@ -49,6 +49,7 @@ void fill (Server::Config& cfg, const Hash& h) {
 void fill (Pool::Config& cfg, const Hash& h) {
     Simple v;
     if ((v = h.fetch("timeout"))) cfg.idle_timeout = (double)v * 1000;
+    if ((v = h.fetch("max_connections"))) cfg.max_connections = v;
 }
 
 void fill (UserAgent::Config& cfg, const Hash& h) {

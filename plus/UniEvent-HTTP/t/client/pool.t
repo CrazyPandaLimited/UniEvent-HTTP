@@ -10,6 +10,7 @@ variate_catch('[client-pool]', 'ssl');
 subtest "reusing connection" => sub {
     my $test = new UE::Test::Async();
     my $pool = new MyTest::TPool($test->loop);
+    ok $pool->max_connections > 0;
     my $srv  = MyTest::make_server($test->loop);
     $srv->autorespond(new UE::HTTP::ServerResponse({code => 200}));
     $srv->autorespond(new UE::HTTP::ServerResponse({code => 200}));

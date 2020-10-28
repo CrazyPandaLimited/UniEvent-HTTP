@@ -39,6 +39,9 @@ struct Pool : Refcnt {
     uint32_t idle_timeout () const { return _idle_timeout; }
     void     idle_timeout (uint32_t);
 
+    uint32_t max_connections () const { return _max_connections; }
+    void     max_connections (uint32_t value) { _max_connections = value; }
+
     size_t size  () const;
     size_t nbusy () const;
 
