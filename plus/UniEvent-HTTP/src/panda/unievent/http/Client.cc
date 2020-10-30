@@ -138,7 +138,8 @@ void Client::on_timer (const TimerSP& t) {
     HOLD_ON(this);
     assert(_request);
     assert(_request->_timer == t);
-    cancel(make_error_code(std::errc::timed_out));
+    auto err = make_error_code(std::errc::timed_out);
+    cancel(connecting() ? nest_error(errc::connect_error, err) : err);
 }
 
 void Client::on_read (string& buf, const ErrorCode& err) {
