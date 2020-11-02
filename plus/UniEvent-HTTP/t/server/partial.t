@@ -8,7 +8,6 @@ variate_catch('[server-partial]', 'ssl');
 subtest "request receive" => sub {
     my $test = new UE::Test::Async(5);
     my $p    = new MyTest::ServerPair($test->loop);
-    pass();
 
     $p->server->route_callback(sub {
         my $req = shift;
