@@ -8,17 +8,17 @@ TEST("same server") {
 
     p.server->request_event.add([&](auto req){
         if (req->uri->to_string() == "/") {
-            CHECK(req->method_raw() == Request::Method::POST);
+            CHECK(req->method_raw() == Request::Method::Post);
             req->redirect("/index");
         } else if (req->uri->to_string() == "/index") {
-            CHECK(req->method_raw() == Request::Method::POST); // preserves original method
+            CHECK(req->method_raw() == Request::Method::Post); // preserves original method
             req->respond(new ServerResponse(200, Headers().add("h", req->headers.get("h")), Body(req->body)));
         }
     });
 
     p.client->connect_event.add([&](auto...){ test.happens("connect"); });
 
-    auto req = Request::Builder().method(Request::Method::POST).uri("/")
+    auto req = Request::Builder().method(Request::Method::Post).uri("/")
             .header("h", "v").header("Authorization", "secret")
             .cookie("c", "cv")
             .body("b").build();
@@ -201,15 +201,15 @@ TEST("redirect with 303 (method changing to GET)") {
 
     p.server->request_event.add([&](auto req){
         if (req->uri->to_string() == "/") {
-            CHECK(req->method_raw() == Request::Method::POST);
+            CHECK(req->method_raw() == Request::Method::Post);
             req->respond(new ServerResponse(303, Headers().location("/index")));
         } else if (req->uri->to_string() == "/index") {
-            CHECK(req->method_raw() == Request::Method::GET); // method changed to GET
+            CHECK(req->method_raw() == Request::Method::Get); // method changed to GET
             req->respond(new ServerResponse(200));
         }
     });
 
-    auto req = Request::Builder().method(Request::Method::POST).uri("/").redirect_callback([&](auto, auto res, auto) {
+    auto req = Request::Builder().method(Request::Method::Post).uri("/").redirect_callback([&](auto, auto res, auto) {
         test.happens();
         CHECK(res->code == 303);
     }).build();

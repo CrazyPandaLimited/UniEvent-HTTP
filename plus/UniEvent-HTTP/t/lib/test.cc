@@ -332,7 +332,7 @@ RawResponseSP ServerPair::get_response () {
             while (str) {
                 if (!parser.context_request()) {
                     if (source_request) parser.set_context_request(source_request);
-                    else                parser.set_context_request(new RawRequest(Request::Method::GET, new URI("/")));
+                    else                parser.set_context_request(new RawRequest(Request::Method::Get, new URI("/")));
                 }
                 auto result = parser.parse_shift(str);
                 if (result.error) {
