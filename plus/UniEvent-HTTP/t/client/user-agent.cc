@@ -122,7 +122,7 @@ TEST("proxy injection") {
     cfg.proxy = p.proxy.url;
 
     UserAgentSP ua(new UserAgent(test.loop, "", cfg));
-    auto req = Request::Builder().method(Request::Method::Get).uri(uri).build();
+    auto req = Request::Builder().method(Request::Method::GET).uri(uri).build();
 
     p.proxy.server->connection_event.add([&](auto...){ test.happens("proxy"); });
     p.server->enable_echo();

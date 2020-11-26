@@ -263,7 +263,7 @@ TEST("100-continue") {
     });
     p.server->autorespond(new ServerResponse(200));
 
-    p.source_request = new RawRequest(Request::Method::Put, new URI("/"), Headers().add("Expect", "100-continue"));
+    p.source_request = new RawRequest(Request::Method::PUT, new URI("/"), Headers().add("Expect", "100-continue"));
     auto res = p.get_response(
         "PUT / HTTP/1.1\r\n"
         "Transfer-Encoding: chunked\r\n"
@@ -324,7 +324,7 @@ TEST("100-continue is not sent") {
     });
     p.server->autorespond(new ServerResponse(200));
 
-    p.source_request = new RawRequest(Request::Method::Put, new URI("/"), Headers().add("Expect", "100-continue"));
+    p.source_request = new RawRequest(Request::Method::PUT, new URI("/"), Headers().add("Expect", "100-continue"));
 
     auto res = p.get_response();
     CHECK(res->code == 200);

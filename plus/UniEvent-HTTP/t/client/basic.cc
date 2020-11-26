@@ -25,7 +25,7 @@ TEST("trivial post") {
     ClientPair p(test.loop);
     p.server->enable_echo();
 
-    auto res = p.client->get_response(Request::Builder().method(Request::Method::Post).uri("/").body("hello").build());
+    auto res = p.client->get_response(Request::Builder().method(Request::Method::POST).uri("/").body("hello").build());
 
     CHECK(res->code == 200);
     CHECK(res->http_version == 11);
@@ -41,7 +41,7 @@ TEST("request and response larger than mtu") {
     string body(sz);
     for (size_t i = 0; i < sz; ++i) body[i] = 'a';
 
-    auto res = p.client->get_response(Request::Builder().method(Request::Method::Post).uri("/").body(body).build());
+    auto res = p.client->get_response(Request::Builder().method(Request::Method::POST).uri("/").body(body).build());
 
     CHECK(res->code == 200);
     CHECK(res->body.to_string() == body);
@@ -125,7 +125,7 @@ TEST("compression") {
     p.server->enable_echo();
 
     auto req = Request::Builder()
-        .method(Request::Method::Post)
+        .method(Request::Method::POST)
         .uri("/")
         .body("hello world")
         .compress(Compression::GZIP)
@@ -147,7 +147,7 @@ TEST("accept-encoding") {
 
     SECTION("gzip by default") {
         auto req = Request::Builder()
-            .method(Request::Method::Post)
+            .method(Request::Method::POST)
             .uri("/")
             .build();
 
@@ -160,7 +160,7 @@ TEST("accept-encoding") {
 
     SECTION("gzip can be turned off") {
         auto req = Request::Builder()
-            .method(Request::Method::Post)
+            .method(Request::Method::POST)
             .uri("/")
             .allow_compression(Compression::IDENTITY)
             .build();
@@ -182,7 +182,7 @@ TEST("request via proxy") {
 
 
     p.proxy.server->connection_event.add([&](auto...){ test.happens("proxy-1"); });
-    auto req1 = Request::Builder().method(Request::Method::Get).uri("/").proxy(p.proxy.url).build();
+    auto req1 = Request::Builder().method(Request::Method::GET).uri("/").proxy(p.proxy.url).build();
     auto res1 = p.client->get_response(req1);
 
     CHECK(res1->code == 200);
@@ -190,7 +190,7 @@ TEST("request via proxy") {
 
     auto proxy2 = new_proxy(test.loop);
     proxy2.server->connection_event.add([&](auto...){ test.happens("proxy-2"); });
-    auto req2 = Request::Builder().method(Request::Method::Get).uri("/").proxy(proxy2.url).build();
+    auto req2 = Request::Builder().method(Request::Method::GET).uri("/").proxy(proxy2.url).build();
     auto res2 = p.client->get_response(req2);
 
     CHECK(res2->code == 200);

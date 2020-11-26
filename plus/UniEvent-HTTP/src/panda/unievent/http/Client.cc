@@ -232,7 +232,7 @@ void Client::analyze_request () {
         }
 
         if (_response->code == 303) {
-            _request->_method = Request::Method::Get;
+            _request->_method = Request::Method::GET;
             _request->body.clear();
         }
 

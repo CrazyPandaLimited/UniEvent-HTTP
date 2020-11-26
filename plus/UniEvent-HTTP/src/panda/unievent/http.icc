@@ -44,7 +44,7 @@ expected<ResponseSP, ErrorCode> http_request (const RequestSP& req, sync_t) {
 }
 
 expected<string, ErrorCode> http_get (const URISP& uri) {
-    auto req = Request::Builder().uri(uri).method(Request::Method::Get).build();
+    auto req = Request::Builder().uri(uri).method(Request::Method::GET).build();
     return http_request(req, sync_t()).map([](const ResponseSP& res) {
         return res->body.to_string();
     });

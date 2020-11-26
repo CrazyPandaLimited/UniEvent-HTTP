@@ -34,7 +34,7 @@ TEST("ssl client cert, server validates client, client validates server") {
     });
 
     auto client_cert = TClient::get_context("01-alice");
-    auto req = Request::Builder().method(Request::Method::Get).uri("/")
+    auto req = Request::Builder().method(Request::Method::GET).uri("/")
             .ssl_ctx(client_cert)
             .build();
     auto res = client->get_response(req);
@@ -42,7 +42,7 @@ TEST("ssl client cert, server validates client, client validates server") {
     CHECK(res->code == 200);
     CHECK(res->http_version == 11);
 
-    req = Request::Builder().method(Request::Method::Get).uri("/")
+    req = Request::Builder().method(Request::Method::GET).uri("/")
          .ssl_ctx(client_cert)
          .build();
     res = client->get_response(req);
@@ -67,7 +67,7 @@ TEST("client uses 2 different valid certificates => 2 different connections are 
 
     auto client_cert_a = TClient::get_context("01-alice");
     auto client_cert_b = TClient::get_context("02-bob");
-    auto req = Request::Builder().method(Request::Method::Get).uri("/")
+    auto req = Request::Builder().method(Request::Method::GET).uri("/")
             .ssl_ctx(client_cert_a)
             .build();
     auto res = client->get_response(req);
@@ -75,7 +75,7 @@ TEST("client uses 2 different valid certificates => 2 different connections are 
     CHECK(res->code == 200);
     CHECK(res->http_version == 11);
 
-    req = Request::Builder().method(Request::Method::Get).uri("/")
+    req = Request::Builder().method(Request::Method::GET).uri("/")
          .ssl_ctx(client_cert_b)
          .build();
     res = client->get_response(req);
