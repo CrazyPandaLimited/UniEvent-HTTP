@@ -48,11 +48,11 @@ TEST("chunked request send") {
 
     ServerResponseSP sres;
 
-    auto req = Request::Builder().uri("/").method(Request::Method::POST).chunked().build();
+    auto req = Request::Builder().uri("/").method(Request::Method::Post).chunked().build();
 
     size_t count = 10;
     p.server->route_event.add([&](auto sreq) {
-        CHECK(sreq->method_raw() == Request::Method::POST);
+        CHECK(sreq->method_raw() == Request::Method::Post);
         CHECK(sreq->uri->path() == "/");
         sreq->enable_partial();
 
@@ -100,7 +100,7 @@ TEST("receiving full response before transfer completed") {
         });
     });
 
-    auto req = Request::Builder().uri("/").method(Request::Method::POST).chunked().build();
+    auto req = Request::Builder().uri("/").method(Request::Method::Post).chunked().build();
     req->response_event.add([&](auto, auto res, auto err) {
         CHECK(res->code == 200);
         CHECK(res->body.to_string() == "hi");

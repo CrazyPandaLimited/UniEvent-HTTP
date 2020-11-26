@@ -8,7 +8,7 @@ TEST("request without body") {
 
     p.server->request_event.add([&](auto req) {
         test.happens();
-        CHECK(req->method_raw() == Request::Method::GET);
+        CHECK(req->method_raw() == Request::Method::Get);
         CHECK(req->is_done());
         CHECK(req->headers.host() == "epta.ru");
         CHECK(!req->body.length());
@@ -30,7 +30,7 @@ TEST("request with body") {
 
     p.server->request_event.add([&](auto req) {
         test.happens();
-        CHECK(req->method_raw() == Request::Method::POST);
+        CHECK(req->method_raw() == Request::Method::Post);
         CHECK(req->is_done());
         CHECK(req->body.to_string() == "epta nah");
         test.loop->stop();
@@ -52,7 +52,7 @@ TEST("request with chunks") {
 
     p.server->request_event.add([&](auto req) {
         test.happens();
-        CHECK(req->method_raw() == Request::Method::POST);
+        CHECK(req->method_raw() == Request::Method::Post);
         CHECK(req->is_done());
         CHECK(req->body.to_string() == "1234567891234567");
         test.loop->stop();

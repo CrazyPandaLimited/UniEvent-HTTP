@@ -13,7 +13,7 @@ TEST("reusing connection") {
     CHECK_FALSE(p.nbusy());
 
     auto uri = active_scheme() +  "://" + srv->location() + "/";
-    auto req = Request::Builder().method(Request::Method::GET).uri(uri).build();
+    auto req = Request::Builder().method(Request::Method::Get).uri(uri).build();
     auto c = p.request(req);
     REQUIRE(c);
 
@@ -46,7 +46,7 @@ TEST("reusing connection after c=close") {
     srv->autorespond(new ServerResponse(200));
 
     auto uri = active_scheme() +  "://" + srv->location() + "/";
-    auto req = Request::Builder().method(Request::Method::GET).uri(uri).build();
+    auto req = Request::Builder().method(Request::Method::Get).uri(uri).build();
     auto c = p.request(req);
     REQUIRE(c);
 
@@ -79,7 +79,7 @@ TEST("different servers") {
     srv2->autorespond(new ServerResponse(200));
 
     auto uri1 = active_scheme() +  "://" + srv1->location() + "/";
-    auto req1 = Request::Builder().method(Request::Method::GET).uri(uri1).build();
+    auto req1 = Request::Builder().method(Request::Method::Get).uri(uri1).build();
     auto c = p.request(req1);
     REQUIRE(c);
     c->connect_event.add([&](auto...){ test.happens(); });
@@ -91,7 +91,7 @@ TEST("different servers") {
     CHECK(p.nbusy() == 0);
 
     auto uri2 = active_scheme() +  "://" + srv2->location() + "/";
-    auto req2 = Request::Builder().method(Request::Method::GET).uri(uri2).build();
+    auto req2 = Request::Builder().method(Request::Method::Get).uri(uri2).build();
     auto c2 = p.request(req2);
     REQUIRE(c2);
     c2->connect_event.add([&](auto...){ test.happens(); });
@@ -116,12 +116,12 @@ TEST("several requests to the same server at once") {
     srv->autorespond(new ServerResponse(200, Headers(), Body("2")));
 
     auto uri = active_scheme() +  "://" + srv->location() + "/";
-    auto r1 = Request::Builder().method(Request::Method::GET).uri(uri).build();
+    auto r1 = Request::Builder().method(Request::Method::Get).uri(uri).build();
     auto c1 = p.request(r1);
     REQUIRE(c1);
     c1->connect_event.add([&](auto...){ test.happens(); });
 
-    auto r2 = Request::Builder().method(Request::Method::GET).uri(uri).build();
+    auto r2 = Request::Builder().method(Request::Method::Get).uri(uri).build();
     auto c2 = p.request(r2);
     REQUIRE(c2);
     c2->connect_event.add([&](auto...){ test.happens(); });
@@ -141,13 +141,13 @@ TEST("several requests to the same server at once") {
     CHECK(p.nbusy() == 0);
 
 
-    auto r3 = Request::Builder().method(Request::Method::GET).uri(uri).build();
+    auto r3 = Request::Builder().method(Request::Method::Get).uri(uri).build();
     auto c3 = p.request(r3);
     CHECK((c3 == c1 || c3 == c2));
     CHECK(p.size() == 2);
     CHECK(p.nbusy() == 1);
 
-    auto r4 = Request::Builder().method(Request::Method::GET).uri(uri).build();
+    auto r4 = Request::Builder().method(Request::Method::Get).uri(uri).build();
     auto c4 = c2 = p.request(r4);
     CHECK((c4 == c1 || c4 == c2));
     CHECK(c4 != c3);
@@ -182,7 +182,7 @@ TEST("idle timeout") {
     auto srv = make_server(test.loop);
 
     auto uri = active_scheme() +  "://" + srv->location() + "/";
-    auto req1 = Request::Builder().method(Request::Method::GET).uri(uri).build();
+    auto req1 = Request::Builder().method(Request::Method::Get).uri(uri).build();
     auto c = p->request(req1);
     REQUIRE(c);
     c->connect_event.add([&](auto...){ test.happens(); });
@@ -199,7 +199,7 @@ TEST("idle timeout") {
     CHECK(p->nbusy() == 0);
 
     srv->autorespond(new ServerResponse(200));
-    auto req2 = Request::Builder().method(Request::Method::GET).uri(uri).build();
+    auto req2 = Request::Builder().method(Request::Method::Get).uri(uri).build();
     c = p->request(req2);
     REQUIRE(c);
     c->connect_event.add([&](auto...){ test.happens(); });
@@ -348,9 +348,9 @@ TEST("connection queuing") {
     auto uri = active_scheme() +  "://" + srv->location() + "/";
     std::vector<RequestSP> v;
 
-    auto r1 = Request::Builder().method(Request::Method::GET).uri(uri).build();
-    auto r2 = Request::Builder().method(Request::Method::GET).uri(uri).build();
-    auto r3 = Request::Builder().method(Request::Method::GET).uri(uri).build();
+    auto r1 = Request::Builder().method(Request::Method::Get).uri(uri).build();
+    auto r2 = Request::Builder().method(Request::Method::Get).uri(uri).build();
+    auto r3 = Request::Builder().method(Request::Method::Get).uri(uri).build();
 
     auto c1 = p.request(r1);
     auto c2 = p.request(r2);

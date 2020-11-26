@@ -56,8 +56,12 @@ void Server::start_listening () {
         lst->event_listener(this);
 
         if (loc.reuse_port) {
+            #ifdef _WIN32
+            panda_log_warning("ignored reuse_port configuration parameter: not supported on windows");
+            #else
             int on = 1;
             lst->setsockopt(SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+            #endif
         }
 
         lst->bind(loc.host, loc.port);
