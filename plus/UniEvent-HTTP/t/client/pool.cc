@@ -324,8 +324,8 @@ TEST("request/client continue to work fine after pool is unreferenced") {
         test.happens();
         test.loop->stop();
     }).build();
-    req->uri->host(srv->sockaddr().ip());
-    req->uri->port(srv->sockaddr().port());
+    req->uri->host(srv->sockaddr()->ip());
+    req->uri->port(srv->sockaddr()->port());
     if (secure) req->uri->scheme("https");
 
     {

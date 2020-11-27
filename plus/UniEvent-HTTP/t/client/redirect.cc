@@ -52,8 +52,8 @@ TEST("different server") {
 
     p.server->request_event.add([&](auto req) {
         auto uri = req->uri;
-        uri->host(backend->sockaddr().ip());
-        uri->port(backend->sockaddr().port());
+        uri->host(backend->sockaddr()->ip());
+        uri->port(backend->sockaddr()->port());
         req->redirect(uri);
     });
 
@@ -92,15 +92,15 @@ TEST("redirection limit") {
         auto srv = make_server(test.loop);
         srv->request_event.add([&, i](auto req) {
             auto uri = req->uri;
-            uri->host(backends[i-1]->sockaddr().ip());
-            uri->port(backends[i-1]->sockaddr().port());
+            uri->host(backends[i-1]->sockaddr()->ip());
+            uri->port(backends[i-1]->sockaddr()->port());
             req->redirect(uri);
         });
         backends.push_back(srv);
     }
 
     TClientSP client = new TClient(test.loop);
-    client->sa = backends.back()->sockaddr();
+    client->sa = backends.back()->sockaddr().value();
 
     int rcnt = 0;
     req->redirect_event.add([&](auto...){ rcnt++; });

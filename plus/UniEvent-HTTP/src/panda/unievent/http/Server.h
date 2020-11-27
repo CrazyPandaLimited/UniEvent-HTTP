@@ -61,7 +61,9 @@ struct Server : Refcnt, private IStreamSelfListener {
     virtual void start_listening ();
     virtual void stop_listening  ();
 
-    net::SockAddr sockaddr () const { return _listeners.size() ? _listeners.front()->sockaddr() : net::SockAddr(); }
+    excepted<net::SockAddr, ErrorCode> sockaddr () const {
+        return _listeners.size() ? _listeners.front()->sockaddr() : make_unexpected(errc::server_stopping);
+    }
 
     const string& date_header_now ();
 

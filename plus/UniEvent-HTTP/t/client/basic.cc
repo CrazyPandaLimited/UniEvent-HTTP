@@ -9,7 +9,7 @@ TEST("trivial get") {
 
     p.server->request_event.add([&](auto& req){
         test.happens();
-        auto sa = p.server->listeners().front()->sockaddr();
+        auto sa = p.server->listeners().front()->sockaddr().value();
         CHECK(req->headers.get("Host") == sa.ip() + ':' + panda::to_string(sa.port()));
     });
 
@@ -98,7 +98,7 @@ TEST("close instead of response") {
     });
 
     TClientSP client = new TClient(test.loop);
-    client->sa = srv->sockaddr();
+    client->sa = srv->sockaddr().value();
     auto err = client->get_error("/");
     CHECK(err); // various depending on if ssl in use or not
 }

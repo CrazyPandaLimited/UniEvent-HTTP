@@ -27,7 +27,7 @@ TEST("ssl client cert, server validates client, client validates server") {
     TClientSP client = new TClient(test.loop);
     client->connect_event.add([&](auto...){ ++connect_events; });
 
-    client->sa = server->sockaddr();
+    client->sa = server->sockaddr().value();
 
     server->request_event.add([&](auto&){
         test.happens();
@@ -59,7 +59,7 @@ TEST("client uses 2 different valid certificates => 2 different connections are 
 
     TClientSP client = new TClient(test.loop);
     client->connect_event.add([&](auto...){ ++connect_events; });
-    client->sa = server->sockaddr();
+    client->sa = server->sockaddr().value();
 
     server->request_event.add([&](auto&){
         test.happens();

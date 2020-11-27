@@ -51,7 +51,7 @@ TEST("n+n") {
 
     for (int j = 0; j < srv_cnt; ++j) {
         auto srv = make_server(test.loop);
-        client->sa = srv->sockaddr();
+        client->sa = srv->sockaddr().value();
 
         for (int i = 0; i < req_cnt; ++i) {
             srv->autorespond(new ServerResponse(200));

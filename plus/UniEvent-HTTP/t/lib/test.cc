@@ -119,12 +119,12 @@ void TServer::autorespond (const ServerResponseSP& res) {
 }
 
 string TServer::location () const {
-    auto sa = sockaddr();
+    auto sa = sockaddr().value();
     return sa.ip() + ':' + panda::to_string(sa.port());
 }
 
 NetLoc TServer::netloc () const {
-    return { sockaddr().ip(), sockaddr().port(), nullptr, {} };
+    return { sockaddr()->ip(), sockaddr()->port(), nullptr, {} };
 }
 
 SslContext TServer::get_context (string cert_name) {
@@ -148,9 +148,9 @@ SslContext TServer::get_context (string cert_name) {
 
 string TServer::uri () const {
     string uri = secure ? string("https://") : string("http://");
-    uri += sockaddr().ip();
+    uri += sockaddr()->ip();
     uri += ":";
-    uri += to_string(sockaddr().port());
+    uri += to_string(sockaddr()->port());
     uri += "/";
     return uri;
 }
@@ -297,7 +297,7 @@ static TcpSP make_socks_server (const LoopSP& loop, const net::SockAddr& sa) {
 
 TProxy new_proxy(const LoopSP& loop, const net::SockAddr& sa) {
     auto server = make_socks_server(loop, sa);
-    auto real_sa = server->sockaddr();
+    auto real_sa = server->sockaddr().value();
     URISP url = new URI(string("socks5://") + real_sa.ip()  + ":" + to_string(real_sa.port()));
     return TProxy { server, url };
 }
@@ -306,7 +306,7 @@ TProxy new_proxy(const LoopSP& loop, const net::SockAddr& sa) {
 ClientPair::ClientPair (const LoopSP& loop, bool with_proxy) {
     server = make_server(loop, {});
     client = new TClient(loop);
-    client->sa = server->sockaddr();
+    client->sa = server->sockaddr().value();
     if (with_proxy) {
         proxy = new_proxy(loop);
     }
@@ -318,7 +318,7 @@ ServerPair::ServerPair (const LoopSP& loop, Server::Config cfg) {
     conn = new Tcp(loop);
     if (secure) {  conn->use_ssl( TClient::get_context("01-alice")); }
     conn->connect_event.add([](auto& conn, auto& err, auto){ if (err) throw err; conn->loop()->stop(); });
-    conn->connect(server->listeners().front()->sockaddr());
+    conn->connect(server->listeners().front()->sockaddr().value());
     loop->run();
 }
 

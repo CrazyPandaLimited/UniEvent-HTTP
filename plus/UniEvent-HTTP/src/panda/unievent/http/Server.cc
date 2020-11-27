@@ -68,7 +68,7 @@ void Server::start_listening () {
         lst->listen(loc.backlog);
         if (loc.ssl_ctx) lst->use_ssl(loc.ssl_ctx);
 
-        panda_log_notice("listening: " << (loc.ssl_ctx ? "https://" : "http://") << loc.host << ":" << lst->sockaddr().port());
+        panda_log_notice("listening: " << (loc.ssl_ctx ? "https://" : "http://") << loc.host << ":" << lst->sockaddr()->port());
         _listeners.push_back(lst);
     }
 }
