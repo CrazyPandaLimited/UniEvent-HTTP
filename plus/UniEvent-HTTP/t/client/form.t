@@ -3,7 +3,7 @@ use lib 't/lib';
 use MyTest;
 use Test::More;
 
-catch_run('[form]');
+catch_run('[client-form]');
 
 subtest "non-streaming form" => sub {
     my $test = new UE::Test::Async(1);

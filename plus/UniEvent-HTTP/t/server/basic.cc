@@ -334,3 +334,30 @@ TEST("server retains when active requests") {
     sreq->respond(new ServerResponse(200));
     CHECK(TServer::dcnt == 1); // server died when last request finishes
 }
+
+TEST("using socket in config location") {
+    LoopSP tmp_loop = new Loop();
+    TcpSP tcp = new Tcp(tmp_loop);
+    tcp->bind("localhost", 0);
+
+    AsyncTest test(1000, 1);
+    Server::Config cfg;
+    Server::Location loc;
+    loc.sock = tcp->socket();
+    cfg.locations.push_back(loc);
+    ServerPair p(test.loop, cfg);
+
+    p.server->request_event.add([&](auto req) {
+        test.happens();
+        CHECK(req->headers.host() == "epta.ru");
+        test.loop->stop();
+    });
+
+    p.conn->write(
+        "GET / HTTP/1.1\r\n"
+        "Host: epta.ru\r\n"
+        "\r\n"
+    );
+
+    test.run();
+}

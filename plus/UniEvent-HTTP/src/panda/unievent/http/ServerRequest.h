@@ -14,13 +14,16 @@ struct ServerRequest : protocol::http::Request {
     using receive_fptr = void(const ServerRequestSP&);
     using partial_fptr = void(const ServerRequestSP&, const ErrorCode&);
     using drop_fptr    = void(const ServerRequestSP&, const ErrorCode&);
+    using finish_fptr  = void(const ServerRequestSP&);
     using receive_fn   = function<receive_fptr>;
     using partial_fn   = function<partial_fptr>;
     using drop_fn      = function<drop_fptr>;
+    using finish_fn    = function<finish_fptr>;
 
     CallbackDispatcher<receive_fptr> receive_event;
     CallbackDispatcher<partial_fptr> partial_event;
     CallbackDispatcher<drop_fptr>    drop_event;
+    CallbackDispatcher<finish_fptr>  finish_event;
 
     bool is_done () { return _is_done; }
 

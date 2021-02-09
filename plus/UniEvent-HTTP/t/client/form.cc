@@ -3,11 +3,7 @@
 
 using Catch::Matchers::Contains;
 
-#define TEST(name) TEST_CASE("form: " name, "[form]")
-
-static bool init_ssl() { secure = true; return secure; }
-
-static bool _init_ssl = init_ssl();
+#define TEST(name) TEST_CASE("client-form: " name, "[client-form]")
 
 TEST("form field") {
     AsyncTest test(1000, 1);

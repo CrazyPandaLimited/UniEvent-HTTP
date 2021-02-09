@@ -17,12 +17,14 @@ struct Server : Refcnt, private IStreamSelfListener {
     static constexpr const size_t   DEFAULT_MAX_BODY_SIZE    = SIZE_UNLIMITED;
 
     struct Location {
-        string     host;
-        uint16_t   port       = 0;
-        bool       reuse_port = true; // several listeners(servers) can be bound to the same port if true, useful for threaded apps
-        int        backlog    = DEFAULT_BACKLOG; // max accept queue
-        SslContext ssl_ctx    = nullptr; // if set, will use SSL
-        int        domain     = AF_INET;
+        string           host;
+        uint16_t         port       = 0;
+        bool             reuse_port = true;            // several listeners(servers) can be bound to the same port if true, useful for threaded apps
+        int              backlog    = DEFAULT_BACKLOG; // max accept queue
+        int              domain     = AF_INET;
+        SslContext       ssl_ctx    = nullptr;         // if set, will use SSL
+        optional<sock_t> sock;                         // if supplied, uses this socket and ignores host, port, reuse_port, backlog, domain
+                                                       // socket must be bound but NOT LISTENING!
     };
 
     struct Config {
@@ -57,6 +59,7 @@ struct Server : Refcnt, private IStreamSelfListener {
 
     virtual void run  ();
     virtual void stop ();
+    virtual void graceful_stop ();
 
     virtual void start_listening ();
     virtual void stop_listening  ();

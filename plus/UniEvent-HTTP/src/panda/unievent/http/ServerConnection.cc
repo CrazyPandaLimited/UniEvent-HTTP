@@ -91,6 +91,7 @@ void ServerConnection::respond (const ServerRequestSP& req, const ServerResponse
     if (req->_response) throw HttpError("double response for request given");
     req->_response = res;
     res->_request = req;
+    if (stopping) res->keep_alive(false); // force connection close, we are gracefully stopping
     if (!res->chunked || res->body.length()) res->_completed = true;
     if (requests.front() == req) write_next_response();
 }
@@ -185,7 +186,8 @@ void ServerConnection::finish_request () {
 
     cleanup_request();
 
-    if (closing) {
+    if (closing || stopping) {
+        // the only way we can get here with closing=false and stopping=true is when chunked response started before graceful stop
         assert(!requests.size());
         close({}, true);
         return;
@@ -205,6 +207,7 @@ void ServerConnection::cleanup_request () {
     req->_connection = nullptr;
     req->_server = nullptr; // release server
     requests.pop_front();
+    req->finish_event(req);
 }
 
 void ServerConnection::on_write (const ErrorCode& err, const WriteRequestSP&) {
@@ -250,6 +253,17 @@ void ServerConnection::close (const ErrorCode& err, bool soft) {
     drop_requests(err);
 
     server->remove(this);
+}
+
+void ServerConnection::graceful_stop () {
+    // immediately soft-close connection if we are idle
+    if (!requests.size()) {
+        close(errc::server_stopping, true);
+        return;
+    }
+
+    // otherwise close it after answering current request
+    stopping = true;
 }
 
 ServerResponseSP ServerConnection::default_error_response (int code) {

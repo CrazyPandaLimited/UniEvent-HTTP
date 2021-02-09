@@ -7,18 +7,14 @@
 
 #define TEST(name) TEST_CASE("ssl: " name, "[ssl]")
 
-static bool init_ssl() { secure = true; return secure; }
-
-static bool _init_ssl = init_ssl();
-
 static TServerSP create_server(const LoopSP& loop) {
     auto server = make_ssl_server(loop);
-
     server->enable_echo();
     return server;
 }
 
 TEST("ssl client cert, server validates client, client validates server") {
+    secure = true;
     AsyncTest test(1000, 2);
 
     auto server = create_server(test.loop);
@@ -49,9 +45,11 @@ TEST("ssl client cert, server validates client, client validates server") {
     CHECK(res->code == 200);
     CHECK(res->http_version == 11);
     CHECK(connect_events == 1);
+    secure = false;
 }
 
 TEST("client uses 2 different valid certificates => 2 different connections are used") {
+    secure = true;
     AsyncTest test(1000, 2);
 
     auto server = create_server(test.loop);
@@ -82,4 +80,5 @@ TEST("client uses 2 different valid certificates => 2 different connections are 
     CHECK(res->code == 200);
     CHECK(res->http_version == 11);
     CHECK(connect_events == 2);
+    secure = false;
 }

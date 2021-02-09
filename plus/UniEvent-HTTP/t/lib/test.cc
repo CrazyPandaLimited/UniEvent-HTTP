@@ -57,10 +57,15 @@ ResponseSP await_response (const RequestSP& req, const LoopSP& loop) { return aw
 TServerSP make_server (const LoopSP& loop, Server::Config cfg) {
     TServerSP server = new TServer(loop);
 
-    Server::Location loc;
-    loc.host = "127.0.0.1";
-    if (secure) { loc.ssl_ctx = TServer::get_context("ca"); }
-    cfg.locations.push_back(loc);
+    if (!cfg.locations.size()) {
+        Server::Location loc;
+        loc.host = "127.0.0.1";
+        if (secure) { loc.ssl_ctx = TServer::get_context("ca"); }
+        cfg.locations.push_back(loc);
+    } else if (secure) {
+        cfg.locations.front().ssl_ctx = TServer::get_context("ca");
+    }
+
     cfg.tcp_nodelay = true;
     server->configure(cfg);
 
@@ -317,7 +322,13 @@ ServerPair::ServerPair (const LoopSP& loop, Server::Config cfg) {
 
     conn = new Tcp(loop);
     if (secure) {  conn->use_ssl( TClient::get_context("01-alice")); }
-    conn->connect_event.add([](auto& conn, auto& err, auto){ if (err) throw err; conn->loop()->stop(); });
+    conn->connect_event.add([](auto& conn, auto& err, auto){
+        if (err) {
+            printf("server pair connect error: %s\n", err.what().c_str());
+            throw err;
+        }
+        conn->loop()->stop();
+    });
     conn->connect(server->listeners().front()->sockaddr().value());
     loop->run();
 }

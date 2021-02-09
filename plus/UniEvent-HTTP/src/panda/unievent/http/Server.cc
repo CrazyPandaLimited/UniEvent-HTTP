@@ -1,6 +1,7 @@
 #include "Server.h"
 #include <ostream>
 #include <panda/time.h>
+#include <iostream>
 
 namespace panda { namespace unievent { namespace http {
 
@@ -22,7 +23,7 @@ void Server::configure (const Config& conf) {
     if (!conf.locations.size()) throw HttpError("no locations to listen supplied");
 
     for (auto& loc : conf.locations) {
-        if (!loc.host) throw HttpError("empty host in one of locations");
+        if (!loc.host && !loc.sock) throw HttpError("neither host nor socket defined in one of the locations");
     }
 
     if (_running) stop_listening();
@@ -49,26 +50,42 @@ void Server::stop () {
     _running = false;
 }
 
+void Server::graceful_stop () {
+    if (!_running) return;
+    stop_listening();
+    panda_log_notice("gracefully stopping HTTP server with " << _connections.size() << " connections");
+    for (auto& row : _connections) row.second->graceful_stop();
+}
+
 void Server::start_listening () {
     if (_listeners.size()) throw HttpError("server is already listening");
     for (auto& loc : _conf.locations) {
-        TcpSP lst = new Tcp(_loop, loc.domain);
-        lst->event_listener(this);
+        TcpSP lst;
 
-        if (loc.reuse_port) {
-            #ifdef _WIN32
-            panda_log_warning("ignored reuse_port configuration parameter: not supported on windows");
-            #else
-            int on = 1;
-            lst->setsockopt(SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
-            #endif
+        if (loc.sock) {
+            lst = new Tcp(_loop);
+            lst->open(loc.sock.value());
+        } else {
+            lst = new Tcp(_loop, loc.domain);
+
+            if (loc.reuse_port) {
+                #ifdef _WIN32
+                panda_log_warning("ignored reuse_port configuration parameter: not supported on windows");
+                #else
+                int on = 1;
+                lst->setsockopt(SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+                #endif
+            }
+
+            lst->bind(loc.host, loc.port);
         }
 
-        lst->bind(loc.host, loc.port);
         lst->listen(loc.backlog);
         if (loc.ssl_ctx) lst->use_ssl(loc.ssl_ctx);
 
-        panda_log_notice("listening: " << (loc.ssl_ctx ? "https://" : "http://") << loc.host << ":" << lst->sockaddr()->port());
+        lst->event_listener(this);
+
+        panda_log_notice("listening: " << (loc.ssl_ctx ? "https://" : "http://") << (loc.sock ? lst->sockaddr()->ip() : loc.host) << ":" << lst->sockaddr()->port());
         _listeners.push_back(lst);
     }
 }

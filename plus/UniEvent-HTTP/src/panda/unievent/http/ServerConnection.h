@@ -28,6 +28,7 @@ struct ServerConnection : Tcp, private ITcpSelfListener, private protocol::http:
 
     void start ();
     void close (const ErrorCode&, bool soft = false);
+    void graceful_stop ();
 
 private:
     friend ServerRequest; friend ServerResponse;
@@ -43,6 +44,7 @@ private:
     uint32_t      idle_timeout;
     TimerSP       idle_timer;
     bool          closing = false;
+    bool          stopping = false;
 
     protocol::http::RequestSP new_request () override;
 
