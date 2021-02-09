@@ -113,6 +113,7 @@ void ServerConnection::write_next_response () {
 
     auto v = res->to_vector(req);
     write(v.begin(), v.end());
+    server->write_request_queued();
 
     if (!res->keep_alive() || !req->keep_alive()) {
         closing = true;
@@ -133,6 +134,7 @@ void ServerConnection::write_next_response () {
             for (auto& chunk : tmp_chunks) {
                 auto v = res->make_chunk(chunk);
                 write(v.begin(), v.end());
+                server->write_request_queued();
             }
         }
         return;
@@ -148,6 +150,7 @@ void ServerConnection::send_continue (const ServerRequestSP& req) {
     if (req->_response) throw HttpError("100-continue can only be sent before response");
 
     write("HTTP/1.1 100 Continue\r\n\r\n");
+    server->write_request_queued();
 }
 
 void ServerConnection::send_chunk (const ServerResponseSP& res, const string& chunk) {
@@ -157,6 +160,7 @@ void ServerConnection::send_chunk (const ServerResponseSP& res, const string& ch
     if (requests.front()->_response == res) {
         auto v = res->make_chunk(chunk);
         write(v.begin(), v.end());
+        server->write_request_queued();
         return;
     }
 
@@ -170,6 +174,7 @@ void ServerConnection::send_final_chunk (const ServerResponseSP& res) {
 
     auto v = res->final_chunk();
     write(v.begin(), v.end());
+    server->write_request_queued();
     finish_request();
 }
 
@@ -211,6 +216,7 @@ void ServerConnection::cleanup_request () {
 }
 
 void ServerConnection::on_write (const ErrorCode& err, const WriteRequestSP&) {
+    server->write_request_completed();
     if (!err) return;
     panda_log_notice("write error: " << err);
     close(err, false);

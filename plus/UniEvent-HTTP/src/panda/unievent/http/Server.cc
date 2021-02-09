@@ -26,35 +26,37 @@ void Server::configure (const Config& conf) {
         if (!loc.host && !loc.sock) throw HttpError("neither host nor socket defined in one of the locations");
     }
 
-    if (_running) stop_listening();
+    if (running()) stop_listening();
 
     _conf = conf;
     for (auto& loc : _conf.locations) {
         if (!loc.backlog) loc.backlog = DEFAULT_BACKLOG;
     }
 
-    if (_running) start_listening();
+    if (running()) start_listening();
 }
 
 void Server::run () {
-    if (_running) throw HttpError("server is already running");
-    _running = true;
+    if (_state != State::initial) throw HttpError("server is already running");
+    _state = State::running;
     start_listening();
 }
 
 void Server::stop () {
-    if (!_running) return;
+    if (!running()) return;
     stop_listening();
     panda_log_notice("stopping HTTP server with " << _connections.size() << " connections");
     while (_connections.size()) _connections.begin()->second->close(errc::server_stopping);
-    _running = false;
+    _state = State::initial;
 }
 
 void Server::graceful_stop () {
-    if (!_running) return;
+    if (!running()) return;
+    _state = State::stopping;
     stop_listening();
     panda_log_notice("gracefully stopping HTTP server with " << _connections.size() << " connections");
     for (auto& row : _connections) row.second->graceful_stop();
+    _stop_if_done();
 }
 
 void Server::start_listening () {

@@ -39,14 +39,17 @@ struct Server : Refcnt, private IStreamSelfListener {
     using route_fptr   = void(const ServerRequestSP&);
     using request_fptr = ServerRequest::receive_fptr;
     using error_fptr   = void(const ServerRequestSP&, const ErrorCode&);
+    using stop_fptr    = void();
     using route_fn     = function<route_fptr>;
     using request_fn   = ServerRequest::receive_fn;
     using error_fn     = function<error_fptr>;
+    using stop_fn      = function<stop_fptr>;
     using IFactory     = ServerConnection::IFactory;
 
     CallbackDispatcher<route_fptr>   route_event;
     CallbackDispatcher<request_fptr> request_event;
     CallbackDispatcher<error_fptr>   error_event;
+    CallbackDispatcher<stop_fptr>    stop_event;
 
     Server (const LoopSP& loop = Loop::default_loop(), IFactory* = nullptr);
 
@@ -55,7 +58,8 @@ struct Server : Refcnt, private IStreamSelfListener {
     const LoopSP&    loop      () const { return _loop; }
     const Listeners& listeners () const { return _listeners; }
 
-    bool running () const { return _running; }
+    bool running  () const { return _state == State::running; }
+    bool stopping () const { return _state == State::stopping; }
 
     virtual void run  ();
     virtual void stop ();
@@ -76,6 +80,7 @@ protected:
     ~Server (); // restrict stack allocation
 
 private:
+    enum class State { initial, running, stopping };
     friend ServerConnection;
     using Locations   = std::vector<Location>;
     using Connections = std::map<uint64_t, ServerConnectionSP>;
@@ -86,10 +91,11 @@ private:
     IFactory*   _factory = nullptr;
     Config      _conf;
     Listeners   _listeners;
-    bool        _running = false;
+    State       _state = State::initial;
     Connections _connections;
     uint64_t    _hdate_time = 0;
     string      _hdate_str;
+    uint64_t    _awrs = 0; // active write requests
 
     StreamSP create_connection (const StreamSP&) override;
 
@@ -97,6 +103,20 @@ private:
 
     void remove (const ServerConnectionSP& conn) {
         _connections.erase(conn->id());
+        if (_state == State::stopping) _stop_if_done();
+    }
+
+    void write_request_queued () { ++_awrs; }
+
+    void write_request_completed () {
+        --_awrs;
+        if (_state == State::stopping) _stop_if_done();
+    }
+
+    void _stop_if_done () {
+        if (_state != State::stopping || _connections.size() || _awrs) return;
+        _state = State::initial;
+        stop_event();
     }
 
     // disable copying
