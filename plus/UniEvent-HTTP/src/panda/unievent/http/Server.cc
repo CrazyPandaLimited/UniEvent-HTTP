@@ -55,7 +55,10 @@ void Server::graceful_stop () {
     _state = State::stopping;
     stop_listening();
     panda_log_notice("gracefully stopping HTTP server with " << _connections.size() << " connections");
-    for (auto& row : _connections) row.second->graceful_stop();
+
+    std::vector<ServerConnectionSP> list;
+    for (auto& row : _connections) list.push_back(row.second);
+    for (auto& conn : list) conn->graceful_stop();
     _stop_if_done();
 }
 
