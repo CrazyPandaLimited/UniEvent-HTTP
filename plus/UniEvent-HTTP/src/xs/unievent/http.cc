@@ -39,11 +39,12 @@ void fill (Server::Location& loc, const Hash& h) {
 
 void fill (Server::Config& cfg, const Hash& h) {
     Sv sv; Simple v;
-    if ((sv = h.fetch("locations")))        cfg.locations        = xs::in<decltype(cfg.locations)>(sv);
-    if ((v  = h.fetch("idle_timeout")))     cfg.idle_timeout     = (double)v * 1000;
-    if ((v  = h.fetch("max_headers_size"))) cfg.max_headers_size = v;
-    if ((v  = h.fetch("max_body_size")))    cfg.max_body_size    = v;
-    if ((v  = h.fetch("tcp_nodelay")))      cfg.tcp_nodelay      = v.is_true();
+    if ((sv = h.fetch("locations")))              cfg.locations              = xs::in<decltype(cfg.locations)>(sv);
+    if ((v  = h.fetch("idle_timeout")))           cfg.idle_timeout           = (double)v * 1000;
+    if ((v  = h.fetch("max_headers_size")))       cfg.max_headers_size       = v;
+    if ((v  = h.fetch("max_body_size")))          cfg.max_body_size          = v;
+    if ((v  = h.fetch("tcp_nodelay")))            cfg.tcp_nodelay            = v.is_true();
+    if ((v  = h.fetch("max_keepalive_requests"))) cfg.max_keepalive_requests = v;
 }
 
 void fill (Pool::Config& cfg, const Hash& h) {
