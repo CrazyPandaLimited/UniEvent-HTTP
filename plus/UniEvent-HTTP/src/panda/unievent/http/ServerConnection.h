@@ -15,6 +15,7 @@ struct ServerConnection : Tcp, private ITcpSelfListener, private protocol::http:
 
     struct Config {
         uint32_t  idle_timeout;
+        uint64_t  max_keepalive_requests;
         size_t    max_headers_size;
         size_t    max_body_size;
         IFactory* factory;
@@ -41,7 +42,9 @@ private:
     IFactory*     factory;
     RequestParser parser;
     Requests      requests;
+    uint64_t      requests_processed = 0;
     uint32_t      idle_timeout;
+    uint64_t      max_keepalive_requests;
     TimerSP       idle_timer;
     bool          closing = false;
     bool          stopping = false;

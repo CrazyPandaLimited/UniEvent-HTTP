@@ -28,11 +28,13 @@ struct Server : Refcnt, private IStreamSelfListener {
     };
 
     struct Config {
-        std::vector<Location> locations;
-        uint32_t              idle_timeout     = DEFAULT_IDLE_TIMEOUT;     // max idle time connection before it is dropped [ms], 0 = unlimited
-        size_t                max_headers_size = DEFAULT_MAX_HEADERS_SIZE; // max size from the start of request to end of headers, 0 = unlimited
-        size_t                max_body_size    = DEFAULT_MAX_BODY_SIZE;    // 0 = unlimited
-        bool                  tcp_nodelay      = false;
+        using Locations = std::vector<Location>;
+        Locations locations;
+        uint32_t  idle_timeout           = DEFAULT_IDLE_TIMEOUT;     // max idle time connection before it is dropped [ms], 0 = unlimited
+        size_t    max_headers_size       = DEFAULT_MAX_HEADERS_SIZE; // max size from the start of request to end of headers, 0 = unlimited
+        size_t    max_body_size          = DEFAULT_MAX_BODY_SIZE;    // 0 = unlimited
+        bool      tcp_nodelay            = false;
+        uint32_t  max_keepalive_requests = 0;                        // respond with "connection: close" in KA connection after that number of requests (0 = unlimited)
     };
 
     using Listeners    = std::vector<TcpSP>;

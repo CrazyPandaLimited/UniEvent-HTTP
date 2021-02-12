@@ -122,3 +122,23 @@ TEST("idle timeout during and after request") {
     /* -1 to compensate that idle timer and test timer do start at different times */
     CHECK(time_elapsed() >= cfg.idle_timeout - 1);
 }
+
+TEST("max keepalive requests") {
+    AsyncTest test(1000);
+    Server::Config cfg;
+    cfg.max_keepalive_requests = 3;
+    ServerPair p(test.loop, cfg);
+    p.server->autorespond(new ServerResponse(200));
+    p.server->autorespond(new ServerResponse(200));
+    p.server->autorespond(new ServerResponse(200, Headers().connection("keep-alive")));
+    auto res = p.get_response("GET / HTTP/1.1\r\n\r\n");
+    CHECK(res->code == 200);
+    CHECK(res->keep_alive());
+    res = p.get_response("GET / HTTP/1.1\r\n\r\n");
+    CHECK(res->code == 200);
+    CHECK(res->keep_alive());
+    res = p.get_response("GET / HTTP/1.1\r\n\r\n");
+    CHECK(res->code == 200);
+    CHECK_FALSE(res->keep_alive());
+    p.wait_eof();
+}

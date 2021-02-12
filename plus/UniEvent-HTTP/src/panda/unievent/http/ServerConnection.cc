@@ -5,7 +5,8 @@
 namespace panda { namespace unievent { namespace http {
 
 ServerConnection::ServerConnection (Server* server, uint64_t id, const Config& conf)
-    : Tcp(server->loop()), server(server), _id(id), factory(conf.factory), parser(this), idle_timeout(conf.idle_timeout)
+    : Tcp(server->loop()), server(server), _id(id), factory(conf.factory), parser(this), idle_timeout(conf.idle_timeout),
+      max_keepalive_requests(conf.max_keepalive_requests)
 {
     event_listener(this);
 
@@ -91,6 +92,12 @@ void ServerConnection::respond (const ServerRequestSP& req, const ServerResponse
     if (req->_response) throw HttpError("double response for request given");
     req->_response = res;
     res->_request = req;
+
+    ++requests_processed;
+    if (max_keepalive_requests && requests_processed >= max_keepalive_requests && requests.size() == 1) {
+        graceful_stop();
+    }
+
     if (stopping) res->keep_alive(false); // force connection close, we are gracefully stopping
     if (!res->chunked || res->body.length()) res->_completed = true;
     if (requests.front() == req) write_next_response();
