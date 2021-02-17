@@ -1,7 +1,7 @@
 #include "Server.h"
 #include <ostream>
+#include <algorithm>
 #include <panda/time.h>
-#include <iostream>
 
 namespace panda { namespace unievent { namespace http {
 
@@ -192,6 +192,17 @@ std::ostream& operator<< (std::ostream& os, const Server::Config& conf) {
     for (auto loc : conf.locations) os << loc << ",";
     os << "]};";
     return os;
+}
+
+bool Server::Location::operator== (const Location& oth) const {
+    return host == oth.host && port == oth.port && reuse_port == oth.reuse_port && backlog == oth.backlog &&
+           domain == oth.domain && ssl_ctx == oth.ssl_ctx && sock == oth.sock;
+}
+
+bool Server::Config::operator== (const Config& oth) const {
+    return idle_timeout == oth.idle_timeout && max_headers_size == oth.max_headers_size && max_body_size == oth.max_body_size &&
+           tcp_nodelay == oth.tcp_nodelay && max_keepalive_requests == oth.max_keepalive_requests &&
+           locations.size() == oth.locations.size() && std::equal(locations.begin(), locations.end(), oth.locations.begin());
 }
 
 }}}

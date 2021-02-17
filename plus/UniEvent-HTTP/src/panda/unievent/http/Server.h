@@ -25,6 +25,8 @@ struct Server : Refcnt, private IStreamSelfListener {
         SslContext       ssl_ctx    = nullptr;         // if set, will use SSL
         optional<sock_t> sock;                         // if supplied, uses this socket and ignores host, port, reuse_port, backlog, domain
                                                        // socket must be bound but NOT LISTENING!
+        bool operator== (const Location&) const;
+        bool operator!= (const Location& oth) const { return !operator==(oth); }
     };
 
     struct Config {
@@ -35,6 +37,9 @@ struct Server : Refcnt, private IStreamSelfListener {
         size_t    max_body_size          = DEFAULT_MAX_BODY_SIZE;    // 0 = unlimited
         bool      tcp_nodelay            = false;
         uint32_t  max_keepalive_requests = 0;                        // respond with "connection: close" in KA connection after that number of requests (0 = unlimited)
+
+        bool operator== (const Config&) const;
+        bool operator!= (const Config& oth) const { return !operator==(oth); }
     };
 
     using Listeners    = std::vector<TcpSP>;
