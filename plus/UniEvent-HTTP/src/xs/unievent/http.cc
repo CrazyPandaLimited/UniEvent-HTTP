@@ -35,6 +35,11 @@ void fill (Server::Location& loc, const Hash& h) {
     if ((v  = h.fetch("backlog")))    loc.backlog    = v;
     if ((v  = h.fetch("domain")))     loc.domain     = v;
     if ((sv = h.fetch("ssl_ctx")))    loc.ssl_ctx    = xs::in<SslContext>(sv);
+
+    if ((sv = h.fetch("sock"))) {
+        auto sock = sv2sock(sv);
+        if (sock) loc.sock = sock;
+    }
 }
 
 void fill (Server::Config& cfg, const Hash& h) {
