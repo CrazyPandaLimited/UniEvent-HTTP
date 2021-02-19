@@ -361,3 +361,28 @@ TEST("using socket in config location") {
 
     test.run();
 }
+
+TEST("server request connection properties") {
+    AsyncTest test(1000, 1);
+    ServerPair p(test.loop);
+
+    auto server_sockaddr = p.server->listeners().front()->sockaddr().value();
+    auto client_sockaddr = p.conn->sockaddr().value();
+
+    p.server->request_event.add([&](auto req) {
+        test.happens();
+        CHECK(req->headers.host() == "epta.ru");
+        CHECK(req->is_secure() == secure);
+        CHECK(req->sockaddr() == server_sockaddr);
+        CHECK(req->peeraddr() == client_sockaddr);
+        test.loop->stop();
+    });
+
+    p.conn->write(
+        "GET / HTTP/1.1\r\n"
+        "Host: epta.ru\r\n"
+        "\r\n"
+    );
+
+    test.run();
+}

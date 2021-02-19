@@ -2,6 +2,7 @@
 #include "msg.h"
 #include "ServerResponse.h"
 #include <panda/error.h>
+#include <panda/net/sockaddr.h>
 #include <panda/CallbackDispatcher.h>
 
 namespace panda { namespace unievent { namespace http {
@@ -39,8 +40,13 @@ struct ServerRequest : protocol::http::Request {
 
     virtual void drop ();
 
+    bool is_secure () const { return _is_secure; }
+
+    net::SockAddr sockaddr () const;
+    net::SockAddr peeraddr () const;
+
 protected:
-    ServerRequest (ServerConnection* conn) : _connection(conn) {}
+    ServerRequest (ServerConnection*);
 
     ~ServerRequest ();
 
@@ -54,6 +60,7 @@ private:
     bool              _partial           = false;
     bool              _finish_on_receive = false;
     bool              _is_done           = false;
+    bool              _is_secure;
 };
 
 }}}
