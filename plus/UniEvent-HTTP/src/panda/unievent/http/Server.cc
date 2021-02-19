@@ -43,11 +43,12 @@ void Server::run () {
 }
 
 void Server::stop () {
-    if (!running()) return;
+    if (!running() && _state != State::stopping) return;
     stop_listening();
     panda_log_notice("stopping HTTP server with " << _connections.size() << " connections");
     while (_connections.size()) _connections.begin()->second->close(errc::server_stopping);
     _state = State::initial;
+    stop_event();
 }
 
 void Server::graceful_stop () {
