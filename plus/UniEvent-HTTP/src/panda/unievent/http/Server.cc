@@ -40,6 +40,7 @@ void Server::run () {
     if (_state != State::initial) throw HttpError("server is already running");
     _state = State::running;
     start_listening();
+    run_event();
 }
 
 void Server::stop () {
