@@ -23,7 +23,7 @@ struct Server : Refcnt, private IStreamSelfListener {
         int              backlog    = DEFAULT_BACKLOG; // max accept queue
         int              domain     = AF_INET;
         SslContext       ssl_ctx    = nullptr;         // if set, will use SSL
-        optional<sock_t> sock;                         // if supplied, uses this socket and ignores host, port, reuse_port, backlog, domain
+        optional<sock_t> sock       = {};              // if supplied, uses this socket and ignores host, port, reuse_port, backlog, domain
                                                        // socket must be bound but NOT LISTENING!
         bool operator== (const Location&) const;
         bool operator!= (const Location& oth) const { return !operator==(oth); }
