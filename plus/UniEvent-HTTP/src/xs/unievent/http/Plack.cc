@@ -10,10 +10,8 @@ Plack::Plack (bool mp, bool mt) : multiprocess(mp), multithread(mt) {
     psgi_version = Array::create({Simple(1), Simple(1)});
     psgi_errors  = Stash("UniEvent::HTTP::Plack::ErrorHandle").bless(Hash::create());
 
-    Sub null_io_sub = eval_pv("sub { open my $fh, '<', \\''; return $fh }", 1);
-
-    null_io                = null_io_sub.call();
-    string_io              = eval_pv("sub { open my $fh, '<', \\$_[0]; return $fh }", 1);
+    null_io                = eval("open my $fh, '<', \\''; $fh");
+    string_io              = Sub::create("open my $fh, '<', \\$_[0]; return $fh");
     run_app                = Sub("Plack::Util::run_app");
     plack_real_fh          = Sub("Plack::Util::is_real_fh");
     read_real_fh           = Sub("UniEvent::HTTP::Plack::read_real_fh");
