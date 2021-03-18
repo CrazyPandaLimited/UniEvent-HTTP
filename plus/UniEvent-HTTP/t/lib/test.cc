@@ -377,7 +377,7 @@ int64_t ServerPair::wait_eof (int tmt) {
     if (eof) return eof;
 
     TimerSP timer;
-    if (tmt) timer = Timer::once(tmt, [this](auto) {
+    if (tmt) timer = Timer::create(tmt, [this](auto) {
         conn->loop()->stop();
     }, conn->loop());
 
