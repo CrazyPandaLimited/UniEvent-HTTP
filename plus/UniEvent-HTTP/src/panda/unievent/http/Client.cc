@@ -54,8 +54,21 @@ void Client::request (const RequestSP& request) {
         filters().clear();
 
         if (request->uri->secure()) {
-            if (request->ssl_ctx) Tcp::use_ssl(request->ssl_ctx);
-            else                  Tcp::use_ssl();
+            SslContext ctx = request->ssl_ctx;
+            if (!ctx) {
+                ctx = SslContext::attach(SSL_CTX_new(TLS_client_method()));
+                bool ok = SSL_CTX_set_default_verify_paths(ctx);
+                if (!ok) {
+
+                }
+                if (request->ssl_check_cert) {
+                    string host = request->uri->host();
+                    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
+                    auto param = SSL_CTX_get0_param(ctx);
+                    X509_VERIFY_PARAM_set1_host(param, host.c_str(), host.size());
+                }
+            }
+            Tcp::use_ssl(ctx);
             auto ssl = Tcp::get_ssl();
             SSL_set_tlsext_host_name(ssl, request->uri->host().c_str());
         }

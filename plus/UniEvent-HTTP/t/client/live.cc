@@ -1,4 +1,5 @@
 #include "../lib/test.h"
+#include <openssl/ssl.h>
 
 #define TEST(name) TEST_CASE("client-live: " name, "[client-live]" VSSL)
 
@@ -11,9 +12,10 @@ TEST("get real sites") {
         "http://facebook.com",
         "http://wikipedia.org",
         "http://yandex.ru",
-        "http://rbc.ru",
+//        "http://rbc.ru",
         "http://ya.ru",
         "http://example.com"
+        "http://easylist.to"
     };
 
     AsyncTest test(5000, sites.size());
@@ -32,5 +34,20 @@ TEST("get real sites") {
         http_request(req, test.loop);
     }
 
+    test.run();
+}
+
+TEST("validate host name") {
+    AsyncTest test(5000, 1);
+    RequestSP req = Request::Builder()
+        .uri("https://a.b.c.dev.crazypanda.ru")
+        .response_callback([&](auto&, auto& res, auto& err) {
+            panda_log_debug("GOT response " << res << ", " << res->body.length() << " bytes, err=" << err);
+            test.happens();
+            CHECK(err);
+        })
+        .ssl_check_ctx(true)
+        .build();
+    http_request(req, test.loop);
     test.run();
 }

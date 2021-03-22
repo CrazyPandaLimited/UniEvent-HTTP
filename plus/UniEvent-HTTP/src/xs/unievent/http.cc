@@ -21,6 +21,7 @@ void fill (Request* req, const Hash& h) {
     if ((sv = h.fetch("ssl_ctx")))           req->ssl_ctx = xs::in<SslContext>(sv);
     if ((sv = h.fetch("proxy")))             req->proxy = xs::in<URISP>(sv);
     if ((sv = h.fetch("tcp_hints")))         req->tcp_hints = xs::in<AddrInfoHints>(sv);
+    if ((v  = h.fetch("ssl_ctx")))           req->ssl_check_cert = v.is_true();
 }
 
 void fill (ServerResponse* res, const Hash& h) {
