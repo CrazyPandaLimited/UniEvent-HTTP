@@ -439,7 +439,7 @@ TEST("proxies using") {
 }
 
 TEST("ssl_cert_check") {
-    AsyncTest test(1000);
+    AsyncTest test(1000, {"res", "res"});
     TPool p(test.loop);
     auto srv = make_server(test.loop);
     srv->autorespond(new ServerResponse(200));
@@ -451,14 +451,12 @@ TEST("ssl_cert_check") {
     auto c = p.request(req);
     REQUIRE(c);
 
-    auto res = await_response(req, test.loop);
-    CHECK(res->code == 200);
+    test.await(req->response_event, "res");
+
     req = builder.ssl_check_cert(false).build();
     auto c2 = p.request(req);
 
     REQUIRE(c != c2);
 
-    res = await_response(req, test.loop);
-    CHECK(res->code == 200);
-
+    test.await(req->response_event, "res");
 }
