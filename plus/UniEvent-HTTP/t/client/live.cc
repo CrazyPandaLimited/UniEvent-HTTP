@@ -46,7 +46,7 @@ TEST("validate host name") {
             test.happens();
             CHECK(err);
         })
-        .ssl_check_ctx(true)
+        .ssl_check_cert(true)
         .build();
     http_request(req, test.loop);
     test.run();

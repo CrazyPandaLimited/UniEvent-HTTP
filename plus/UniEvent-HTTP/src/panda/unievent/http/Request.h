@@ -27,7 +27,7 @@ struct NetLoc {
 
 
     bool operator== (const NetLoc& other) const {
-        return host == other.host && port == other.port && ssl_ctx == other.ssl_ctx && proxy == other.proxy;
+        return host == other.host && port == other.port && ssl_ctx == other.ssl_ctx && proxy == other.proxy && ssl_check_cert == other.ssl_check_cert;
     }
     bool operator!= (const NetLoc& other) const { return !operator==(other); }
 };
@@ -128,7 +128,7 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder, RequestS
         return *this;
     }
 
-    Builder& ssl_check_ctx (bool check) {
+    Builder& ssl_check_cert (bool check) {
         _message->ssl_check_cert = check;
         return *this;
     }

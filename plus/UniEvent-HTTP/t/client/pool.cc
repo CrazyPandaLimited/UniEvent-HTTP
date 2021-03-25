@@ -437,3 +437,28 @@ TEST("proxies using") {
         CHECK(c4 == c1);
     }
 }
+
+TEST("ssl_cert_check") {
+    AsyncTest test(1000);
+    TPool p(test.loop);
+    auto srv = make_server(test.loop);
+    srv->autorespond(new ServerResponse(200));
+    srv->autorespond(new ServerResponse(200));
+
+    auto uri = active_scheme() +  "://" + srv->location() + "/";
+    auto builder = Request::Builder().method(Request::Method::Get).uri(uri);
+    auto req = builder.ssl_check_cert(true).build();
+    auto c = p.request(req);
+    REQUIRE(c);
+
+    auto res = await_response(req, test.loop);
+    CHECK(res->code == 200);
+    req = builder.ssl_check_cert(false).build();
+    auto c2 = p.request(req);
+
+    REQUIRE(c != c2);
+
+    res = await_response(req, test.loop);
+    CHECK(res->code == 200);
+
+}
