@@ -16,14 +16,18 @@ struct RedirectContext; using RedirectContextSP = iptr<RedirectContext>;
 
 using panda::unievent::AddrInfoHints;
 
+extern bool default_ssl_verify;
+
 struct NetLoc {
     string     host;
     uint16_t   port    = 0;
     SslContext ssl_ctx = nullptr;
     URISP      proxy;
+    bool       ssl_check_cert = true;
+
 
     bool operator== (const NetLoc& other) const {
-        return host == other.host && port == other.port && ssl_ctx == other.ssl_ctx && proxy == other.proxy;
+        return host == other.host && port == other.port && ssl_ctx == other.ssl_ctx && proxy == other.proxy && ssl_check_cert == other.ssl_check_cert;
     }
     bool operator!= (const NetLoc& other) const { return !operator==(other); }
 };
@@ -56,6 +60,7 @@ struct Request : protocol::http::Request {
     URISP                             proxy;
     AddrInfoHints                     tcp_hints         = Tcp::defhints;
     Form                              form;
+    bool                              ssl_check_cert    = default_ssl_verify;
 
     Request () {}
 
@@ -77,7 +82,7 @@ private:
     ClientSP _client; // holds client when active
     TimerSP  _timer;
 
-    NetLoc netloc () const { return { uri->host(), uri->port(), ssl_ctx, proxy }; }
+    NetLoc netloc () const { return { uri->host(), uri->port(), ssl_ctx, proxy, ssl_check_cert }; }
 
     void check () const {
         if (!uri) throw HttpError("request must have uri");
@@ -120,6 +125,11 @@ struct Request::Builder : protocol::http::Request::BuilderImpl<Builder, RequestS
 
     Builder& ssl_ctx (const SslContext& ctx) {
         _message->ssl_ctx = ctx;
+        return *this;
+    }
+
+    Builder& ssl_check_cert (bool check) {
+        _message->ssl_check_cert = check;
         return *this;
     }
 

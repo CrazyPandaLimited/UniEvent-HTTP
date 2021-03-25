@@ -4,6 +4,8 @@
 
 namespace panda { namespace unievent { namespace http {
 
+bool default_ssl_verify = true;
+
 #define CHECK_SEND_CHUNK                                                                                \
     if (_transfer_completed) throw HttpError("can't send chunk: request has already been transfered");  \
     if (!_client) throw HttpError("can't send chunk: request is not active");
