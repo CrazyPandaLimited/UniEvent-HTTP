@@ -343,7 +343,7 @@ TEST("using socket in config location") {
     AsyncTest test(1000, 1);
     Server::Config cfg;
     Server::Location loc;
-    loc.sock = tcp->socket();
+    loc.sock = tcp->socket().value();
     cfg.locations.push_back(loc);
     ServerPair p(test.loop, cfg);
 
