@@ -22,7 +22,7 @@ TEST("basic") {
         server->stop();
     });
 
-    auto result = http_request(Request::Builder().uri(uri).timeout(10000).build(), sync_t());
+    auto result = http_request_sync(Request::Builder().uri(uri).timeout(10000).build());
     async->send();
     thr.join();
 
@@ -51,7 +51,7 @@ TEST("simple get") {
         server->stop();
     });
 
-    auto txt = http_get(uri).value();
+    auto txt = http_get(uri).value()->body.to_string();
     async->send();
     thr.join();
 
@@ -80,7 +80,7 @@ TEST("recursive sync") {
     auto req = Request::Builder().uri(uri).timeout(10000).response_callback([&](auto&, auto&, auto&) {
         CHECK_THROWS(http_get(uri));
     }).build();
-    auto res = http_request(req, sync_t()).value();
+    auto res = http_request_sync(req).value();
     async->send();
     thr.join();
 

@@ -172,7 +172,7 @@ TEST("idle timeout") {
     SECTION("set at creation time") {
         Pool::Config cfg;
         cfg.idle_timeout = 5;
-        p = new TPool(test.loop, cfg);
+        p = new TPool(cfg, test.loop);
     }
     SECTION("set at runtime") {
         p = new TPool(test.loop);
@@ -340,7 +340,7 @@ TEST("connection queuing") {
     AsyncTest test(5000);
     Pool::Config cfg;
     cfg.max_connections = 1;
-    TPool p(test.loop, cfg);
+    TPool p(cfg, test.loop);
     auto srv = make_server(test.loop);
     srv->autorespond(new ServerResponse(200));
     srv->autorespond(new ServerResponse(200));

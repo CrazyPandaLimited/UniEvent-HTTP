@@ -9,19 +9,42 @@ using SslContext = panda::unievent::SslContext;
 
 void fill (Request* req, const Hash& h) {
     xs::protocol::http::fill(req, h);
-    Sv sv; Simple v;
-    if ((sv = h.fetch("response_callback"))) req->response_event.add(xs::in<Request::response_fn>(sv));
-    if ((sv = h.fetch("redirect_callback"))) req->redirect_event.add(xs::in<Request::redirect_fn>(sv));
-    if ((sv = h.fetch("partial_callback")))  req->partial_event.add(xs::in<Request::partial_fn>(sv));
-    if ((sv = h.fetch("continue_callback"))) req->continue_event.add(xs::in<Request::continue_fn>(sv));
-    if ((v  = h.fetch("timeout")))           req->timeout = (double)v * 1000;
-    if ((v  = h.fetch("follow_redirect")))   req->follow_redirect = v;
-    if ((v  = h.fetch("tcp_nodelay")))       req->tcp_nodelay = v.is_true();
-    if ((v  = h.fetch("redirection_limit"))) req->redirection_limit = v;
-    if ((sv = h.fetch("ssl_ctx")))           req->ssl_ctx = xs::in<SslContext>(sv);
-    if ((sv = h.fetch("proxy")))             req->proxy = xs::in<URISP>(sv);
-    if ((sv = h.fetch("tcp_hints")))         req->tcp_hints = xs::in<AddrInfoHints>(sv);
-    if ((v  = h.fetch("ssl_ctx")))           req->ssl_check_cert = v.is_true();
+
+    for (auto& row : h) {
+        auto key = row.key();
+        if (!key.length()) continue;
+        auto v = row.value();
+
+        switch (key[0]) {
+            case 'r':
+                if      (key == "response_callback") req->response_event.add(xs::in<Request::response_fn>(v));
+                else if (key == "redirect_callback") req->redirect_event.add(xs::in<Request::redirect_fn>(v));
+                else if (key == "redirection_limit") req->redirection_limit = Simple(v);
+                break;
+            case 't':
+                if      (key == "timeout")     req->timeout = (double)Simple(v) * 1000;
+                else if (key == "tcp_nodelay") req->tcp_nodelay = v.is_true();
+                else if (key == "tcp_hints")   req->tcp_hints = xs::in<AddrInfoHints>(v);
+                break;
+            case 'p':
+                if      (key == "partial_callback") req->partial_event.add(xs::in<Request::partial_fn>(v));
+                else if (key == "proxy")            req->proxy = xs::in<URISP>(v);
+                break;
+            case'f':
+                if (key == "form") fill_form(req, v);
+                if (key == "follow_redirect") req->follow_redirect = v.is_true();
+                break;
+            case 's':
+                if (key == "ssl_ctx") {
+                    req->ssl_ctx = xs::in<SslContext>(v);
+                    if (req->ssl_ctx) req->ssl_check_cert = true;
+                }
+                break;
+            case 'c':
+                if (key == "continue_callback") req->continue_event.add(xs::in<Request::continue_fn>(v));
+                break;
+        }
+    }
 }
 
 void fill (ServerResponse* res, const Hash& h) {

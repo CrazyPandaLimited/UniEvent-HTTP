@@ -11,7 +11,7 @@ subtest "default loop" => sub {
     my $loop = new UE::Loop->default_loop;
     my $test = new UE::Test::Async(1, 1, $loop);
     UE::HTTP::http_request({
-        uri => 'http://rbc.ru',
+        uri => 'http://ya.ru',
         response_callback => sub {
             my ($request, $response) = @_;
             is $response->code, 200;
@@ -26,7 +26,7 @@ subtest "separate loop" => sub {
     my $loop = new UE::Loop->new;
     my $test = new UE::Test::Async(1, 1, $loop);
     UE::HTTP::http_request({
-        uri => 'http://rbc.ru',
+        uri => 'http://ya.ru',
         response_callback => sub {
             my ($request, $response) = @_;
             is $response->code, 200;
@@ -41,7 +41,7 @@ subtest "https" => sub {
     my $loop = new UE::Loop->default_loop;
     my $test = new UE::Test::Async(1, 1, $loop);
     UE::HTTP::http_request({
-        uri => 'https://rbc.ru',
+        uri => 'https://ya.ru',
         response_callback => sub {
             my ($request, $response) = @_;
             is $response->code, 200;
@@ -53,8 +53,19 @@ subtest "https" => sub {
 };
 
 subtest "sync simple get" => sub {
-    my ($body, $err) = UE::HTTP::http_get("https://ya.ru");
+    my ($res, $err) = UE::HTTP::http_get("https://ya.ru");
     is $err, undef;
+    cmp_ok length($res->body), '>', 0, "body length = ".length($res->body);
+};
+
+subtest "async simple get" => sub {
+    my $body;
+    UE::HTTP::http_get("https://ya.ru", sub {
+        my ($req, $res, $err) = @_;
+        is $err, undef;
+        $body = $res->body;
+    });
+    UE::Loop::default->run;
     cmp_ok length($body), '>', 0, "body length = ".length($body);
 };
 

@@ -19,7 +19,7 @@ private:
 
 static thread_local Pool* sync_pool;
 
-expected<ResponseSP, ErrorCode> http_request (const RequestSP& req, sync_t) {
+expected<ResponseSP, ErrorCode> http_request_sync (const RequestSP& req) {
     auto pool = sync_pool;
     if (!pool) {
         tls.sync_loop = new Loop();
@@ -43,11 +43,14 @@ expected<ResponseSP, ErrorCode> http_request (const RequestSP& req, sync_t) {
     return ret;
 }
 
-expected<string, ErrorCode> http_get (const URISP& uri) {
+void http_get (const URISP& uri, const Request::response_fn& cb, const LoopSP& loop) {
+    auto req = Request::Builder().uri(uri).method(Request::Method::Get).response_callback(cb).build();
+    http_request(req, loop);
+}
+
+expected<ResponseSP, ErrorCode> http_get (const URISP& uri) {
     auto req = Request::Builder().uri(uri).method(Request::Method::Get).build();
-    return http_request(req, sync_t()).map([](const ResponseSP& res) {
-        return res->body.to_string();
-    });
+    return http_request_sync(req);
 }
 
 }}}

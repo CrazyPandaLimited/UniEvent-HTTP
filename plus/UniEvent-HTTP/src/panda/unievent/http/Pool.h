@@ -25,11 +25,12 @@ struct Pool : Refcnt {
     static const PoolSP& instance (const LoopSP& loop) {
         auto v = _instances;
         for (const auto& r : *v) if (r->loop() == loop) return r;
-        v->push_back(new Pool(loop));
+        v->push_back(new Pool({}, loop));
         return v->back();
     }
 
-    Pool (const LoopSP& loop = Loop::default_loop(), Config = {});
+    Pool (Config = {}, const LoopSP& loop = Loop::default_loop());
+    Pool (const LoopSP& loop) : Pool({}, loop) {}
 
     ~Pool ();
 
