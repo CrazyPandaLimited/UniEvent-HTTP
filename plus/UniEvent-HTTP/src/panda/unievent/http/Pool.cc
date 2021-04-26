@@ -8,7 +8,7 @@ static thread_local struct {
 
 thread_local std::vector<PoolSP>* Pool::_instances = &tls.s_instances;
 
-Pool::Pool (const LoopSP& loop, Config cfg) : _loop(loop), _max_connections(cfg.max_connections), _factory(cfg.factory)  {
+Pool::Pool (Config cfg, const LoopSP& loop) : _loop(loop), _max_connections(cfg.max_connections), _factory(cfg.factory)  {
     idle_timeout(cfg.idle_timeout);
 }
 

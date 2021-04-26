@@ -11,6 +11,10 @@ std::atomic<uint64_t> Server::lastid(0);
 
 Server::Server (const LoopSP& loop, IFactory* fac) : _loop(loop), _factory(fac) {}
 
+Server::Server (const Config& conf, const LoopSP& loop, IFactory* fac) : Server(loop, fac) {
+    configure(conf);
+}
+
 Server::~Server() {
     // close all connections to stop any delayed callbacks and self holdings, e.g. on_write. Connections should not leave longer than Server.
     // it can not lead to user callback because active http::Requests are impossible in Server dtor, so no retry or any sort of infinite loop

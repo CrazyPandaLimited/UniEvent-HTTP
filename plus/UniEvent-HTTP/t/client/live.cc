@@ -12,10 +12,8 @@ TEST("get real sites") {
         "http://facebook.com",
         "http://wikipedia.org",
         "http://yandex.ru",
-//        "http://rbc.ru",
         "http://ya.ru",
         "http://example.com"
-        "http://easylist.to"
     };
 
     AsyncTest test(5000, sites.size());

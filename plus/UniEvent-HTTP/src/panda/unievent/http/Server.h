@@ -62,6 +62,7 @@ struct Server : Refcnt, private IStreamSelfListener {
     CallbackDispatcher<stop_fptr>    stop_event;
 
     Server (const LoopSP& loop = Loop::default_loop(), IFactory* = nullptr);
+    Server (const Config& config, const LoopSP& loop = Loop::default_loop(), IFactory* = nullptr);
 
     virtual void configure (const Config& config);
 
