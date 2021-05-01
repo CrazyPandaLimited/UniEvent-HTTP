@@ -16,9 +16,9 @@ void Request::send_chunk (const string& chunk) {
     _client->send_chunk(this, chunk);
 }
 
-void Request::send_final_chunk () {
+void Request::send_final_chunk (const string& chunk) {
     CHECK_SEND_CHUNK;
-    _client->send_final_chunk(this);
+    _client->send_final_chunk(this, chunk);
 }
 
 void Request::cancel (const ErrorCode& err) {

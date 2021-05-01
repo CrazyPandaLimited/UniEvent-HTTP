@@ -67,7 +67,7 @@ struct Request : protocol::http::Request {
     bool transfer_completed () const { return _transfer_completed; }
 
     void send_chunk        (const string& chunk);
-    void send_final_chunk  ();
+    void send_final_chunk  (const string& chunk = {});
 
     void cancel (const ErrorCode& = make_error_code(std::errc::operation_canceled));
 

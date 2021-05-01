@@ -34,14 +34,14 @@ subtest "chunked response receive" => sub {
                 return;
             }
     
-            $sres->send_final_chunk;
+            $sres->send_final_chunk("b");
     
             $req->partial_callback(sub {
                 my (undef, $res, $err) = @_;
                 die $err if $err;
                 return unless $res->is_done;
                 $test->happens;
-                is $res->body, "aaaaaaaaaa";
+                is $res->body, "aaaaaaaaaab";
             });
         },
     });
@@ -49,7 +49,7 @@ subtest "chunked response receive" => sub {
     is $res->code, 200;
     ok $res->chunked;
     ok $res->is_done;
-    is $res->body, "aaaaaaaaaa";
+    is $res->body, "aaaaaaaaaab";
 };
 
 subtest "chunked request send" => sub {
@@ -77,7 +77,7 @@ subtest "chunked request send" => sub {
                 $req->send_chunk("a");
                 return;
             }
-            $req->send_final_chunk;
+            $req->send_final_chunk("b");
 
             $sreq->partial_callback(sub {
                 my ($sreq, $err) = @_;
@@ -85,7 +85,7 @@ subtest "chunked request send" => sub {
                 return unless $sreq->is_done;
                 ok $sreq->chunked;
                 $test->happens;
-                is $sreq->body, "aaaaaaaaaa";
+                is $sreq->body, "aaaaaaaaaab";
                 $sreq->respond(new UE::HTTP::ServerResponse({code => 200, body => $sreq->body}));
             });
         });
@@ -96,7 +96,7 @@ subtest "chunked request send" => sub {
     my $res = $p->client->get_response($req);
     is $res->code, 200;
     ok !$res->chunked;
-    is $res->body, "aaaaaaaaaa";
+    is $res->body, "aaaaaaaaaab";
 };
 
 subtest "100-continue" => sub {

@@ -15,7 +15,7 @@ struct ServerResponse : protocol::http::Response {
     {}
 
     virtual void send_chunk       (const string& chunk);
-    virtual void send_final_chunk ();
+    virtual void send_final_chunk (const string& chunk = {});
 
     bool completed () const { return _completed; }
 
