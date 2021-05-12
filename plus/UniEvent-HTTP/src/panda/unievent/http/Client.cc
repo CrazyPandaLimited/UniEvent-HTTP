@@ -122,10 +122,10 @@ void Client::send_chunk (const RequestSP& req, const string& chunk) {
     write(v.begin(), v.end());
 }
 
-void Client::send_final_chunk (const RequestSP& req) {
+void Client::send_final_chunk (const RequestSP& req, const string& chunk) {
     assert(_request == req);
     req->_transfer_completed = true;
-    auto v = req->final_chunk();
+    auto v = req->final_chunk(chunk);
     write(v.begin(), v.end());
 }
 

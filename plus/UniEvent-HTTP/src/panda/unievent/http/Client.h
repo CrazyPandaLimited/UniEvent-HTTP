@@ -48,7 +48,7 @@ private:
     void on_eof     () override;
 
     void send_chunk       (const RequestSP&, const string&);
-    void send_final_chunk (const RequestSP&);
+    void send_final_chunk (const RequestSP&, const string&);
 
     void drop_connection ();
     void analyze_request ();

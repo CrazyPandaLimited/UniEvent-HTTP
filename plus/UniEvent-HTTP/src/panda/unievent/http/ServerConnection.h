@@ -61,7 +61,7 @@ private:
     void write_next_response ();
     void send_continue       (const ServerRequestSP&);
     void send_chunk          (const ServerResponseSP&, const string& chunk);
-    void send_final_chunk    (const ServerResponseSP&);
+    void send_final_chunk    (const ServerResponseSP&, const string& chunk);
     void finish_request      ();
     void cleanup_request     ();
     void drop_requests       (const ErrorCode&);

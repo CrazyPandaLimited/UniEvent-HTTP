@@ -174,12 +174,12 @@ void ServerConnection::send_chunk (const ServerResponseSP& res, const string& ch
     res->body.parts.push_back(chunk);
 }
 
-void ServerConnection::send_final_chunk (const ServerResponseSP& res) {
+void ServerConnection::send_final_chunk (const ServerResponseSP& res, const string& chunk) {
     assert(requests.size());
     res->_completed = true;
     if (requests.front()->_response != res) return;
 
-    auto v = res->final_chunk();
+    auto v = res->final_chunk(chunk);
     write(v.begin(), v.end());
     server->write_request_queued();
     finish_request();
