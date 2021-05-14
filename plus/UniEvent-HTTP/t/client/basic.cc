@@ -7,7 +7,7 @@ TEST("trivial get") {
     ClientPair p(test.loop);
     p.server->enable_echo();
 
-    p.server->request_event.add([&](auto& req){
+    p.server->request_event.prepend([&](auto& req){
         test.happens();
         auto sa = p.server->listeners().front()->sockaddr().value();
         CHECK(req->headers.get("Host") == sa.ip() + ':' + panda::to_string(sa.port()));
@@ -151,7 +151,7 @@ TEST("accept-encoding") {
             .uri("/")
             .build();
 
-        p.server->request_event.add([&](auto& req){
+        p.server->request_event.prepend([&](auto& req){
             test.happens();
             CHECK(req->headers.get("Accept-Encoding") == "gzip");
         });
@@ -167,7 +167,7 @@ TEST("accept-encoding") {
 
         CHECK(req->compression_prefs != static_cast<std::uint8_t>(Compression::IDENTITY));
 
-        p.server->request_event.add([&](auto& req){
+        p.server->request_event.prepend([&](auto& req){
             test.happens();
             CHECK(!req->headers.has("Accept-Encoding"));
         });
