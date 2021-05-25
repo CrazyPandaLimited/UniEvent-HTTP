@@ -66,7 +66,7 @@ TEST("form file streaming") {
 
 
     auto req = Request::Builder().uri("/")
-            .form_file("source", new streamer::FileInput("t/client/form.cc"), "application/pdf", "cv.pdf")
+            .form_file("source", new streamer::FileInput("tests/client/form.cc"), "application/pdf", "cv.pdf")
             .build();
     auto res = p.client->get_response(req);
     CHECK(res->code == 200);
@@ -92,7 +92,7 @@ TEST("form file streaming + fields") {
 
     auto req = Request::Builder().uri("/")
             .form_field("password", "secret")
-            .form_file("source", new streamer::FileInput("t/client/form.cc"), "application/pdf", "cv.pdf")
+            .form_file("source", new streamer::FileInput("tests/client/form.cc"), "application/pdf", "cv.pdf")
             .form_field("signature", "Darth Vader")
             .build();
     auto res = p.client->get_response(req);
@@ -104,7 +104,7 @@ TEST("form file streaming error") {
     ClientPair p(test.loop);
 
     auto req = Request::Builder().uri("/")
-            .form_file("source", new streamer::FileInput("t/client/not-existant.zzz"), "application/pdf", "cv.pdf")
+            .form_file("source", new streamer::FileInput("tests/client/not-existant.zzz"), "application/pdf", "cv.pdf")
             .form_field("signature", "Looser")
             .build();
     try {

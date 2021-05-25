@@ -75,7 +75,7 @@ TServerSP make_server (const LoopSP& loop, Server::Config cfg) {
 
 TServerSP make_ssl_server (const LoopSP& loop) {
     auto server_ctx = TServer::get_context("ca");
-    auto err = SSL_CTX_load_verify_locations(server_ctx, "t/cert/ca.pem", nullptr);
+    auto err = SSL_CTX_load_verify_locations(server_ctx, "tests/cert/ca.pem", nullptr);
     assert(err);
 
     SSL_CTX_set_verify(server_ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
@@ -135,7 +135,7 @@ NetLoc TServer::netloc () const {
 SslContext TServer::get_context (string cert_name) {
     auto ctx = SSL_CTX_new(SSLv23_server_method());
     auto r = SslContext::attach(ctx);
-    string path("t/cert");
+    string path("tests/cert");
     string cert = path + "/" + cert_name + ".pem";
     string key = path + "/" + cert_name + ".key";
     int err;
@@ -214,7 +214,7 @@ ErrorCode TClient::get_error (const string& uri, Headers&& headers, Body&& body,
 SslContext TClient::get_context(string cert_name, const string& ca_name) {
     auto ctx = SSL_CTX_new(SSLv23_client_method());
     auto r = SslContext::attach(ctx);
-    string path("t/cert");
+    string path("tests/cert");
     string ca = path + "/" + ca_name + ".pem";
     string cert = path + "/" + cert_name + ".pem";
     string key = path + "/" + cert_name + ".key";
