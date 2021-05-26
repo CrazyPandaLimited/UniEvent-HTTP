@@ -251,7 +251,7 @@ void ServerConnection::drop_requests (const ErrorCode& err) {
 }
 
 void ServerConnection::close (const ErrorCode& err, bool soft) {
-    panda_log_notice("close: " << err);
+    panda_log_debug("connection close: soft: " << soft << " " << err);
     ServerConnectionSP hold = this; (void)hold;
     ServerSP hold_srv = server; (void)hold_srv;
 
