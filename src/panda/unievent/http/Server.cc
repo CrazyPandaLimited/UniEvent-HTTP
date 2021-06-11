@@ -183,7 +183,7 @@ string rfc822_date (time::ptime_t epoch) {
 }
 
 std::ostream& operator<< (std::ostream& os, const Server::Location& location) {
-    os << (location.ssl_ctx ? "https://" : "http://");
+    os << "{uri:" << (location.ssl_ctx ? "https://" : "http://");
     if (location.sock) {
         auto res = unievent::getsockname(location.sock.value());
         if (res) {
@@ -199,18 +199,22 @@ std::ostream& operator<< (std::ostream& os, const Server::Location& location) {
     } else {
         os << location.host << ":" << location.port;
     }
-    if (location.reuse_port) os << " reuse_port";
-    os << " backlog=" << location.backlog;
+    if (location.reuse_port) os << ", reuse_port:true";
+    os << ", backlog:" << location.backlog;
+    os << "}";
     return os;
 }
 
 std::ostream& operator<< (std::ostream& os, const Server::Config& conf) {
-    os << "idle_timeout=" << conf.idle_timeout << "ms";
-    os << ", max_headers_size=" << conf.max_headers_size;
-    if (conf.max_body_size != panda::protocol::http::SIZE_UNLIMITED) os << ", max_body_size=" << conf.max_body_size;
-    if (conf.max_keepalive_requests) os << ", max_keepalive_requests=" << conf.max_keepalive_requests;
-    if (conf.tcp_nodelay) os << ", tcp_nodelay";
-    for (auto loc : conf.locations) os << std::endl << "location " << loc;
+    os << "{";
+    os << "idle_timeout:" << conf.idle_timeout << "ms";
+    os << ", max_headers_size:" << conf.max_headers_size;
+    if (conf.max_body_size != panda::protocol::http::SIZE_UNLIMITED) os << ", max_body_size:" << conf.max_body_size;
+    if (conf.max_keepalive_requests) os << ", max_keepalive_requests:" << conf.max_keepalive_requests;
+    if (conf.tcp_nodelay) os << ", tcp_nodelay:true";
+    os << ", locations:[";
+    for (auto loc : conf.locations) os << loc << ", ";
+    os << "]}";
     return os;
 }
 
