@@ -207,7 +207,7 @@ std::ostream& operator<< (std::ostream& os, const Server::Location& location) {
 
 std::ostream& operator<< (std::ostream& os, const Server::Config& conf) {
     os << "{";
-    os << "idle_timeout: " << conf.idle_timeout << "ms";
+    os << "idle_timeout: " << (conf.idle_timeout / 1000) << "s";
     os << ", max_headers_size: " << conf.max_headers_size;
     if (conf.max_body_size != panda::protocol::http::SIZE_UNLIMITED) os << ", max_body_size: " << conf.max_body_size;
     if (conf.max_keepalive_requests) os << ", max_keepalive_requests: " << conf.max_keepalive_requests;
