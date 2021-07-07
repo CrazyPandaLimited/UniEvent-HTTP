@@ -104,7 +104,7 @@ ServerResponseSP Plack::create_response (Simple code, Array headers) {
 
     auto hsize = headers.size();
     for (size_t i = 0; i+1 < hsize; i += 2) {
-        res->headers.add(Simple(headers[i]).as_string(), Simple(headers[i+1]).as_string());
+        res->headers.add(xs::in<string>(headers[i]), xs::in<string>(headers[i+1]));
     }
 
     return res;
@@ -119,7 +119,7 @@ void Plack::respond_now (const ServerRequestSP& request, const Array& psgi_res) 
         Array body_list = psgi_body;
         auto& body = res->body;
         for (const auto& elem : body_list) {
-            body.parts.push_back(Simple(elem).as_string());
+            body.parts.push_back(xs::in<string>(elem));
         }
     }
     else if (plack_real_fh.call(psgi_body).is_true()) {
