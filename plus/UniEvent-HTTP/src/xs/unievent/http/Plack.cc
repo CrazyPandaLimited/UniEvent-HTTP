@@ -124,7 +124,7 @@ void Plack::respond_now (const ServerRequestSP& request, const Array& psgi_res) 
     }
     else if (plack_real_fh.call(psgi_body).is_true()) {
         //TODO async via streamer
-        auto content = read_real_fh.call<Simple>(psgi_body);
+        auto content = read_real_fh.call(psgi_body);
         res->body.parts.push_back(content.as_string());
     }
     else if (psgi_body.is_object_ref()) {
@@ -132,9 +132,9 @@ void Plack::respond_now (const ServerRequestSP& request, const Array& psgi_res) 
         Sub sub;
         if ((sub = obj.method("string_ref"))) {
             // optimize IO::String to not use its incredibly slow getline
-            size_t pos = obj.call<Simple>("tell");
-            auto strsv = Simple(sub.call<Ref>(obj.ref()).value());
-            string_view str = strsv;
+            size_t pos = obj.call("tell").number();
+            auto strsv = sub.call<Ref>(obj.ref()).value<Scalar>();
+            string_view str = strsv.as_string<string_view>();
             res->body.parts.push_back(string(str.data() + pos, str.length() - pos));
         }
         else {
@@ -143,9 +143,9 @@ void Plack::respond_now (const ServerRequestSP& request, const Array& psgi_res) 
             sv_setsv(input_record_separator, Ref::create(Simple(32 * 1024)));
             string data;
             sub = obj.method("getline");
-            Simple buf;
+            Scalar buf;
             while ((buf = sub.call(obj.ref())).defined()) {
-                data += (string_view)buf;
+                data += buf.as_string<string_view>();
             }
             res->body.parts.push_back(data);
             obj.call("close");
