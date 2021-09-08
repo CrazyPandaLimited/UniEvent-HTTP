@@ -48,7 +48,7 @@ void Client::request (const RequestSP& request) {
 
     auto netloc = request->netloc();
 
-    if (!connected() || _netloc != netloc) {
+    if (!connected() || _netloc != netloc || !request->keep_alive()) {
         panda_log_info("connecting to " << netloc);
         if (connected()) drop_connection();
         filters().clear();
