@@ -286,7 +286,7 @@ void Client::finish_request (const ErrorCode& _err) {
     auto err = _err;
     if (!err && !req->_transfer_completed) err = errc::transfer_aborted;
 
-    if (err || !res->keep_alive()) drop_connection();
+    if (err || !res->keep_alive() || !req->keep_alive()) drop_connection();
     else Tcp::weak(true);
 
     req->_redirection_counter = 0;
