@@ -79,6 +79,10 @@ void Client::request (const RequestSP& request) {
                 SocksSP socks = new Socks(uri->host(), uri->port(), uri->user(), uri->password());
                 use_socks(this, socks);
             }
+            else if (uri->scheme() == "http") {
+                // netloc =  NetLoc { uri->host(), uri->port(), nullptr, nullptr, false };
+                // no-op
+            }
             else throw HttpError("client supports only socks5 protocol for proxy");
         }
 
