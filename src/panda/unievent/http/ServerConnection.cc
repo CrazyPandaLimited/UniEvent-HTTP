@@ -34,10 +34,14 @@ ServerConnection::ServerConnection (Server* server, uint64_t id, const Config& c
     : server(server), _id(id), stream(stream), factory(conf.factory), parser(this), idle_timeout(conf.idle_timeout),
       max_keepalive_requests(conf.max_keepalive_requests)
 {
-    stream->event_listener(this);
-
     parser.max_headers_size = conf.max_headers_size;
     parser.max_body_size    = conf.max_body_size;
+    
+    stream->event_listener(this);
+    // can't do this in event listener because stream may live longer than server connection
+    stream->write_event.add([server](auto...){
+        server->write_request_completed();
+    });
 }
 
 void ServerConnection::start () {
@@ -251,7 +255,6 @@ void ServerConnection::cleanup_request () {
 }
 
 void ServerConnection::on_write (const ErrorCode& err, const WriteRequestSP&) {
-    server->write_request_completed();
     if (!err) return;
     panda_log_notice("write error: " << err);
     close(err, false);
