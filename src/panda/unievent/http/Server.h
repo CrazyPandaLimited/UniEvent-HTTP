@@ -111,7 +111,6 @@ private:
     Connections _connections;
     uint64_t    _hdate_time = 0;
     string      _hdate_str;
-    uint64_t    _awrs = 0; // active write requests
 
     void on_connection (const StreamSP&, const ErrorCode&) override;
 
@@ -120,15 +119,9 @@ private:
         if (_state == State::stopping) _stop_if_done();
     }
 
-    void write_request_queued () { ++_awrs; }
-
-    void write_request_completed () {
-        --_awrs;
-        if (_state == State::stopping) _stop_if_done();
-    }
-
     void _stop_if_done () {
-        if (_state != State::stopping || _connections.size() || _awrs) return;
+        assert(_state == State::stopping);
+        if (_connections.size()) return;
         _state = State::initial;
         stop_event();
     }

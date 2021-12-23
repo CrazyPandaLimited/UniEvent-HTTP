@@ -1,6 +1,8 @@
 #pragma once
 #include <deque>
 #include "ServerRequest.h"
+#include "panda/error.h"
+#include "panda/unievent/forward.h"
 #include <panda/unievent/Stream.h>
 #include <panda/protocol/http/RequestParser.h>
 
@@ -30,9 +32,10 @@ struct ServerConnection : Refcnt, private IStreamSelfListener, private protocol:
 
     uint64_t id () const { return _id; }
 
-    void start ();
-    void close (const ErrorCode&, bool soft = false);
-    void graceful_stop ();
+    void start        ();
+    void close        (const ErrorCode& err) { do_close(err, false); }
+    void shutdown     (const ErrorCode& err) { do_close(err, true); }
+    void graceful_stop();
 
     bool is_secure () const { return stream->is_secure(); }
 
@@ -41,6 +44,8 @@ struct ServerConnection : Refcnt, private IStreamSelfListener, private protocol:
 
 private:
     friend ServerRequest; friend ServerResponse;
+    
+    enum class State { Running, Closing, ShuttingDown };
 
     using RequestParser = protocol::http::RequestParser;
     using Requests      = std::deque<ServerRequestSP>;
@@ -55,14 +60,15 @@ private:
     uint32_t      idle_timeout;
     uint64_t      max_keepalive_requests;
     TimerSP       idle_timer;
-    bool          closing = false;
+    bool          closing  = false;
     bool          stopping = false;
 
     protocol::http::RequestSP new_request () override;
 
-    void on_read  (string&, const ErrorCode&) override;
-    void on_write (const ErrorCode&, const WriteRequestSP&) override;
-    void on_eof   () override;
+    void on_read    (string&, const ErrorCode&) override;
+    void on_write   (const ErrorCode&, const WriteRequestSP&) override;
+    void on_shutdown(const ErrorCode&, const ShutdownRequestSP&) override;
+    void on_eof     () override;
 
     void request_error (const ServerRequestSP&, const ErrorCode& err);
 
@@ -74,6 +80,8 @@ private:
     void finish_request      ();
     void cleanup_request     ();
     void drop_requests       (const ErrorCode&);
+    
+    void do_close (const ErrorCode&, bool soft);
 
     ServerResponseSP default_error_response (int code);
 };

@@ -19,6 +19,7 @@ Server::Server (const Config& conf, const LoopSP& loop, IFactory* fac) : Server(
 }
 
 Server::~Server() {
+    printf("~Server\n");
     // close all connections to stop any delayed callbacks and self holdings, e.g. on_write. Connections should not leave longer than Server.
     // it can not lead to user callback because active http::Requests are impossible in Server dtor, so no retry or any sort of infinite loop
     while (_connections.size()) {

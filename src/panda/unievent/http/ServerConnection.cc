@@ -1,6 +1,7 @@
 #include "ServerConnection.h"
 #include "Server.h"
 #include "msg.h" // for uehtlog
+#include "panda/unievent/forward.h"
 #include <panda/unievent/Tcp.h>
 #include <panda/unievent/Pipe.h>
 
@@ -31,17 +32,13 @@ excepted<net::SockAddr, ErrorCode> get_peeraddr (const Stream* stream) {
 }
 
 ServerConnection::ServerConnection (Server* server, uint64_t id, const Config& conf, const StreamSP& stream)
-    : server(server), _id(id), stream(stream), factory(conf.factory), parser(this), idle_timeout(conf.idle_timeout),
-      max_keepalive_requests(conf.max_keepalive_requests)
+    : server(server), _id(id), stream(stream), factory(conf.factory), parser(this),
+      idle_timeout(conf.idle_timeout), max_keepalive_requests(conf.max_keepalive_requests)
 {
     parser.max_headers_size = conf.max_headers_size;
     parser.max_body_size    = conf.max_body_size;
     
     stream->event_listener(this);
-    // can't do this in event listener because stream may live longer than server connection
-    stream->write_event.add([server](auto...){
-        server->write_request_completed();
-    });
 }
 
 void ServerConnection::start () {
@@ -49,7 +46,7 @@ void ServerConnection::start () {
         idle_timer = new Timer(server->loop());
         idle_timer->event.add([this](auto&){
             assert(!requests.size());
-            this->close({}, true);
+            shutdown({});
         });
         idle_timer->once(idle_timeout);
     }
@@ -78,14 +75,14 @@ void ServerConnection::on_read (string& buf, const ErrorCode& err) {
 
         auto req = static_pointer_cast<ServerRequest>(result.request);
         if (!requests.size() || requests.back() != req) requests.emplace_back(req);
-        req->_is_done = result.state >= State::done;
+        req->_is_done = result.state >= protocol::http::State::done;
 
         if (result.error) {
             panda_log_notice("parser error: " << result.error);
             return request_error(req, result.error);
         }
 
-        if (result.state <= State::headers) {
+        if (result.state <= protocol::http::State::headers) {
             panda_log_debug("got part, headers not finished");
             return;
         }
@@ -101,12 +98,12 @@ void ServerConnection::on_read (string& buf, const ErrorCode& err) {
         if (req->_partial) {
             req->partial_event(req, {});
         }
-        else if (result.state == State::done) {
+        else if (result.state == protocol::http::State::done) {
             req->receive_event(req);
             server->request_event(req);
         }
 
-        if (result.state == State::done) {
+        if (result.state == protocol::http::State::done) {
             // if request is non-KA or non-KA response is already started, stop receiving any further requests
             if (req->_finish_on_receive) finish_request();
             else if (closing || !req->keep_alive()) {
@@ -152,7 +149,6 @@ void ServerConnection::write_next_response () {
 
     auto v = res->to_vector(req);
     stream->write(v.begin(), v.end());
-    server->write_request_queued();
 
     if (!res->keep_alive() || !req->keep_alive()) {
         closing = true;
@@ -173,7 +169,6 @@ void ServerConnection::write_next_response () {
             for (auto& chunk : tmp_chunks) {
                 auto v = res->make_chunk(chunk);
                 stream->write(v.begin(), v.end());
-                server->write_request_queued();
             }
         }
         return;
@@ -189,7 +184,6 @@ void ServerConnection::send_continue (const ServerRequestSP& req) {
     if (req->_response) throw HttpError("100-continue can only be sent before response");
 
     stream->write("HTTP/1.1 100 Continue\r\n\r\n");
-    server->write_request_queued();
 }
 
 void ServerConnection::send_chunk (const ServerResponseSP& res, const string& chunk) {
@@ -199,7 +193,6 @@ void ServerConnection::send_chunk (const ServerResponseSP& res, const string& ch
     if (requests.front()->_response == res) {
         auto v = res->make_chunk(chunk);
         stream->write(v.begin(), v.end());
-        server->write_request_queued();
         return;
     }
 
@@ -213,7 +206,6 @@ void ServerConnection::send_final_chunk (const ServerResponseSP& res, const stri
 
     auto v = res->final_chunk(chunk);
     stream->write(v.begin(), v.end());
-    server->write_request_queued();
     finish_request();
 }
 
@@ -233,7 +225,7 @@ void ServerConnection::finish_request () {
     if (closing || stopping) {
         // the only way we can get here with closing=false and stopping=true is when chunked response started before graceful stop
         assert(!requests.size());
-        close({}, true);
+        shutdown({});
         return;
     }
 
@@ -257,12 +249,17 @@ void ServerConnection::cleanup_request () {
 void ServerConnection::on_write (const ErrorCode& err, const WriteRequestSP&) {
     if (!err) return;
     panda_log_notice("write error: " << err);
-    close(err, false);
+    close(err);
+}
+
+void ServerConnection::on_shutdown(const ErrorCode& err, const ShutdownRequestSP&) {
+    if (err) panda_log_notice("shutdown error: " << err);
+    server->remove(this);
 }
 
 void ServerConnection::on_eof () {
     panda_log_info("eof");
-    close(make_error_code(std::errc::connection_reset), true);
+    shutdown(make_error_code(std::errc::connection_reset));
 }
 
 void ServerConnection::drop_requests (const ErrorCode& err) {
@@ -281,28 +278,35 @@ void ServerConnection::drop_requests (const ErrorCode& err) {
     }
 }
 
-void ServerConnection::close (const ErrorCode& err, bool soft) {
+void ServerConnection::do_close (const ErrorCode& err, bool soft) {
     panda_log_debug("connection close: soft: " << soft << " " << err);
     ServerConnectionSP hold = this; (void)hold;
     ServerSP hold_srv = server; (void)hold_srv;
-
-    stream->event_listener(nullptr);
 
     if (idle_timer) {
         idle_timer->stop();
         idle_timer = nullptr;
     }
+    
+    if (soft) {
+        stream->shutdown();
+        stream->disconnect();
+    } else {
+        stream->event_listener(nullptr);
+        stream->reset();
+    }
 
-    soft ? stream->disconnect() : stream->reset();
     drop_requests(err);
 
-    server->remove(this);
+    if (!soft) {
+        server->remove(this);
+    }
 }
 
 void ServerConnection::graceful_stop () {
-    // immediately soft-close connection if we are idle
+    // immediately shutdown connection if we are idle
     if (!requests.size()) {
-        close(errc::server_stopping, true);
+        shutdown(errc::server_stopping);
         return;
     }
 
