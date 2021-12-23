@@ -254,6 +254,7 @@ void ServerConnection::on_write (const ErrorCode& err, const WriteRequestSP&) {
 
 void ServerConnection::on_shutdown(const ErrorCode& err, const ShutdownRequestSP&) {
     if (err) panda_log_notice("shutdown error: " << err);
+    stream->event_listener(nullptr); // there should be no more events anyway
     server->remove(this);
 }
 
