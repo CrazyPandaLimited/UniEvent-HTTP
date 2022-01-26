@@ -32,24 +32,28 @@ excepted<net::SockAddr, ErrorCode> get_peeraddr (const Stream* stream) {
 }
 
 ServerConnection::ServerConnection (Server* server, uint64_t id, const Config& conf, const StreamSP& stream)
-    : server(server), _id(id), stream(stream), factory(conf.factory), parser(this),
-      idle_timeout(conf.idle_timeout), max_keepalive_requests(conf.max_keepalive_requests)
+    : server(server), _id(id), stream(stream), factory(conf.factory), parser(this), idle_timeout(conf.idle_timeout),
+      max_keepalive_requests(conf.max_keepalive_requests), _establish_time(server->loop()->now())
 {
+    stream->event_listener(this);
+
     parser.max_headers_size = conf.max_headers_size;
     parser.max_body_size    = conf.max_body_size;
-    
-    stream->event_listener(this);
-}
 
-void ServerConnection::start () {
     if (idle_timeout) {
         idle_timer = new Timer(server->loop());
         idle_timer->event.add([this](auto&){
             assert(!requests.size());
-            shutdown({});
+            close({});
         });
         idle_timer->once(idle_timeout);
     }
+}
+
+void ServerConnection::on_connection(const StreamSP&, const ErrorCode& err) {
+    if (!err) return;
+    panda_log_notice("on connection error: " << err);
+    close(err);
 }
 
 protocol::http::RequestSP ServerConnection::new_request () {
@@ -88,6 +92,13 @@ void ServerConnection::on_read (string& buf, const ErrorCode& err) {
         }
 
         panda_log_debug("got part, body finished = " << req->is_done());
+
+        // do not allow upgrade requests in pipeline
+        if (requests.size() > 1 && req->headers.connection() == "upgrade") {
+            request_error(req, errc::upgrade_in_pipeline);
+            stream->read_ignore();
+            break;
+        }
 
         if (!req->_routed) {
             req->_routed = true;
@@ -231,10 +242,8 @@ void ServerConnection::finish_request () {
 
     if (requests.size()) {
         if (requests.front()->_response) write_next_response();
-    }
-    else if (idle_timer) {
-        assert(!idle_timer->active());
-        idle_timer->once(idle_timeout);
+    } else {
+        check_if_idle();
     }
 }
 
@@ -246,14 +255,26 @@ void ServerConnection::cleanup_request () {
     req->finish_event(req);
 }
 
+void ServerConnection::check_if_idle() {
+    if (!requests.size() && !idle_timer->active() && !stream->write_queue_size()) {
+        idle_timer->once(idle_timeout);
+    }
+}
+
 void ServerConnection::on_write (const ErrorCode& err, const WriteRequestSP&) {
-    if (!err) return;
-    panda_log_notice("write error: " << err);
-    close(err);
+    if (err) {
+        panda_log_notice("write error: " << err);
+        close(err);
+        return;
+    }
+    
+    //active idle timer when the last write request from the last response has been written
+    check_if_idle();
 }
 
 void ServerConnection::on_shutdown(const ErrorCode& err, const ShutdownRequestSP&) {
     if (err) panda_log_notice("shutdown error: " << err);
+    if (idle_timer) idle_timer->stop();
     stream->event_listener(nullptr); // there should be no more events anyway
     server->remove(this);
 }
@@ -284,15 +305,11 @@ void ServerConnection::do_close (const ErrorCode& err, bool soft) {
     ServerConnectionSP hold = this; (void)hold;
     ServerSP hold_srv = server; (void)hold_srv;
 
-    if (idle_timer) {
-        idle_timer->stop();
-        idle_timer = nullptr;
-    }
-    
     if (soft) {
         stream->shutdown();
         stream->disconnect();
     } else {
+        if (idle_timer) idle_timer->stop();
         stream->event_listener(nullptr);
         stream->reset();
     }
@@ -313,6 +330,26 @@ void ServerConnection::graceful_stop () {
 
     // otherwise close it after answering current request
     stopping = true;
+}
+
+StreamSP ServerConnection::upgrade(const ServerRequest* req) {
+    if (requests.size() != 1 || requests.front() != req) throw std::logic_error("should not happen");
+    panda_log_debug("connection upgrade");
+    ServerConnectionSP hold = this; (void)hold;
+    ServerSP hold_srv = server; (void)hold_srv;
+
+    stream->event_listener(nullptr);
+
+    if (idle_timer) {
+        idle_timer->stop();
+        idle_timer = nullptr;
+    }
+
+    cleanup_request();
+
+    server->remove(this);
+
+    return stream;
 }
 
 ServerResponseSP ServerConnection::default_error_response (int code) {

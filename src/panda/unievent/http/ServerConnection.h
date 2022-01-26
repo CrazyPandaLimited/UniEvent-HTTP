@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <deque>
 #include "ServerRequest.h"
 #include "panda/error.h"
@@ -9,9 +10,6 @@
 namespace panda { namespace unievent { namespace http {
 
 struct Server;
-
-excepted<net::SockAddr, ErrorCode> get_sockaddr (const Stream*);
-excepted<net::SockAddr, ErrorCode> get_peeraddr (const Stream*);
 
 struct ServerConnection : Refcnt, private IStreamSelfListener, private protocol::http::RequestParser::IFactory {
     struct IFactory {
@@ -39,8 +37,10 @@ struct ServerConnection : Refcnt, private IStreamSelfListener, private protocol:
 
     bool is_secure () const { return stream->is_secure(); }
 
-    excepted<net::SockAddr, ErrorCode> sockaddr () const { return get_sockaddr(stream); }
-    excepted<net::SockAddr, ErrorCode> peeraddr () const { return get_peeraddr(stream); }
+    excepted<net::SockAddr, ErrorCode> sockaddr () const { return stream->sockaddr(); }
+    excepted<net::SockAddr, ErrorCode> peeraddr () const { return stream->peeraddr(); }
+    
+    uint64_t establish_time() const { return _establish_time; }
 
 private:
     friend ServerRequest; friend ServerResponse;
@@ -62,28 +62,33 @@ private:
     TimerSP       idle_timer;
     bool          closing  = false;
     bool          stopping = false;
+    uint64_t      _establish_time;
 
     protocol::http::RequestSP new_request () override;
 
-    void on_read    (string&, const ErrorCode&) override;
-    void on_write   (const ErrorCode&, const WriteRequestSP&) override;
-    void on_shutdown(const ErrorCode&, const ShutdownRequestSP&) override;
-    void on_eof     () override;
+    void on_connection(const StreamSP&, const ErrorCode&) override;
+    void on_read      (string&, const ErrorCode&) override;
+    void on_write     (const ErrorCode&, const WriteRequestSP&) override;
+    void on_shutdown  (const ErrorCode&, const ShutdownRequestSP&) override;
+    void on_eof       () override;
 
-    void request_error (const ServerRequestSP&, const ErrorCode& err);
+    void request_error(const ServerRequestSP&, const ErrorCode& err);
 
-    void respond             (const ServerRequestSP&, const ServerResponseSP&);
-    void write_next_response ();
-    void send_continue       (const ServerRequestSP&);
-    void send_chunk          (const ServerResponseSP&, const string& chunk);
-    void send_final_chunk    (const ServerResponseSP&, const string& chunk);
-    void finish_request      ();
-    void cleanup_request     ();
-    void drop_requests       (const ErrorCode&);
+    void respond            (const ServerRequestSP&, const ServerResponseSP&);
+    void write_next_response();
+    void send_continue      (const ServerRequestSP&);
+    void send_chunk         (const ServerResponseSP&, const string& chunk);
+    void send_final_chunk   (const ServerResponseSP&, const string& chunk);
+    void finish_request     ();
+    void cleanup_request    ();
+    void drop_requests      (const ErrorCode&);
+    void check_if_idle      ();
     
-    void do_close (const ErrorCode&, bool soft);
+    void do_close(const ErrorCode&, bool soft);
 
-    ServerResponseSP default_error_response (int code);
+    StreamSP upgrade(const ServerRequest*);
+
+    ServerResponseSP default_error_response(int code);
 };
 using ServerConnectionSP = iptr<ServerConnection>;
 
