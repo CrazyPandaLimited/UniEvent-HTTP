@@ -24,6 +24,9 @@ struct Client : Tcp, private ITcpSelfListener, private ITimerListener {
     uint64_t      last_activity_time () const { return _last_activity_time; }
     const NetLoc& last_netloc        () const { return _netloc; }
 
+    bool uncompress_response () const { return _parser.uncompress_content; }
+    void uncompress_response (bool v) { _parser.uncompress_content = v; }
+
 protected:
     Client (Pool*);
 
