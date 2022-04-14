@@ -1,4 +1,8 @@
 #include "../lib/test.h"
+#include "panda/protocol/http/Headers.h"
+#include "panda/unievent/http/Request.h"
+#include "panda/unievent/http/ServerRequest.h"
+#include "panda/unievent/http/ServerResponse.h"
 
 #define TEST(name) TEST_CASE("client-pool: " name, "[client-pool]" VSSL)
 
@@ -459,4 +463,74 @@ TEST("ssl_cert_check") {
     REQUIRE(c != c2);
 
     test.await(req->response_event, "res");
+}
+
+TEST("request timeout applied when not yet executing (queued)") {
+    AsyncTest test(5000, {"srv", "r2"});
+    TPool p(test.loop);
+    p.max_connections(1);
+    auto srv = make_server(test.loop);
+    srv->request_event.add([&](const ServerRequestSP& req){
+        test.happens("srv");
+        REQUIRE_FALSE(req->uri->path() == "/r2");
+    });
+
+    auto uri = active_scheme() +  "://" + srv->location() + "/";
+    auto req1 = Request::Builder().method(Request::Method::Get).uri(uri + "r1").timeout(0).build();
+    auto req2 = Request::Builder().method(Request::Method::Get).uri(uri + "r2").timeout(10).build();
+    auto c1 = p.request(req1);
+    REQUIRE(c1);
+    auto c2 = p.request(req2);
+    REQUIRE_FALSE(c2);
+
+    req1->response_event.add([&](auto, auto& res, auto& err) {
+        FAIL("should not happen");
+    });
+    
+    req2->response_event.add([&](auto, auto& res, auto& err) {
+        test.happens("r2");
+        CHECK(err & std::errc::timed_out);
+        test.loop->stop();
+    });
+
+    test.run();
+}
+
+TEST("request timeout applied when not yet executing (queued) after redirect") {
+    AsyncTest test(5000, {"srv1-r1", "srv1-r2", "r2"});
+    TPool p(test.loop);
+    p.max_connections(1);
+    auto srv1 = make_server(test.loop);
+    auto srv2 = make_server(test.loop);
+    auto uri1 = active_scheme() +  "://" + srv1->location() + "/";
+    auto uri2 = active_scheme() +  "://" + srv2->location() + "/";
+    
+    srv1->request_event.add([&](const ServerRequestSP& req) {
+        if (req->uri->path() == "/r1") test.happens("srv1-r1");
+        else                           test.happens("srv1-r2");
+        req->respond(new ServerResponse(302, Headers().location(uri2)));
+    });
+    
+    srv2->request_event.add([&](const ServerRequestSP& req) {
+        REQUIRE_FALSE(req->uri->path() == "/r2");
+    });
+
+    auto req1 = Request::Builder().method(Request::Method::Get).uri(uri1 + "r1").timeout(0).build();
+    auto req2 = Request::Builder().method(Request::Method::Get).uri(uri1 + "r2").timeout(20).build();
+    auto c1 = p.request(req1);
+    REQUIRE(c1);
+    auto c2 = p.request(req2);
+    REQUIRE_FALSE(c2);
+    
+    req1->response_event.add([&](auto, auto& res, auto& err) {
+        FAIL("should not happen");
+    });
+
+    req2->response_event.add([&](auto, auto& res, auto& err) {
+        test.happens("r2");
+        CHECK(err & std::errc::timed_out);
+        test.loop->stop();
+    });
+    
+    test.run();
 }
