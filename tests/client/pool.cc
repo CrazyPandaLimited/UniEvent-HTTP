@@ -483,17 +483,20 @@ TEST("request timeout applied when not yet executing (queued)") {
     auto c2 = p.request(req2);
     REQUIRE_FALSE(c2);
 
-    req1->response_event.add([&](auto, auto& res, auto& err) {
+    req1->response_event.add([&](auto...) {
         FAIL("should not happen");
     });
     
-    req2->response_event.add([&](auto, auto& res, auto& err) {
+    req2->response_event.add([&](auto, auto, auto& err) {
         test.happens("r2");
         CHECK(err & std::errc::timed_out);
         test.loop->stop();
     });
 
     test.run();
+    
+    req1->response_event.remove_all();
+    req1->cancel();
 }
 
 TEST("request timeout applied when not yet executing (queued) after redirect") {
@@ -522,15 +525,18 @@ TEST("request timeout applied when not yet executing (queued) after redirect") {
     auto c2 = p.request(req2);
     REQUIRE_FALSE(c2);
     
-    req1->response_event.add([&](auto, auto& res, auto& err) {
+    req1->response_event.add([&](auto...) {
         FAIL("should not happen");
     });
 
-    req2->response_event.add([&](auto, auto& res, auto& err) {
+    req2->response_event.add([&](auto, auto, auto& err) {
         test.happens("r2");
         CHECK(err & std::errc::timed_out);
         test.loop->stop();
     });
     
     test.run();
+    
+    req1->response_event.remove_all();
+    req1->cancel();
 }
