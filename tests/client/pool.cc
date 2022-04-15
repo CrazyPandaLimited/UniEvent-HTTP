@@ -3,6 +3,7 @@
 #include "panda/unievent/http/Request.h"
 #include "panda/unievent/http/ServerRequest.h"
 #include "panda/unievent/http/ServerResponse.h"
+#include <cstdlib>
 
 #define TEST(name) TEST_CASE("client-pool: " name, "[client-pool]" VSSL)
 
@@ -467,6 +468,7 @@ TEST("ssl_cert_check") {
 
 TEST("request timeout applied when not yet executing (queued)") {
     AsyncTest test(5000, {"srv", "r2"});
+    bool asan = getenv("ASAN_OPTIONS");
     TPool p(test.loop);
     p.max_connections(1);
     auto srv = make_server(test.loop);
@@ -477,7 +479,7 @@ TEST("request timeout applied when not yet executing (queued)") {
 
     auto uri = active_scheme() +  "://" + srv->location() + "/";
     auto req1 = Request::Builder().method(Request::Method::Get).uri(uri + "r1").timeout(0).build();
-    auto req2 = Request::Builder().method(Request::Method::Get).uri(uri + "r2").timeout(10).build();
+    auto req2 = Request::Builder().method(Request::Method::Get).uri(uri + "r2").timeout(asan ? 1000 : 50).build();
     auto c1 = p.request(req1);
     REQUIRE(c1);
     auto c2 = p.request(req2);
@@ -502,6 +504,7 @@ TEST("request timeout applied when not yet executing (queued)") {
 TEST("request timeout applied when not yet executing (queued) after redirect") {
     AsyncTest test(5000, {"srv1-r1", "srv1-r2", "r2"});
     TPool p(test.loop);
+    bool asan = getenv("ASAN_OPTIONS");
     p.max_connections(1);
     auto srv1 = make_server(test.loop);
     auto srv2 = make_server(test.loop);
@@ -519,7 +522,7 @@ TEST("request timeout applied when not yet executing (queued) after redirect") {
     });
 
     auto req1 = Request::Builder().method(Request::Method::Get).uri(uri1 + "r1").timeout(0).build();
-    auto req2 = Request::Builder().method(Request::Method::Get).uri(uri1 + "r2").timeout(20).build();
+    auto req2 = Request::Builder().method(Request::Method::Get).uri(uri1 + "r2").timeout(asan ? 2000 : 100).build();
     auto c1 = p.request(req1);
     REQUIRE(c1);
     auto c2 = p.request(req2);
