@@ -10,20 +10,16 @@ http_request(Request::Builder()
     .response_callback([](const RequestSP& /*request*/,
                           const ResponseSP& response,
                           const ErrorCode& error) {
-
         if (error) {
             std::cerr << error << std::endl;
             return;
         }
         std::cout << response->to_string();
-    })
-    .build()
+    }).build()
 );
 
 // simple API
-http_get("http://mysite.com", [](const RequestSP& /*request*/,
-                                    const ResponseSP& response,
-                                    const ErrorCode& /*error*/) {
+http_get("http://mysite.com", [](auto, const ResponseSP& response, auto) {
     std::cout << response->body;
 });
 
@@ -62,7 +58,6 @@ http_request(Request::Builder()
     .build()
 );
 
-
 // http server
 Server::Config conf;
 conf.idle_timeout = 60'000;
@@ -90,12 +85,10 @@ server->request_event.add([](const ServerRequestSP& request) {
 auto sig = unievent::Signal::create(SIGINT, [server](const unievent::SignalSP& sig, int) {
     sig->stop();
     server->stop();
-
 });
 
 server->run();
 unievent::Loop::default_loop()->run();
-
 
 // personal pool
 Pool::Config pool_conf;
@@ -143,7 +136,7 @@ It is built on top of [Protocol::HTTP](https://github.com/CrazyPandaLimited/Prot
 
 UniEvent::HTTP supports many features, including various request methods, cookies, request forms, chunks, compression, keep-alive, connection pools and so on.
 
-See UniEvent::HTTP::Manager if you need async multi-process http server with process management.
+See [UniEvent::HTTP::Manager](https://github.com/CrazyPandaLimited/UniEvent-HTTP-Manager) if you need async multi-process http server with process management.
 
 # Build and Install
 
@@ -229,7 +222,7 @@ Only one request can be made via client at a time. To execute next request you m
 The short description is given below, for full reference see corresponding class's [docs](doc/server.md).
 
 Server is an object to be run in single process/thread. If you need to make use of all processor cores, you need to create server in each process/thread.
-See UniEvent::HTTP::Manager.
+See [UniEvent::HTTP::Manager](https://github.com/CrazyPandaLimited/UniEvent-HTTP-Manager).
 
 Server is created via
 ```cpp
