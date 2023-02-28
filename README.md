@@ -140,7 +140,7 @@ See [UniEvent::HTTP::Manager](https://github.com/CrazyPandaLimited/UniEvent-HTTP
 
 # Build and Install
 
-UniEvent::HTTP can be wuild using CMake. It supports both `find_package` and `add_subdirectory` approaches. Target name to link against your library or executable is `unievent-http`. See [detailed manual how to build UniEvent based projects](https://github.com/CrazyPandaLimited/UniEvent/blob/master/doc/build.md). For UniEvent http all the instructions are the same. Just add [UniEvent::HTTP itself](https://github.com/CrazyPandaLimited/UniEvent-HTTP) to list of modules to install/add.
+UniEvent::HTTP can be build using CMake. It supports both `find_package` and `add_subdirectory` approaches. Target name to link against your library or executable is `unievent-http`. See [detailed manual how to build UniEvent based projects](https://github.com/CrazyPandaLimited/UniEvent/blob/master/doc/build.md). For UniEvent http all the instructions are the same. Just add [UniEvent::HTTP itself](https://github.com/CrazyPandaLimited/UniEvent-HTTP), [Protocol::HTTP](https://github.com/CrazyPandaLimited/Protocol-HTTP) and its [dependencies](https://github.com/CrazyPandaLimited/Protocol-HTTP#build-and-install)  to list of modules to install/add.
 
 # Client
 
