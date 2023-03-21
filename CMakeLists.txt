@@ -20,6 +20,10 @@ else()
     set(EXCLUDE_TEST EXCLUDE_FROM_ALL)
 endif()
 
+if (${UNIEVENT_HTTP_FETCH_DEPS})
+    include(FetchDeps.cmake)
+endif()
+
 file(GLOB_RECURSE libSource RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "src/panda/*.cc")
 add_library(${PROJECT_NAME} ${LIB_TYPE} ${libSource})
 set(pub_includes ${CMAKE_CURRENT_SOURCE_DIR}/src)
