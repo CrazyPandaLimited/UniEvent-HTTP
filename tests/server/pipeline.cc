@@ -151,7 +151,7 @@ TEST("request connection close waits until all previous requests are done") {
 
     bool chunked1 = GENERATE(false, true);
     bool chunked2 = GENERATE(false, true);
-    SECTION(string("chunked first-second response: ") + char(chunked1 + '0') + '-' + char(chunked2 + '0')){}
+    SECTION(std::string("chunked first-second response: ") + char(chunked1 + '0') + '-' + char(chunked2 + '0')){}
 
     ServerRequestSP req1;
 

@@ -54,15 +54,16 @@ file(GLOB_RECURSE testSource RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "tests/*.cc")
 add_library(unievent-http-tests STATIC EXCLUDE_FROM_ALL ${testSource})
 target_link_libraries(unievent-http-tests PUBLIC ${PROJECT_NAME})
 
-find_package(Catch2)
+if (NOT TARGET Catch2::Catch2)
+    find_package(Catch2)
+endif()
 target_link_libraries(unievent-http-tests PUBLIC Catch2::Catch2)
 
 #ctest
 enable_testing()
-add_library(${PROJECT_NAME}-test-lib STATIC EXCLUDE_FROM_ALL tests/lib/test.cc)
-target_compile_definitions(${PROJECT_NAME}-test-lib PRIVATE CATCH_CONFIG_MAIN)
-target_link_libraries(${PROJECT_NAME}-test-lib Catch2::Catch2 ${PROJECT_NAME})
-list(FILTER testSource EXCLUDE REGEX "lib")
+add_executable(${PROJECT_NAME}-runtests EXCLUDE_FROM_ALL ${testSource})
+target_link_libraries(${PROJECT_NAME}-runtests Catch2::Catch2WithMain ${PROJECT_NAME})
+add_test(NAME ${PROJECT_NAME} COMMAND ${PROJECT_NAME}-runtests WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 endif() #if (${UNIEVENT_HTTP_TESTS})
 

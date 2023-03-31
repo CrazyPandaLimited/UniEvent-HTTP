@@ -197,7 +197,7 @@ TEST("response is complete before request fully received") {
 
     bool chunked = GENERATE(false, true);
     int closed   = GENERATE(0, 1, 2); // 1 - closed by request, 2 - closed by response
-    SECTION(string(chunked ? "chunked" : "non-chunked") + ' ' + (closed ? (closed == 1 ? "request-close" : "response-close") : "keep-alive")) {}
+    SECTION(std::string(chunked ? "chunked" : "non-chunked") + ' ' + (closed ? (closed == 1 ? "request-close" : "response-close") : "keep-alive")) {}
 
     p.server->route_event.add([&](auto& req) {
         req->enable_partial();
