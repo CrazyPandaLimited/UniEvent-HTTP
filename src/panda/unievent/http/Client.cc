@@ -77,6 +77,7 @@ void Client::request (const RequestSP& request) {
             auto uri = request->proxy;
             if (uri->scheme() == "socks5") {
                 SocksSP socks = new Socks(uri->host(), uri->port(), uri->user(), uri->password());
+                socks->socks_resolve = request->proxy_resolve;
                 use_socks(this, socks);
             }
             else if (uri->scheme() == "http") {
