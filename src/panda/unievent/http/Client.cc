@@ -57,11 +57,11 @@ void Client::request (const RequestSP& request) {
             SslContext ctx = request->ssl_ctx;
             if (!ctx) {
                 ctx = SslContext::attach(SSL_CTX_new(TLS_client_method()));
-                bool ok = SSL_CTX_set_default_verify_paths(ctx);
-                if (!ok) {
-                    throw HttpError("can not set ssl certificate default verify paths");
-                }
                 if (request->ssl_check_cert) {
+                    bool ok = SSL_CTX_set_default_verify_paths(ctx);
+                    if (!ok) {
+                        throw HttpError("can not set ssl certificate default verify paths");
+                    }
                     string host = request->uri->host();
                     SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
                     auto param = SSL_CTX_get0_param(ctx);
