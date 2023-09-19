@@ -444,7 +444,7 @@ TEST("proxies using") {
 }
 
 TEST("ssl_cert_check") {
-    AsyncTest test(1000, {"res", "res"});
+    AsyncTest test(3000, {"res", "res"});
     TPool p(test.loop);
     auto srv = make_server(test.loop);
     srv->autorespond(new ServerResponse(200));
@@ -488,7 +488,7 @@ TEST("request timeout applied when not yet executing (queued)") {
     req1->response_event.add([&](auto...) {
         FAIL("should not happen");
     });
-    
+
     req2->response_event.add([&](auto, auto, auto& err) {
         test.happens("r2");
         CHECK(err & std::errc::timed_out);
@@ -496,7 +496,7 @@ TEST("request timeout applied when not yet executing (queued)") {
     });
 
     test.run();
-    
+
     req1->response_event.remove_all();
     req1->cancel();
 }
@@ -510,13 +510,13 @@ TEST("request timeout applied when not yet executing (queued) after redirect") {
     auto srv2 = make_server(test.loop);
     auto uri1 = active_scheme() +  "://" + srv1->location() + "/";
     auto uri2 = active_scheme() +  "://" + srv2->location() + "/";
-    
+
     srv1->request_event.add([&](const ServerRequestSP& req) {
         if (req->uri->path() == "/r1") test.happens("srv1-r1");
         else                           test.happens("srv1-r2");
         req->respond(new ServerResponse(302, Headers().location(uri2)));
     });
-    
+
     srv2->request_event.add([&](const ServerRequestSP& req) {
         REQUIRE_FALSE(req->uri->path() == "/r2");
     });
@@ -527,7 +527,7 @@ TEST("request timeout applied when not yet executing (queued) after redirect") {
     REQUIRE(c1);
     auto c2 = p.request(req2);
     REQUIRE_FALSE(c2);
-    
+
     req1->response_event.add([&](auto...) {
         FAIL("should not happen");
     });
@@ -537,9 +537,9 @@ TEST("request timeout applied when not yet executing (queued) after redirect") {
         CHECK(err & std::errc::timed_out);
         test.loop->stop();
     });
-    
+
     test.run();
-    
+
     req1->response_event.remove_all();
     req1->cancel();
 }

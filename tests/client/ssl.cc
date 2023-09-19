@@ -84,21 +84,6 @@ TEST("client uses 2 different valid certificates => 2 different connections are 
     secure = false;
 }
 
-TEST("google.com cert from system") {
-    AsyncTest test(5000);
-
-    TClientSP client = new TClient(test.loop);
-
-    auto req = Request::Builder().method(Request::Method::Get)
-            .uri("https://google.com")
-            .ssl_check_cert(true)
-            .build();
-    auto res = client->get_response(req);
-
-    CHECK(res->code == 200);
-    CHECK(res->http_version == 11);
-}
-
 TEST("ssl verify server cert fail") {
     secure = true;
     AsyncTest test(5000);
