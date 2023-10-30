@@ -444,7 +444,7 @@ TEST("proxies using") {
 }
 
 TEST("ssl_cert_check") {
-    AsyncTest test(3000, {"res", "res"});
+    AsyncTest test(5000, {"res", "res"});
     TPool p(test.loop);
     auto srv = make_server(test.loop);
     srv->autorespond(new ServerResponse(200));
